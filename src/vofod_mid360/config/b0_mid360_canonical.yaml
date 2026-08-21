@@ -1,5 +1,5 @@
 # Frozen VoFOD-Mid360 B0 detector configuration.
-sync_queue_size: 8
+sync_queue_size: 32
 expected_rays_per_bundle: 20000
 require_expected_ray_count: true
 

@@ -58,6 +58,17 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(RUNNER.overlaid_value(
                 (canonical, overlay), "birth", "min_groups"), 5)
 
+    def test_master_port_uses_ros_master_uri(self):
+        previous = os.environ.get("ROS_MASTER_URI")
+        try:
+            os.environ["ROS_MASTER_URI"] = "http://127.0.0.1:11442"
+            self.assertEqual(RUNNER.master_port(), 11442)
+        finally:
+            if previous is None:
+                os.environ.pop("ROS_MASTER_URI", None)
+            else:
+                os.environ["ROS_MASTER_URI"] = previous
+
     def test_input_readiness_and_run_level_warmup_gate(self):
         state = ([], [
             ("/points", ["/soft_vofod"]),
@@ -67,6 +78,14 @@ class RunnerTest(unittest.TestCase):
         self.assertTrue(RUNNER.subscriptions_ready(state, required))
         self.assertFalse(RUNNER.subscriptions_ready(
             ([], [("/points", ["/soft_vofod"])], []), required))
+        recorder_state = ([], [
+            ("/tracks", ["/record_123"]),
+            ("/diagnostics", ["/record_123"]),
+        ], [])
+        self.assertTrue(RUNNER.recorder_subscriptions_ready(
+            recorder_state, ("/tracks", "/diagnostics")))
+        self.assertFalse(RUNNER.recorder_subscriptions_ready(
+            recorder_state, ("/tracks", "/missing")))
 
         source = {
             "first_checked_ray_stamp": 4.2,

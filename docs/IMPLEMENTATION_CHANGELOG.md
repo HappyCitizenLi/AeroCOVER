@@ -380,3 +380,18 @@
   master 出现 3 个 spawn timeout；受影响的 preprocessor、B0 和 scenario 包随后逐包串行
   28/28、57/57、94/94 通过。最终 `catkin_test_results build` 为 385 tests、
   0 error/failure/skipped。
+
+## 2026-08-22 — SOFT-VoFOD V2 Phase 14 full-matrix entry and replay transport
+
+- CAL 后单 seed gate 全部通过：S03 final B4 为 unique/peak confirmed 2/2、FP 2、IDSW 0、
+  p95 44.0 ms（历史 A3 为 126/51、FP 15643）；S05 fragmentation 2 <= B2 的 9，
+  stale>3 s 为 0、FP 16、p95 42.7 ms；S07 为单轨、0 FP/IDSW/fragmentation、p95
+  47.4 ms。配合 CAL02 moving-observer no-target 的 0 birth/track，满足 full-matrix 启动门槛。
+- full-matrix 预跑发现 B0 外层 ExactTime queue 虽可配置，points/rays 两个底层 subscriber queue
+  仍硬编码为 2，新的 record-once bags 会随机丢首帧。底层 queue 现与 canonical
+  `sync_queue_size=32` 共用；输出 recorder 也新增全 topic subscription handshake，rosbag 初始
+  connection delay 由 1 s 增至 2 s。严格 `first_input_ack <= first source input` 未放宽；
+  S01/N0/seed1003 复验为 ack/bootstrap 4.227 s、warm-up complete 14.227 s、status ok。
+- runner 的 roscore 端口现在从 `ROS_MASTER_URI` 解析并显式传给 `roscore -p`，允许同一只读
+  source bag 上隔离 ROS masters 并行回放。压力试验表明 B0 并发时会违反首帧门槛，因此正式
+  矩阵采用 B0 单独 1.0x、B1–B4 四 master 并行 1.0x；任何子 run 失败则整 source 组合失败。

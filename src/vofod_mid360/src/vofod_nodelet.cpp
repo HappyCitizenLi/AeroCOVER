@@ -251,10 +251,12 @@ namespace vofod
 
       point_subscriber_ = std::make_unique<
           message_filters::Subscriber<sensor_msgs::PointCloud2>>(
-              private_nh_, "points_world", 2);
+              private_nh_, "points_world",
+              static_cast<uint32_t>(sync_queue_size_));
       ray_subscriber_ = std::make_unique<
           message_filters::Subscriber<mid360_ray_msgs::CheckedRayBundle>>(
-              private_nh_, "rays_checked", 2);
+              private_nh_, "rays_checked",
+              static_cast<uint32_t>(sync_queue_size_));
       synchronizer_ = std::make_unique<Synchronizer>(
           SyncPolicy(sync_queue_size_), *point_subscriber_, *ray_subscriber_);
       synchronizer_->registerCallback(

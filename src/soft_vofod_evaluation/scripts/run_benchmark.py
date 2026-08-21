@@ -16,6 +16,7 @@ import statistics
 import subprocess
 import sys
 import time
+from urllib.parse import urlparse
 
 import rosgraph
 import rosbag
@@ -237,6 +238,11 @@ def overlaid_value(paths, section, name):
     return value
 
 
+def master_port():
+    return urlparse(os.environ.get(
+        "ROS_MASTER_URI", "http://127.0.0.1:11311")).port or 11311
+
+
 def stop(process, timeout=10.0):
     if process is None or process.poll() is not None:
         return
@@ -310,6 +316,25 @@ def wait_for_subscriptions(required, timeout=30.0, process=None):
         ", ".join(sorted(required))))
 
 
+def recorder_subscriptions_ready(system_state, topics):
+    subscribers = {topic: nodes for topic, nodes in system_state[1]}
+    return all(any(node.startswith("/record_") or node == "/record"
+                   for node in subscribers.get(topic, []))
+               for topic in topics)
+
+
+def wait_for_recorder_subscriptions(topics, process, timeout=30.0):
+    deadline = time.time() + timeout
+    master_api = rosgraph.Master("/soft_vofod_benchmark")
+    while time.time() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError("rosbag recorder exited before subscriptions were ready")
+        if recorder_subscriptions_ready(master_api.getSystemState(), topics):
+            return
+        time.sleep(0.1)
+    raise RuntimeError("startup timeout waiting for rosbag output subscriptions")
+
+
 class RunContractError(RuntimeError):
     def __init__(self, status, message):
         super().__init__(message)
@@ -350,7 +375,7 @@ def validate_run_timing(algorithm, evidence, source_manifest):
 def master(log_path):
     if rosgraph.is_master_online():
         raise RuntimeError("a ROS master is already running; refusing shared benchmark state")
-    process = start(["roscore"], log_path)
+    process = start(["roscore", "-p", str(master_port())], log_path)
     try:
         wait_for_master()
         yield
@@ -855,9 +880,9 @@ class BenchmarkRunner:
                     ["rosbag", "record", "--lz4", "-O", bag_path] + output_topics,
                     os.path.join(run_dir, "rosbag_record.log"))
                 processes.append(recorder)
-                time.sleep(1.0)
+                wait_for_recorder_subscriptions(output_topics, recorder)
                 player = start([
-                    "rosbag", "play", "--clock", "--delay=1.0", "--rate",
+                    "rosbag", "play", "--clock", "--delay=2.0", "--rate",
                     str(self.arguments.replay_rate), source_bag, "--topics",
                     "/tf", "/tf_static", "/uav1/mid360/points_world",
                     "/uav1/mid360/rays_checked",
