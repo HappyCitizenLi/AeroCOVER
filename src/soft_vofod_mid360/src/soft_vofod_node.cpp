@@ -223,6 +223,14 @@ private:
     parameter("event/background_search_m",
               &config->map.event_background_search_m);
     parameter("event/distance_scale_m", &config->map.event_distance_scale_m);
+    parameter("event/packet_dt_s", &config->map.packet_dt_s);
+    parameter("event/packet_radius_m", &config->map.packet_radius_m);
+    parameter("event/packet_sensor_variance_m2",
+              &config->map.packet_sensor_variance_m2);
+    parameter("event/packet_shape_sigma_m",
+              &config->map.packet_shape_sigma_m);
+    parameter("event/packet_sampling_variance_floor_m2",
+              &config->map.packet_sampling_variance_floor_m2);
 
     parameter("birth/buffer_duration_s", &config->birth.buffer_duration_s);
     int maximum_events = static_cast<int>(config->birth.max_buffer_events);
@@ -522,6 +530,15 @@ private:
       output.background_distance =
           static_cast<float>(event.background_distance_m);
       output.anomaly_score = static_cast<float>(event.anomaly_score);
+      output.stamp_start = rosTime(event.stamp_start_s);
+      output.stamp_end = rosTime(event.stamp_end_s);
+      output.point_count = event.point_count;
+      output.original_indices = event.original_indices;
+      for (int row = 0; row < 3; ++row)
+      {
+        for (int column = 0; column < 3; ++column)
+          output.covariance[3 * row + column] = event.covariance(row, column);
+      }
       events.events.push_back(output);
     }
     events_pub_.publish(events);
@@ -619,6 +636,8 @@ private:
       status.values.push_back(diagnosticValue(
           "valid_returns", number(diagnostics->valid_returns)));
       status.values.push_back(diagnosticValue("events", number(diagnostics->events)));
+      status.values.push_back(diagnosticValue(
+          "violation_packets", number(diagnostics->violation_packets)));
       status.values.push_back(diagnosticValue("births", number(diagnostics->births)));
       status.values.push_back(diagnosticValue("matches", number(diagnostics->matches)));
       status.values.push_back(diagnosticValue(

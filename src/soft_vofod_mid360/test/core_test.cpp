@@ -85,7 +85,7 @@ void makeHoverTrack(
         0.1 * scan, soft_vofod::ReturnStatus::no_return);
     core->processScan(scan, sample.time_s, {sample});
   }
-  for (uint32_t scan = first_scan + 4U; scan < first_scan + 7U; ++scan)
+  for (uint32_t scan = first_scan + 4U; scan < first_scan + 9U; ++scan)
   {
     soft_vofod::RaySample sample = ray(
         0.1 * scan, soft_vofod::ReturnStatus::valid_return, target_range);
@@ -289,6 +289,60 @@ TEST(ColdStartBackground, MovingUnknownComponentNeverPromotes)
   for (const soft_vofod::Vec3& position : positions)
     EXPECT_NE(map.query(position).state,
               soft_vofod::VoxelState::stable_background);
+}
+
+TEST(Packetizer, AggregatesReturnsAndKeepsSingleton)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 cluster(2.0, 0.0, 0.0);
+  const soft_vofod::Vec3 singleton(4.0, 0.0, 0.0);
+  map.addFreeEvidence(cluster, 2.0, 0.0);
+  map.addFreeEvidence(singleton, 2.0, 0.0);
+  map.advanceEpoch(0.0);
+  for (uint32_t index = 0U; index < 10U; ++index)
+  {
+    map.accumulateReturn(
+        cluster + soft_vofod::Vec3(0.0, 0.005 * index, 0.0),
+        0.001 * index, false, true, index, soft_vofod::Vec3::UnitX(),
+        1.0, 2.0, 1.0);
+  }
+  map.accumulateReturn(
+      singleton, 0.01, false, true, 10U, soft_vofod::Vec3::UnitX(),
+      1.0, 2.0, 1.0);
+  const auto commit = map.advanceEpoch(0.2);
+  ASSERT_TRUE(commit.has_value());
+  ASSERT_EQ(commit->violation_packets.size(), 2U);
+  std::vector<uint32_t> counts;
+  for (const soft_vofod::Event& packet : commit->violation_packets)
+  {
+    counts.push_back(packet.point_count);
+    EXPECT_EQ(packet.original_indices.size(), packet.point_count);
+    EXPECT_GT(packet.covariance.diagonal().minCoeff(),
+              config.map.packet_sensor_variance_m2);
+  }
+  std::sort(counts.begin(), counts.end());
+  EXPECT_EQ(counts, (std::vector<uint32_t>{1U, 10U}));
+}
+
+TEST(Packetizer, DoesNotMergeTargetsBeyondPacketGate)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 first(2.1, 0.0, 0.0);
+  const soft_vofod::Vec3 second(2.9, 0.0, 0.0);
+  map.addFreeEvidence(first, 2.0, 0.0);
+  map.addFreeEvidence(second, 2.0, 0.0);
+  map.advanceEpoch(0.0);
+  map.accumulateReturn(
+      first, 0.01, false, true, 1U, soft_vofod::Vec3::UnitX(),
+      1.0, 2.0, 1.0);
+  map.accumulateReturn(
+      second, 0.01, false, true, 2U, soft_vofod::Vec3::UnitX(),
+      1.0, 2.0, 1.0);
+  const auto commit = map.advanceEpoch(0.2);
+  ASSERT_TRUE(commit.has_value());
+  EXPECT_EQ(commit->violation_packets.size(), 2U);
 }
 
 TEST(MotionModel, WhiteAccelerationScalesWithRealDt)
@@ -581,15 +635,17 @@ TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
   EXPECT_EQ(core.backgroundMap().query(soft_vofod::Vec3(5.0, 0.0, 0.0)).state,
             soft_vofod::VoxelState::confident_free);
 
-  for (uint32_t scan = 5U; scan < 9U; ++scan)
+  size_t packets = 0U;
+  for (uint32_t scan = 5U; scan < 10U; ++scan)
   {
     soft_vofod::RaySample sample = ray(
         0.1 * scan, soft_vofod::ReturnStatus::valid_return, 5.0);
     sample.original_index = 0U;
     const soft_vofod::ScanResult result =
         core.processScan(scan, sample.time_s, {sample});
-    EXPECT_EQ(result.events.size(), 1U);
+    packets += result.events.size();
   }
+  EXPECT_GE(packets, 3U);
   EXPECT_FALSE(core.tracks().empty());
   EXPECT_NE(core.backgroundMap().query(
       soft_vofod::Vec3(5.0, 0.0, 0.0)).state,
@@ -630,10 +686,16 @@ TEST(Pipeline, RawEventNeverCreatesAMapSupport)
   }
   const soft_vofod::RaySample hit = ray(
       0.4, soft_vofod::ReturnStatus::valid_return, 5.0);
-  const soft_vofod::ScanResult result =
+  soft_vofod::ScanResult result =
       core.processScan(4U, hit.time_s, {hit});
-  ASSERT_EQ(result.events.size(), 1U);
+  EXPECT_TRUE(result.events.empty());
   EXPECT_TRUE(result.tracks.empty());
+  EXPECT_EQ(result.diagnostics.support_count, 0U);
+  const soft_vofod::RaySample flush = ray(
+      0.6, soft_vofod::ReturnStatus::no_return);
+  result = core.processScan(5U, flush.time_s, {flush});
+  ASSERT_EQ(result.events.size(), 1U);
+  EXPECT_EQ(result.events.front().point_count, 1U);
   EXPECT_EQ(result.diagnostics.support_count, 0U);
 }
 
@@ -665,14 +727,14 @@ TEST(Pipeline, ExistenceHysteresisAndHardTimeoutReason)
   makeHoverTrack(&core, 5.0);
 
   soft_vofod::RaySample hit = ray(
-      0.7, soft_vofod::ReturnStatus::valid_return, 5.0);
-  soft_vofod::ScanResult result = core.processScan(7U, hit.time_s, {hit});
+      0.9, soft_vofod::ReturnStatus::valid_return, 5.0);
+  soft_vofod::ScanResult result = core.processScan(9U, hit.time_s, {hit});
   ASSERT_EQ(result.tracks.size(), 1U);
   EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::confirmed);
 
   soft_vofod::RaySample invalid = ray(
-      1.0, soft_vofod::ReturnStatus::invalid_range);
-  result = core.processScan(8U, invalid.time_s, {invalid});
+      1.2, soft_vofod::ReturnStatus::invalid_range);
+  result = core.processScan(10U, invalid.time_s, {invalid});
   ASSERT_EQ(result.tracks.size(), 1U);
   EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::deleting);
   EXPECT_EQ(result.tracks.front().deletion_reason, "hard_timeout");

@@ -46,6 +46,11 @@ event:
   background_exclusion_m: 0.75
   background_search_m: 2.0
   distance_scale_m: 1.0
+  packet_dt_s: 0.03
+  packet_radius_m: 0.75
+  packet_sensor_variance_m2: 0.1
+  packet_shape_sigma_m: 0.35
+  packet_sampling_variance_floor_m2: 0.04
 
 birth:
   buffer_duration_s: 2.0

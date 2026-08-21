@@ -62,6 +62,11 @@ void validateConfig(const Config& config)
       config.map.unknown_position_sigma_m < 0.0 ||
       !finitePositive(config.map.unknown_match_distance_m) ||
       !finitePositive(config.map.unknown_candidate_timeout_s) ||
+      !finitePositive(config.map.packet_dt_s) ||
+      !finitePositive(config.map.packet_radius_m) ||
+      !finitePositive(config.map.packet_sensor_variance_m2) ||
+      config.map.packet_shape_sigma_m < 0.0 ||
+      config.map.packet_sampling_variance_floor_m2 < 0.0 ||
       !finitePositive(config.map.valid_free_weight) ||
       !finitePositive(config.map.no_return_free_weight) ||
       config.map.no_return_free_weight > config.map.valid_free_weight ||
@@ -506,6 +511,109 @@ bool BackgroundMap::updateUnknownCandidate(
   return true;
 }
 
+std::vector<Event> BackgroundMap::packetizeViolationComponent(
+    const std::vector<size_t>& component) const
+{
+  std::map<uint64_t, std::vector<const EpochReturnVoxel::Sample*>> windows;
+  for (const size_t linear_index : component)
+  {
+    for (const EpochReturnVoxel::Sample& sample :
+         epoch_returns_.at(linear_index).samples)
+    {
+      if (sample.track_explained ||
+          sample.free_confidence < config_.event_free_probability_threshold)
+        continue;
+      const uint64_t window = static_cast<uint64_t>(
+          std::floor(sample.time_s / config_.packet_dt_s));
+      windows[window].push_back(&sample);
+    }
+  }
+
+  std::vector<Event> output;
+  for (const auto& window : windows)
+  {
+    const auto& samples = window.second;
+    std::vector<size_t> parent(samples.size());
+    std::iota(parent.begin(), parent.end(), 0U);
+    auto root = [&parent](size_t index)
+    {
+      while (parent[index] != index)
+      {
+        parent[index] = parent[parent[index]];
+        index = parent[index];
+      }
+      return index;
+    };
+    for (size_t first = 0U; first < samples.size(); ++first)
+    {
+      for (size_t second = first + 1U; second < samples.size(); ++second)
+      {
+        if ((samples[first]->point_m - samples[second]->point_m).norm() >
+            config_.packet_radius_m)
+          continue;
+        const size_t first_root = root(first);
+        const size_t second_root = root(second);
+        if (first_root != second_root)
+          parent[std::max(first_root, second_root)] =
+              std::min(first_root, second_root);
+      }
+    }
+    std::map<size_t, std::vector<const EpochReturnVoxel::Sample*>> clusters;
+    for (size_t index = 0U; index < samples.size(); ++index)
+      clusters[root(index)].push_back(samples[index]);
+    for (const auto& cluster : clusters)
+    {
+      Event packet;
+      packet.group_id = window.first;
+      packet.stamp_start_s = std::numeric_limits<double>::infinity();
+      packet.stamp_end_s = -std::numeric_limits<double>::infinity();
+      packet.background_distance_m = std::numeric_limits<double>::infinity();
+      std::vector<double> xs;
+      std::vector<double> ys;
+      std::vector<double> zs;
+      for (const EpochReturnVoxel::Sample* sample : cluster.second)
+      {
+        xs.push_back(sample->point_m.x());
+        ys.push_back(sample->point_m.y());
+        zs.push_back(sample->point_m.z());
+        packet.ray_direction += sample->ray_direction;
+        packet.free_confidence += sample->free_confidence;
+        packet.background_distance_m = std::min(
+            packet.background_distance_m, sample->background_distance_m);
+        packet.anomaly_score += sample->anomaly_score;
+        packet.stamp_start_s = std::min(
+            packet.stamp_start_s, sample->time_s);
+        packet.stamp_end_s = std::max(packet.stamp_end_s, sample->time_s);
+        packet.original_indices.push_back(sample->original_index);
+      }
+      packet.position_m = Vec3(median(xs), median(ys), median(zs));
+      packet.point_count = static_cast<uint32_t>(cluster.second.size());
+      packet.time_s = packet.stamp_end_s;
+      std::sort(
+          packet.original_indices.begin(), packet.original_indices.end());
+      packet.original_index = packet.original_indices.front();
+      packet.free_confidence /= static_cast<double>(packet.point_count);
+      packet.anomaly_score /= static_cast<double>(packet.point_count);
+      if (packet.ray_direction.norm() > kProbabilityEpsilon)
+        packet.ray_direction.normalize();
+      Mat3 spread = Mat3::Zero();
+      for (const EpochReturnVoxel::Sample* sample : cluster.second)
+      {
+        const Vec3 difference = sample->point_m - packet.position_m;
+        spread += difference * difference.transpose();
+      }
+      if (packet.point_count > 1U)
+        spread /= static_cast<double>(packet.point_count - 1U);
+      packet.covariance = spread +
+          (config_.packet_sensor_variance_m2 +
+           config_.packet_shape_sigma_m * config_.packet_shape_sigma_m +
+           config_.packet_sampling_variance_floor_m2) * Mat3::Identity();
+      output.push_back(std::move(packet));
+    }
+  }
+  return output;
+}
+
 std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     const double time_s)
 {
@@ -655,7 +763,14 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     else if (background_supported)
       ++output.background_components;
     else if (free_violation)
+    {
       ++output.free_violation_components;
+      std::vector<Event> packets = packetizeViolationComponent(component);
+      output.violation_packets.insert(
+          output.violation_packets.end(),
+          std::make_move_iterator(packets.begin()),
+          std::make_move_iterator(packets.end()));
+    }
     else if (unknown_component)
       ++output.unknown_components;
     if (unknown_component)
@@ -704,7 +819,20 @@ void BackgroundMap::accumulateReturn(
     const Vec3& point_m, const double time_s, const bool track_explained,
     const bool allow_background)
 {
-  if (!point_m.allFinite() || !std::isfinite(time_s))
+  accumulateReturn(
+      point_m, time_s, track_explained, allow_background, 0U, Vec3::Zero(),
+      0.0, config_.event_background_search_m, 0.0);
+}
+
+void BackgroundMap::accumulateReturn(
+    const Vec3& point_m, const double time_s, const bool track_explained,
+    const bool allow_background, const uint32_t original_index,
+    const Vec3& ray_direction, const double free_confidence,
+    const double background_distance_m, const double anomaly_score)
+{
+  if (!point_m.allFinite() || !ray_direction.allFinite() ||
+      !std::isfinite(time_s) || !std::isfinite(free_confidence) ||
+      !std::isfinite(background_distance_m) || !std::isfinite(anomaly_score))
     throw std::invalid_argument("invalid deferred background endpoint");
   if (!geometry_.inLimits(
           static_cast<float>(point_m.x()), static_cast<float>(point_m.y()),
@@ -720,6 +848,16 @@ void BackgroundMap::accumulateReturn(
   if (track_explained)
     ++item.track_explained_returns;
   item.allow_background = item.allow_background || allow_background;
+  EpochReturnVoxel::Sample sample;
+  sample.point_m = point_m;
+  sample.ray_direction = ray_direction;
+  sample.time_s = time_s;
+  sample.free_confidence = free_confidence;
+  sample.background_distance_m = background_distance_m;
+  sample.anomaly_score = anomaly_score;
+  sample.original_index = original_index;
+  sample.track_explained = track_explained;
+  item.samples.push_back(std::move(sample));
 }
 
 void BackgroundMap::observeBackground(
@@ -1597,6 +1735,16 @@ void SoftVofodCore::processBatch(
         epoch_commit->promoted_unknown_candidates;
     result->diagnostics.expired_unknown_candidates +=
         epoch_commit->expired_unknown_candidates;
+    result->diagnostics.violation_packets +=
+        epoch_commit->violation_packets.size();
+    result->diagnostics.events += epoch_commit->violation_packets.size();
+    for (Event packet : epoch_commit->violation_packets)
+    {
+      packet.scan_id = scan_id;
+      result->events.push_back(packet);
+      if (birth_enabled)
+        birth_buffer_.push_back(std::move(packet));
+    }
   }
   const auto epoch_end = std::chrono::steady_clock::now();
   const double batch_time_s = rays.back().time_s;
@@ -1629,7 +1777,7 @@ void SoftVofodCore::processBatch(
         background_map_.nearCandidateBackground(ray.point_m);
     if (unresolved_candidate)
       ++result->diagnostics.unresolved_candidate_returns;
-    const bool event = birth_enabled && !unresolved_candidate && query.inside &&
+    const bool event = query.inside &&
         query.state == VoxelState::confident_free &&
         query.free_probability >= config_.map.event_free_probability_threshold &&
         background_distances[ray_index] >=
@@ -1639,23 +1787,7 @@ void SoftVofodCore::processBatch(
             config_.map.event_distance_scale_m);
     const double anomaly = event
         ? query.confidence * query.free_probability * distance_weight : 0.0;
-    if (event)
-    {
-      Event output_event;
-      output_event.scan_id = scan_id;
-      output_event.original_index = ray.original_index;
-      output_event.group_id = static_cast<uint64_t>(std::floor(
-          ray.time_s / config_.birth.event_group_dt_s));
-      output_event.time_s = ray.time_s;
-      output_event.position_m = ray.point_m;
-      output_event.ray_direction = ray.direction_unit;
-      output_event.free_confidence = query.confidence * query.free_probability;
-      output_event.background_distance_m = background_distances[ray_index];
-      output_event.anomaly_score = anomaly;
-      result->events.push_back(output_event);
-      ray_is_event[ray_index] = true;
-      ++result->diagnostics.events;
-    }
+    ray_is_event[ray_index] = event;
 
     const bool stable_background_consistent =
         query.state == VoxelState::stable_background ||
@@ -1666,9 +1798,6 @@ void SoftVofodCore::processBatch(
       Measurement measurement;
       measurement.ray = &ray;
       measurement.anomaly_score = anomaly;
-      measurement.is_event = event;
-      if (event)
-        measurement.event_result_index = result->events.size() - 1U;
       ray_measurement_index[ray_index] = measurements.size();
       measurements.push_back(measurement);
     }
@@ -1777,7 +1906,6 @@ void SoftVofodCore::processBatch(
 
   std::vector<bool> matched(tracks_before_birth, false);
   std::vector<double> likelihoods(tracks_before_birth, 1.0);
-  std::vector<bool> result_event_matched(result->events.size(), false);
   for (size_t track_index = 0U; track_index < tracks_before_birth; ++track_index)
   {
     if (anchor[track_index] < 0)
@@ -1792,8 +1920,6 @@ void SoftVofodCore::processBatch(
       xs.push_back(point.x());
       ys.push_back(point.y());
       zs.push_back(point.z());
-      if (measurements[measurement_index].is_event)
-        result_event_matched[measurements[measurement_index].event_result_index] = true;
     }
     const Vec3 measurement(median(xs), median(ys), median(zs));
     Track& track = tracks_[track_index];
@@ -1826,13 +1952,6 @@ void SoftVofodCore::processBatch(
     ++result->diagnostics.matches;
   }
 
-  for (const Measurement& measurement : measurements)
-  {
-    if (!measurement.is_event ||
-        result_event_matched[measurement.event_result_index])
-      continue;
-    birth_buffer_.push_back(result->events[measurement.event_result_index]);
-  }
   prune(batch_time_s);
 
   std::unordered_set<uint32_t> born_ids;
@@ -1965,14 +2084,19 @@ void SoftVofodCore::processBatch(
       background_map_.quarantine(
           ray.point_m, batch_time_s + config_.tracker.quarantine_duration_s);
     }
-    else if (ray_is_event[ray_index])
-    {
-      background_map_.quarantine(
-          ray.point_m, batch_time_s + config_.micro_batch_dt_s);
-    }
     background_map_.accumulateReturn(
         ray.point_m, ray.time_s, track_protected_endpoint,
-        background_endpoint_updates_enabled);
+        background_endpoint_updates_enabled, ray.original_index,
+        ray.direction_unit,
+        old_queries[ray_index].confidence *
+            old_queries[ray_index].free_probability,
+        background_distances[ray_index],
+        ray_is_event[ray_index] ?
+            old_queries[ray_index].confidence *
+                old_queries[ray_index].free_probability *
+                std::min(1.0, background_distances[ray_index] /
+                    config_.map.event_distance_scale_m)
+            : 0.0);
   }
   const auto map_end = std::chrono::steady_clock::now();
   result->diagnostics.classification_ms +=

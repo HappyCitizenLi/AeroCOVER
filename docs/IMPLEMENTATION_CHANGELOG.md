@@ -225,3 +225,21 @@
   该结果不算实时/质量通过，明确要求 Phase 7 将 birth 输入改为 epoch-classified F packets。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 358 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 7 violation packetizer
+
+- 删除生产路径的 `raw endpoint -> result event -> birth_buffer`；只有 map epoch 明确分类为 F
+  的 component 才生成 violation packets，raw return 不再建立 quarantine/support。
+- F returns 先按 30 ms 窗口，再用 0.75 m 3D 距离 connected components 聚合；允许
+  singleton。packet 发布 start/end stamp、point count、全部 original indices、median centroid、
+  mean ray/anomaly/free confidence、min background distance 与 3x3 covariance。
+- packet covariance 使用 sensor variance + shape variance + sampling floor + 实际 spread，绝不
+  按 `N` 相除产生虚假精度；旧 `Event`/birth 接口暂时以 packet centroid 兼容，避免复制 tracker。
+- 单测覆盖 10 returns→1 packet、singleton→1 packet、超过 packet gate→2 packets；ROS
+  integration 覆盖 deferred packet→trajectory birth。局部 build 无 warning，62 tests 零失败。
+- S06/1.0× coverage 恢复有效；scored event count 7741→508，diagnostic packets 986，track
+  peak 129→93，p95 151→112 ms，HOTA 0.071→0.086。旧 birth 仍把 packets 反复生成 285
+  tracks/births，FP 16,839；Phase 8 必须增加 packet consumption 与 per-cell/epoch birth cap。
+- ROS integration warm-up 改为覆盖至少三个完整 map epochs，不再依赖测试启动时绝对 ROS
+  time 与 0.2 s 边界的偶然相位；修正后全工作区串行 tests 11/11 成功，
+  `catkin_test_results build` 为 362 tests、0 error/failure/skipped（build 11/11、无 warning）。

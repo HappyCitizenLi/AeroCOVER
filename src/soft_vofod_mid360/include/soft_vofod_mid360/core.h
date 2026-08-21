@@ -70,6 +70,11 @@ struct MapConfig
   double unknown_position_sigma_m = 0.15;
   double unknown_match_distance_m = 1.0;
   double unknown_candidate_timeout_s = 1.0;
+  double packet_dt_s = 0.03;
+  double packet_radius_m = 0.75;
+  double packet_sensor_variance_m2 = 0.1;
+  double packet_shape_sigma_m = 0.35;
+  double packet_sampling_variance_floor_m2 = 0.04;
   double valid_free_weight = 1.0;
   double no_return_free_weight = 0.5;
   double background_weight = 1.0;
@@ -176,6 +181,11 @@ struct Event
   double free_confidence = 0.0;
   double background_distance_m = 0.0;
   double anomaly_score = 0.0;
+  double stamp_start_s = 0.0;
+  double stamp_end_s = 0.0;
+  uint32_t point_count = 1U;
+  std::vector<uint32_t> original_indices;
+  Mat3 covariance = Mat3::Identity();
 };
 
 struct Track
@@ -256,6 +266,7 @@ struct ProcessDiagnostics
   size_t unknown_candidates = 0;
   size_t promoted_unknown_candidates = 0;
   size_t expired_unknown_candidates = 0;
+  size_t violation_packets = 0;
   size_t unresolved_candidate_returns = 0;
 };
 
@@ -295,6 +306,7 @@ struct MapEpochCommit
   size_t unknown_candidates = 0;
   size_t promoted_unknown_candidates = 0;
   size_t expired_unknown_candidates = 0;
+  std::vector<Event> violation_packets;
 };
 
 class BackgroundMap
@@ -317,6 +329,11 @@ public:
   void accumulateReturn(
       const Vec3& point_m, double time_s, bool track_explained,
       bool allow_background);
+  void accumulateReturn(
+      const Vec3& point_m, double time_s, bool track_explained,
+      bool allow_background, uint32_t original_index,
+      const Vec3& ray_direction, double free_confidence,
+      double background_distance_m, double anomaly_score);
   void observeBackground(
       const Vec3& point_m, double time_s, uint64_t group_id,
       bool allow_promotion, bool background_supported = false);
@@ -334,6 +351,8 @@ private:
       std::vector<size_t> component, double time_s, bool allow_create,
       MapEpochCommit* output);
   void rebuildCandidateBackgroundIndex();
+  std::vector<Event> packetizeViolationComponent(
+      const std::vector<size_t>& component) const;
 
   MapConfig config_;
   vofod::VoxelMap geometry_;
@@ -350,6 +369,18 @@ private:
     size_t returns = 0;
     size_t track_explained_returns = 0;
     bool allow_background = false;
+    struct Sample
+    {
+      Vec3 point_m = Vec3::Zero();
+      Vec3 ray_direction = Vec3::Zero();
+      double time_s = 0.0;
+      double free_confidence = 0.0;
+      double background_distance_m = 0.0;
+      double anomaly_score = 0.0;
+      uint32_t original_index = 0U;
+      bool track_explained = false;
+    };
+    std::vector<Sample> samples;
   };
   std::unordered_map<size_t, EpochReturnVoxel> epoch_returns_;
   struct CandidateBackground
@@ -415,8 +446,6 @@ private:
   {
     const RaySample* ray = nullptr;
     double anomaly_score = 0.0;
-    bool is_event = false;
-    size_t event_result_index = std::numeric_limits<size_t>::max();
   };
 
   struct Support

@@ -135,7 +135,9 @@ class PipelineTest(unittest.TestCase):
         self.assertAlmostEqual(float(values["map_bootstrap_start_stamp"]),
                                start.to_sec(), places=6)
 
-        for scan_id in range(1, 5):
+        # Cover at least three 0.2 s epochs regardless of the absolute ROS
+        # time phase at which this rostest starts.
+        for scan_id in range(1, 9):
             self._publish(
                 scan_id, start + rospy.Duration(0.1 * scan_id), False
             )
@@ -143,18 +145,30 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(len(events.events), 0)
             self.assertEqual(len(tracks.tracks), 0)
 
-        for scan_id in range(5, 8):
+        packet_count = 0
+        packet_point_counts = []
+        latest_tracks = None
+        for scan_id in range(9, 19):
             self._publish(
                 scan_id, start + rospy.Duration(0.1 * scan_id), True
             )
             events, tracks = self._wait_for_scan(scan_id)
-            self.assertEqual(len(events.events), 1)
-            if scan_id < 7:
-                self.assertEqual(len(tracks.tracks), 0)
-            else:
-                self.assertEqual(len(tracks.tracks), 1)
-                self.assertEqual(tracks.tracks[0].state, tracks.tracks[0].TENTATIVE)
-                self.assertAlmostEqual(tracks.tracks[0].position.x, 5.0, places=3)
+            packet_count += len(events.events)
+            packet_point_counts.extend(event.point_count for event in events.events)
+            latest_tracks = tracks
+
+        self._publish(19, start + rospy.Duration(1.9), False)
+        events, tracks = self._wait_for_scan(19)
+        packet_count += len(events.events)
+        packet_point_counts.extend(event.point_count for event in events.events)
+        if tracks.tracks:
+            latest_tracks = tracks
+
+        self.assertGreaterEqual(packet_count, 3)
+        self.assertTrue(all(count == 1 for count in packet_point_counts))
+        self.assertIsNotNone(latest_tracks)
+        self.assertGreaterEqual(len(latest_tracks.tracks), 1)
+        self.assertAlmostEqual(latest_tracks.tracks[0].position.x, 5.0, places=3)
 
 
 if __name__ == "__main__":

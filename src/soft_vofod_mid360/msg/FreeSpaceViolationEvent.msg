@@ -6,4 +6,8 @@ geometry_msgs/Vector3 ray_direction
 float32 free_confidence
 float32 background_distance
 float32 anomaly_score
-
+time stamp_start
+time stamp_end
+uint32 point_count
+uint32[] original_indices
+float64[9] covariance
