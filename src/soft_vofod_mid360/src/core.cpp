@@ -2073,6 +2073,8 @@ void SoftVofodCore::processBatch(
         background_distances[ray_index] >=
             config_.map.event_background_exclusion_m;
     ray_is_event[ray_index] = event;
+    if (event)
+      ++result->diagnostics.raw_anomaly_endpoints;
 
   }
   const auto classification_end = std::chrono::steady_clock::now();

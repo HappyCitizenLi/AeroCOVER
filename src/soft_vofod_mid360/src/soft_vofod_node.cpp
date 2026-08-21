@@ -646,6 +646,9 @@ private:
           "micro_batches", number(diagnostics->micro_batches)));
       status.values.push_back(diagnosticValue(
           "valid_returns", number(diagnostics->valid_returns)));
+      status.values.push_back(diagnosticValue(
+          "raw_anomaly_endpoints",
+          number(diagnostics->raw_anomaly_endpoints)));
       status.values.push_back(diagnosticValue("events", number(diagnostics->events)));
       status.values.push_back(diagnosticValue(
           "violation_packets", number(diagnostics->violation_packets)));

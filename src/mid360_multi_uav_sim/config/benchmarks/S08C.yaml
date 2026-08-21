@@ -1,0 +1,23 @@
+schema_version: 1
+scenario_id: S08C_cold_start_unknown_stationary_object
+world: E1_sparse
+seed: 1008
+start_delay_s: 4.0
+duration_s: 45.0
+score_start_s: 10.5
+score_end_s: 44.5
+purpose: stationary UAV in unknown space remains geometrically ambiguous
+ray_time_geometry_mode: per_ray_pose
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0, yaw: 0.0}
+    - {t: 20.0, x: 6.0, y: 0.0, z: 2.0, yaw: 0.3}
+    - {t: 45.0, x: 12.0, y: 1.0, z: 2.5, yaw: 0.7}
+targets:
+  - id: uav2
+    spawn_time_s: 10.5
+    waypoints:
+      - {t: 0.0, x: 18.0, y: 2.0, z: 3.0}
+      - {t: 45.0, x: 18.0, y: 2.0, z: 3.0}
+events:
+  - {t: 20.0, id: observe_unknown_stationary_object}

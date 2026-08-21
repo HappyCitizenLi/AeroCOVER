@@ -1,0 +1,22 @@
+schema_version: 1
+scenario_id: NEG04_new_area_exploration_no_target
+world: E3_cluttered
+seed: 1104
+start_delay_s: 4.0
+duration_s: 120.0
+score_start_s: 10.5
+score_end_s: 119.5
+purpose: two-minute no-target exploration from open space into unseen clutter
+ray_time_geometry_mode: per_ray_pose
+observer:
+  waypoints:
+    - {t: 0.0, x: -6.0, y: 0.0, z: 2.0, yaw: 0.0}
+    - {t: 35.0, x: 0.0, y: -4.0, z: 2.0, yaw: 0.4}
+    - {t: 70.0, x: 8.0, y: 4.0, z: 2.5, yaw: 1.1}
+    - {t: 95.0, x: 14.0, y: 0.0, z: 3.0, yaw: -0.5}
+    - {t: 120.0, x: 4.0, y: 0.0, z: 2.0, yaw: 0.0}
+targets: []
+events:
+  - {t: 35.0, id: enter_clutter}
+  - {t: 70.0, id: deep_exploration}
+  - {t: 95.0, id: east_wall_view}

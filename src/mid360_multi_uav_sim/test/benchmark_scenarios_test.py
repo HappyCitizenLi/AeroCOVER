@@ -23,7 +23,10 @@ class BenchmarkScenariosTest(unittest.TestCase):
 
     def test_all_scenes_are_target_free_during_common_warmup(self):
         expected_targets = {"S01": 1, "S02": 1, "S03": 2, "S04": 4,
-                            "S05": 1, "S06": 1, "S07": 1}
+                            "S05": 1, "S06": 1, "S07": 1,
+                            "S08A": 0, "S08B": 1, "S08C": 1,
+                            "NEG01": 0, "NEG02": 0, "NEG03": 0,
+                            "NEG04": 0}
         for scene, count in expected_targets.items():
             config = self.load(scene)
             self.assertEqual(config["schema_version"], 1)
@@ -35,6 +38,21 @@ class BenchmarkScenariosTest(unittest.TestCase):
                 self.assertGreaterEqual(target["spawn_time_s"], config["score_start_s"])
                 self.assertEqual(target["waypoints"][0]["t"], 0.0)
                 self.assertEqual(target["waypoints"][-1]["t"], config["duration_s"])
+
+    def test_negative_controls_and_cold_start_contracts(self):
+        for scene in ("NEG01", "NEG02", "NEG03", "NEG04"):
+            config = self.load(scene)
+            self.assertEqual(config["targets"], [])
+            self.assertGreaterEqual(config["duration_s"], 120.0)
+            self.assertGreater(config["score_end_s"] - config["score_start_s"],
+                               108.0)
+        self.assertEqual(self.load("S08A")["targets"], [])
+        moving = self.load("S08B")["targets"][0]["waypoints"]
+        self.assertGreater(len({(item["x"], item["y"], item["z"])
+                                for item in moving}), 1)
+        stationary = self.load("S08C")["targets"][0]["waypoints"]
+        self.assertEqual(len({(item["x"], item["y"], item["z"])
+                              for item in stationary}), 1)
 
     def test_required_semantic_stressors_are_declared(self):
         s01 = self.load("S01")

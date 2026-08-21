@@ -321,3 +321,32 @@
   而非弱 B 权重分支。该语义修正按规范保留，回归进入 Phase 12 根因闭环，不包装为性能提升。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 376 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 12 root-cause experiments
+
+- 新增 NEG01–NEG04（每个 120 s）和 S08A/B/C 场景合同；no-target source 不再启动/伪造
+  visibility truth。新 source 只录 replay/evaluation 必需的 checked rays、world points、TF、
+  observer truth 和事件，不再重复录 raw cloud/rays/identity。
+- evaluator 新增 raw endpoints→packets、packet purity/singleton/false persistence、candidate→stable
+  latency、background expansion、false tentative/confirmed per minute、confirmed stale 0.5/1/3 s、
+  模块时延/复杂度及独立 diagnostics/track/opportunity time-series CSV。E3 map truth 补齐门框、
+  立柱和三面墙；opportunity calibration 只在 5 Hz detector epochs 计分。
+- 正式消融改为 B1–B4，Hungarian 固定：B1 two-packet birth；B2 three-group trajectory；B3 加
+  opportunity/survival；B4 加 confirmed feedback。旧 A1/A2/A3 仍可重放但只作历史。
+- NEG03/NEG04 109 s scored runs 均在 1.0×、100% coverage 下有效：false confirmed 分别
+  0.55/0 per minute、confirmed peak 1/0、p95 48.4/41.2 ms、background expansion recall
+  0.730/0.975。NEG03 false-free 0.221 和 candidate latency p95 17.2 s 仍是未闭环项。
+- B1→B2 在 S01/S03/S04 将 births 分别 272→142、269→192、316→181，但 FP 只下降
+  2–7%，IDSW 未稳定改善；trajectory birth 有效但不能代替地图修正。
+- B2→B3 在 S07 将 FP 447→229、max stale 3.39→0.59 s；在 S05 将 fragmentation
+  9→3、stale>3 s tracks 78→1，但 TP 140→79，证明 survival 修复有效而未标定 `P_D`
+  过强。B3→B4 将 S07 packets 231→3、FP→0、HOTA→0.987；S05 packets
+  4981→343、FP 20871→12061，但 contamination 未下降。
+- 空间统计确认 S01–S06 剩余 false packets 几乎全为 z≈0/range25–32 m 的 sparse grazing
+  ground。两种 F→candidate 并行实验都增加 packets/births，已完整撤回且未留下生产开关。
+  详细证据、失败分支和门槛判断见 `SOFT_VOFOD_V2_ROOT_CAUSE_EXPERIMENTS.md`。
+- 因磁盘约束，NEG03/NEG04 评估后仅删除可由场景重建的 source/output bag（约 4 GiB）；
+  manifests、SHA、metrics 和时间序列均保留。现有 S01–S07 source bags 未删除。
+- 定向 9-package build 无 warning；SOFT/runner/evaluator/scenario tests 均通过。全工作区
+  `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 379 tests、0 error/failure/skipped。

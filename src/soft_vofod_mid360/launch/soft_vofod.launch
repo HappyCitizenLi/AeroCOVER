@@ -10,6 +10,7 @@
   <arg name="opportunity_aware_existence" default="true"/>
   <arg name="target_feedback" default="true"/>
   <arg name="hungarian_association" default="true"/>
+  <arg name="survival_lambda_per_s" default="0.05"/>
   <arg name="output" default="screen"/>
 
   <node pkg="soft_vofod_mid360" type="soft_vofod_node"
@@ -24,5 +25,7 @@
     <param name="ablation/target_feedback" value="$(arg target_feedback)"/>
     <param name="ablation/hungarian_association"
            value="$(arg hungarian_association)"/>
+    <param name="tracker/survival_lambda_per_s"
+           value="$(arg survival_lambda_per_s)"/>
   </node>
 </launch>

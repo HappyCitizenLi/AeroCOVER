@@ -236,6 +236,7 @@ struct ProcessDiagnostics
   size_t input_rays = 0;
   size_t micro_batches = 0;
   size_t valid_returns = 0;
+  size_t raw_anomaly_endpoints = 0;
   size_t events = 0;
   size_t births = 0;
   size_t matches = 0;

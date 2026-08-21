@@ -57,7 +57,9 @@ class EvaluationTest(unittest.TestCase):
     def test_opportunity_calibration_and_map_contamination(self):
         opportunity = METRICS.opportunity_metrics([
             (0.0, [{"track_id": 1, "pd": 0.8, "effective": 4.0, "matched": True},
-                   {"track_id": 2, "pd": 0.0, "effective": 0.0, "matched": False}])])
+                   {"track_id": 2, "pd": 0.0, "effective": 0.0, "matched": False}]),
+            (0.1, [{"track_id": 1, "pd": 0.8, "effective": 4.0,
+                    "matched": False}])], detector_stamps=[0.0])
         self.assertLess(opportunity["Brier"], 0.03)
         self.assertEqual(opportunity["no_opportunity_samples"], 1)
 
@@ -66,9 +68,39 @@ class EvaluationTest(unittest.TestCase):
         path, _ = METRICS.target_path_voxels(truth)
         contaminated = next(iter(path))
         result = METRICS.map_metrics(
-            [(2.0, {contaminated})], [], truth, "E0_open")
+            [(2.0, {contaminated})], [], [], truth, "E0_open")
         self.assertGreater(result["target_contamination_ratio"], 0.0)
         self.assertLess(result["free_space_retention"], 1.0)
+
+    def test_packet_ghost_and_diagnostic_metrics(self):
+        truth = [(0.0, [{"position": (1.0, 0.0, 0.0),
+                         "actual_returns": 1}])]
+        packets = [(0.0, [
+            {"position": (1.0, 0.0, 0.0), "point_count": 4},
+            {"position": (8.0, 0.0, 0.0), "point_count": 1},
+        ])]
+        event = METRICS.event_metrics(packets, truth, 60.0)
+        self.assertEqual(event["event_count"], 2)
+        self.assertEqual(event["raw_anomaly_points_in_packets"], 5)
+        self.assertEqual(event["packet_singleton_ratio"], 0.5)
+
+        tracks = [
+            {"stamp": 1.0, "id": 1, "state": "tentative",
+             "existence": 0.6, "stale_s": 0.0},
+            {"stamp": 2.0, "id": 1, "state": "confirmed",
+             "existence": 0.8, "stale_s": 1.2},
+        ]
+        health = METRICS.track_health_metrics(tracks, 60.0, no_target=True)
+        self.assertEqual(health["false_confirmed_tracks_per_min"], 1.0)
+        self.assertEqual(health["confirmed_stale_samples"]["1.0"], 1)
+        self.assertEqual(health["confirmed_stale_unique_tracks"]["1.0"], 1)
+        diagnostics = METRICS.diagnostics_metrics([
+            (1.0, {"processing_ms": 10.0, "track_count": 2.0}),
+            (2.0, {"processing_ms": 20.0, "track_count": 3.0}),
+        ])
+        self.assertEqual(
+            diagnostics["module_runtime_ms"]["processing_ms"]["p50"], 15.0)
+        self.assertEqual(diagnostics["complexity"]["track_count"]["max"], 3.0)
 
     def test_resource_parser(self):
         with tempfile.NamedTemporaryFile("w", delete=False) as stream:
@@ -85,6 +117,12 @@ class EvaluationTest(unittest.TestCase):
             self.assertEqual(parsed["wall_elapsed_s"], 4.0)
         finally:
             os.unlink(path)
+
+    def test_clutter_static_geometry_includes_walls_and_pillars(self):
+        voxels = METRICS.static_voxels("E3_cluttered")
+        self.assertIn(METRICS.quantize((18.0, 0.0, 4.0)), voxels)
+        self.assertIn(METRICS.quantize((4.0, 8.0, 4.0)), voxels)
+        self.assertIn(METRICS.quantize((5.6, 0.0, 2.0)), voxels)
 
 
 if __name__ == "__main__":

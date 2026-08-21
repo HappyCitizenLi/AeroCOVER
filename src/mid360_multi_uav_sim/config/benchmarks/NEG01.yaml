@@ -1,0 +1,15 @@
+schema_version: 1
+scenario_id: NEG01_static_observer_no_target
+world: E0_open
+seed: 1101
+start_delay_s: 4.0
+duration_s: 120.0
+score_start_s: 10.5
+score_end_s: 119.5
+purpose: two-minute static-observer no-target false-positive control
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0}
+    - {t: 120.0, x: 0.0, y: 0.0, z: 2.0}
+targets: []
+events: []

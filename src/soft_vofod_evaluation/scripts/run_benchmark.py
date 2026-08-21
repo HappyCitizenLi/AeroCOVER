@@ -24,8 +24,10 @@ from roslib.packages import find_node
 import yaml
 
 
-ALGORITHMS = ("B0", "A1", "A2", "A3")
-SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
+ALGORITHMS = ("B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3")
+DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
+SCENES = DEFAULT_SCENES + (
+    "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04")
 WORLD_FILES = {
     "E0_open": "E0_open.world",
     "E1_sparse": "E1_sparse.world",
@@ -75,8 +77,14 @@ SUMMARY_METRICS = {
     "track_completeness_mean": ("track_set", "track_completeness_mean"),
     "event_recall": ("event", "recall"),
     "event_false_per_min": ("event", "false_events_per_min"),
+    "packet_singleton_ratio": ("event", "packet_singleton_ratio"),
+    "packet_purity": ("event", "packet_purity"),
     "opportunity_Brier": ("opportunity", "Brier"),
     "target_contamination_ratio": ("map", "target_contamination_ratio"),
+    "background_expansion_recall": ("map", "background_expansion_recall"),
+    "false_confirmed_tracks_per_min": (
+        "track_health", "false_confirmed_tracks_per_min"),
+    "max_stale_age_s": ("track_health", "max_stale_age_s"),
     "runtime_p95_ms": ("runtime", "p95_ms"),
     "peak_rss_kib": ("runtime", "peak_rss_kib"),
     "cpu_core_equivalent": ("runtime", "cpu_core_equivalent"),
@@ -177,14 +185,17 @@ def aggregate_results(output_root):
 
     paired = {(row["scene"], row["noise"], row["seed"], row["algorithm"]): row
               for row in rows}
-    delta_columns = ("scene", "noise", "seed", "comparator", "metric",
-                     "A3", "comparator_value", "A3_minus_comparator")
+    delta_columns = ("scene", "noise", "seed", "proposed_algorithm",
+                     "comparator", "metric", "proposed_value",
+                     "comparator_value", "proposed_minus_comparator")
     delta_rows = []
     for scene, noise, seed, algorithm in sorted(paired):
-        if algorithm != "A3":
+        if algorithm not in ("A3", "B4"):
             continue
         proposed = paired[(scene, noise, seed, algorithm)]
-        for comparator in ("B0", "A1", "A2"):
+        comparators = ("B0", "A1", "A2") if algorithm == "A3" \
+            else ("B0", "B1", "B2", "B3")
+        for comparator in comparators:
             baseline = paired.get((scene, noise, seed, comparator))
             if baseline is None:
                 continue
@@ -193,9 +204,12 @@ def aggregate_results(output_root):
                     continue
                 delta_rows.append({
                     "scene": scene, "noise": noise, "seed": seed,
+                    "proposed_algorithm": algorithm,
                     "comparator": comparator, "metric": metric,
-                    "A3": proposed[metric], "comparator_value": baseline[metric],
-                    "A3_minus_comparator": proposed[metric] - baseline[metric],
+                    "proposed_value": proposed[metric],
+                    "comparator_value": baseline[metric],
+                    "proposed_minus_comparator":
+                    proposed[metric] - baseline[metric],
                 })
     with open(os.path.join(metrics_dir, "ablation_deltas.csv"), "w",
               newline="", encoding="utf-8") as stream:
@@ -306,12 +320,14 @@ def validate_run_timing(algorithm, evidence, source_manifest):
     if algorithm != "B0":
         return
     complete = evidence.get("background_warmup_complete_stamp")
-    spawn = source_manifest["first_target_spawn_stamp"]
-    if complete is None or complete >= spawn:
+    gate = source_manifest.get("first_target_spawn_stamp")
+    if gate is None:
+        gate = source_manifest["scoring_start_stamp"]
+    if complete is None or complete >= gate:
         raise RunContractError(
             "INVALID_WARMUP",
-            "B0 warm-up completion {} must precede target spawn {}".format(
-                complete, spawn))
+            "B0 warm-up completion {} must precede scoring/target gate {}".format(
+                complete, gate))
     if evidence.get("first_scored_warmup_active") is not False:
         raise RunContractError(
             "INVALID_WARMUP", "B0 warm-up is active on the first scored frame")
@@ -513,15 +529,16 @@ class BenchmarkRunner:
             changed = True
         if "target_free_input_duration_s" not in manifest or \
                 "first_scored_input_stamp" not in manifest:
-            timing = self.source_timing_contract(os.path.join(
-                os.path.dirname(manifest_path), "source.bag"))
+            timing = self.source_timing_contract(
+                os.path.join(os.path.dirname(manifest_path), "source.bag"),
+                expect_targets=not manifest.get("no_target_control", False))
             manifest.update(timing)
             changed = True
         if changed:
             write_json(manifest_path, manifest)
         return manifest
 
-    def source_timing_contract(self, bag_path):
+    def source_timing_contract(self, bag_path, expect_targets=True):
         first_input = None
         first_spawn = None
         scoring_start = None
@@ -542,14 +559,17 @@ class BenchmarkRunner:
                             else min(first_spawn, event["sim_time"])
                     elif event.get("event") == "scoring_start":
                         scoring_start = event["sim_time"]
-        if first_input is None or first_spawn is None or scoring_start is None:
+        if first_input is None or scoring_start is None or \
+                (expect_targets and first_spawn is None):
             raise RuntimeError("source bag is missing input/spawn/scoring timing evidence")
         first_scored = next(
             (stamp for stamp in input_stamps if stamp >= scoring_start), None)
         if first_scored is None:
             raise RuntimeError("source bag has no input at or after scoring start")
-        target_free = first_spawn - first_input
-        if first_spawn != scoring_start or target_free <= self.required_warmup_s:
+        target_free_gate = first_spawn if first_spawn is not None else scoring_start
+        target_free = target_free_gate - first_input
+        if (first_spawn is not None and first_spawn != scoring_start) or \
+                target_free <= self.required_warmup_s:
             raise RuntimeError(
                 "source target-free input is {:.3f}s; must exceed {:.3f}s and "
                 "spawn exactly at scoring start".format(
@@ -618,15 +638,18 @@ class BenchmarkRunner:
         generated_scenario = os.path.join(source_dir, "scenario.yaml")
         with open(generated_scenario, "w", encoding="utf-8") as stream:
             yaml.safe_dump(scenario, stream, sort_keys=False)
-        ray_mode = "per_ray_pose" if scene == "S07" else "snapshot"
+        ray_mode = scenario.get(
+            "ray_time_geometry_mode",
+            "per_ray_pose" if scene == "S07" else "snapshot")
         observer_model = os.path.join(source_dir, "observer.sdf")
         generated_observer(
             os.path.join(self.sim_root, "models", "observer_uav_dynamic", "model.sdf"),
             observer_model, ray_mode, self.noise_modes[noise]["range_stddev_m"])
         truth_path = os.path.join(source_dir, "truth_evaluator.yaml")
-        with open(truth_path, "w", encoding="utf-8") as stream:
-            yaml.safe_dump(truth_configuration(scenario, ray_mode), stream,
-                           sort_keys=False)
+        if scenario["targets"]:
+            with open(truth_path, "w", encoding="utf-8") as stream:
+                yaml.safe_dump(truth_configuration(scenario, ray_mode), stream,
+                               sort_keys=False)
         world_path = os.path.join(
             self.sim_root, "worlds", WORLD_FILES[scenario["world"]])
         environment = os.environ.copy()
@@ -644,25 +667,28 @@ class BenchmarkRunner:
                 ], os.path.join(source_dir, "simulation.log"), environment)
                 processes.append(launch)
                 wait_for_topic("/uav1/mid360/rays_checked", 45.0, launch)
-                subprocess.run(
-                    ["rosparam", "load", truth_path,
-                     "/visibility_ground_truth_evaluator"], check=True)
-                evaluator = start([
-                    self.truth_evaluator,
-                    "__name:=visibility_ground_truth_evaluator",
-                ], os.path.join(source_dir, "truth_evaluator.log"))
-                processes.append(evaluator)
-                wait_for_topic("/evaluation/visibility_ground_truth", 20.0, evaluator)
+                evaluator = None
+                if scenario["targets"]:
+                    subprocess.run(
+                        ["rosparam", "load", truth_path,
+                         "/visibility_ground_truth_evaluator"], check=True)
+                    evaluator = start([
+                        self.truth_evaluator,
+                        "__name:=visibility_ground_truth_evaluator",
+                    ], os.path.join(source_dir, "truth_evaluator.log"))
+                    processes.append(evaluator)
+                    wait_for_topic(
+                        "/evaluation/visibility_ground_truth", 20.0, evaluator)
                 topics = [
                     "/clock", "/tf", "/tf_static",
-                    "/uav1/mid360/points_raw", "/uav1/mid360/rays_raw",
-                    "/uav1/mid360/scan_identity", "/uav1/mid360/points_world",
+                    "/uav1/mid360/points_world",
                     "/uav1/mid360/rays_checked",
                     "/mid360_multi_uav_sim/scenario_events",
-                    "/evaluation/visibility_ground_truth",
                     "/mid360_multi_uav_sim/ground_truth/uav1/odom",
                 ] + ["/mid360_multi_uav_sim/ground_truth/{}/odom".format(
                     target["id"]) for target in scenario["targets"]]
+                if scenario["targets"]:
+                    topics.append("/evaluation/visibility_ground_truth")
                 recorder = start(
                     ["rosbag", "record", "--lz4", "-O", bag_path] + topics,
                     os.path.join(source_dir, "rosbag_record.log"))
@@ -675,7 +701,7 @@ class BenchmarkRunner:
                 if return_code != 0:
                     raise RuntimeError("simulation launch exited with {}".format(return_code))
                 stop(recorder)
-                if evaluator.poll() not in (None, 0):
+                if evaluator is not None and evaluator.poll() not in (None, 0):
                     raise RuntimeError("truth evaluator crashed")
         finally:
             for process in reversed(processes):
@@ -683,7 +709,8 @@ class BenchmarkRunner:
                 close_log(process)
         if not os.path.exists(bag_path) or os.path.getsize(bag_path) == 0:
             raise RuntimeError("source recorder produced no bag")
-        timing_contract = self.source_timing_contract(bag_path)
+        timing_contract = self.source_timing_contract(
+            bag_path, expect_targets=bool(scenario["targets"]))
         manifest = {
             "schema_version": 1, "scenario": scene,
             "scenario_id": scenario["scenario_id"], "noise_mode": noise,
@@ -691,7 +718,9 @@ class BenchmarkRunner:
             "source_bag_sha256": sha256(bag_path),
             "scenario_config_sha256": sha256(generated_scenario),
             "sensor_model_sha256": sha256(observer_model),
-            "truth_config_sha256": sha256(truth_path),
+            "truth_config_sha256": sha256(truth_path)
+            if scenario["targets"] else None,
+            "no_target_control": not bool(scenario["targets"]),
             "source_implementation_sha256": combined_sha256(
                 self.source_implementation_paths()),
             "git_commit": self.git_commit, "started_utc": started,
@@ -710,13 +739,20 @@ class BenchmarkRunner:
             "A1": ("2", "false", "false", "false"),
             "A2": ("3", "false", "false", "false"),
             "A3": ("3", "true", "true", "true"),
+            "B1": ("2", "false", "false", "true", "0.0"),
+            "B2": ("3", "false", "false", "true", "0.0"),
+            "B3": ("3", "true", "false", "true", "0.05"),
+            "B4": ("3", "true", "true", "true", "0.05"),
         }[algorithm]
+        if len(values) == 4:
+            values += ("0.05",)
         return time_prefix + [
             "roslaunch", "soft_vofod_mid360", "soft_vofod.launch", "output:=log",
             "birth_min_groups:=" + values[0],
             "opportunity_aware_existence:=" + values[1],
             "target_feedback:=" + values[2],
             "hungarian_association:=" + values[3],
+            "survival_lambda_per_s:=" + values[4],
         ]
 
     def replay(self, algorithm, scene, noise, seed, source_bag, source_manifest):
@@ -917,8 +953,8 @@ def comma_list(value, allowed):
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--algorithms", default="B0,A1,A2,A3")
-    parser.add_argument("--scenes", default=",".join(SCENES))
+    parser.add_argument("--algorithms", default="B0,B1,B2,B3,B4")
+    parser.add_argument("--scenes", default=",".join(DEFAULT_SCENES))
     parser.add_argument("--noise", default="N0")
     parser.add_argument("--seeds", default="1001")
     parser.add_argument("--record", action="store_true")
