@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <iterator>
 #include <map>
 #include <numeric>
 #include <set>
@@ -56,6 +57,11 @@ void validateConfig(const Config& config)
       config.map.background_separate_distance_m <
           config.map.background_attach_distance_m ||
       !finitePositive(config.map.background_supported_weight) ||
+      config.map.unknown_promotion_epochs == 0U ||
+      config.map.unknown_promotion_time_s < 0.0 ||
+      config.map.unknown_position_sigma_m < 0.0 ||
+      !finitePositive(config.map.unknown_match_distance_m) ||
+      !finitePositive(config.map.unknown_candidate_timeout_s) ||
       !finitePositive(config.map.valid_free_weight) ||
       !finitePositive(config.map.no_return_free_weight) ||
       config.map.no_return_free_weight > config.map.valid_free_weight ||
@@ -346,6 +352,160 @@ size_t BackgroundMap::carveFreeRays(
   return epoch_free_voxels_.size() - touched_before;
 }
 
+size_t BackgroundMap::candidateBackgroundCount() const noexcept
+{
+  return candidate_backgrounds_.size();
+}
+
+bool BackgroundMap::nearCandidateBackground(const Vec3& point_m) const
+{
+  if (!point_m.allFinite() || !geometry_.inLimits(
+          static_cast<float>(point_m.x()), static_cast<float>(point_m.y()),
+          static_cast<float>(point_m.z())))
+    return false;
+  const vofod::VoxelMap::vec3i_t center =
+      geometry_.coordToIdx(point_m.cast<float>());
+  const int radius = static_cast<int>(std::ceil(
+      config_.unknown_match_distance_m / config_.voxel_size_m));
+  for (int dx = -radius; dx <= radius; ++dx)
+  {
+    for (int dy = -radius; dy <= radius; ++dy)
+    {
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        size_t linear_index = 0U;
+        if (geometry_.tryLinearIndex(
+                center + vofod::VoxelMap::vec3i_t(dx, dy, dz),
+                &linear_index) &&
+            candidate_background_voxels_.count(linear_index) > 0U)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+void BackgroundMap::rebuildCandidateBackgroundIndex()
+{
+  candidate_background_voxels_.clear();
+  for (const CandidateBackground& candidate : candidate_backgrounds_)
+  {
+    candidate_background_voxels_.insert(
+        candidate.voxels.begin(), candidate.voxels.end());
+  }
+}
+
+bool BackgroundMap::updateUnknownCandidate(
+    std::vector<size_t> component, const double time_s,
+    const bool allow_create,
+    MapEpochCommit* const output)
+{
+  if (!output || component.empty())
+    return false;
+  std::sort(component.begin(), component.end());
+  Vec3 centroid = Vec3::Zero();
+  for (const size_t linear_index : component)
+  {
+    centroid += geometry_.idxToCoord(
+        geometry_.indexFromLinear(linear_index)).cast<double>();
+  }
+  centroid /= static_cast<double>(component.size());
+
+  size_t best = candidate_backgrounds_.size();
+  double best_distance_m = config_.unknown_match_distance_m;
+  for (size_t index = 0U; index < candidate_backgrounds_.size(); ++index)
+  {
+    const CandidateBackground& candidate = candidate_backgrounds_[index];
+    if (candidate.last_epoch_id == epoch_id_)
+      continue;
+    const double distance_m = (centroid - candidate.centroid_m).norm();
+    if (distance_m > best_distance_m)
+      continue;
+    size_t first = 0U;
+    size_t second = 0U;
+    size_t overlap = 0U;
+    while (first < component.size() && second < candidate.voxels.size())
+    {
+      if (component[first] < candidate.voxels[second])
+        ++first;
+      else if (candidate.voxels[second] < component[first])
+        ++second;
+      else
+      {
+        ++overlap;
+        ++first;
+        ++second;
+      }
+    }
+    if (overlap == 0U &&
+        distance_m > std::sqrt(3.0) * config_.voxel_size_m)
+      continue;
+    best = index;
+    best_distance_m = distance_m;
+  }
+
+  if (best == candidate_backgrounds_.size())
+  {
+    if (!allow_create)
+      return false;
+    CandidateBackground candidate;
+    candidate.id = next_candidate_background_id_++;
+    candidate.centroid_m = centroid;
+    candidate.mean_centroid_m = centroid;
+    candidate.first_seen_s = time_s;
+    candidate.last_seen_s = time_s;
+    candidate.epochs = 1U;
+    candidate.last_epoch_id = epoch_id_;
+    candidate.voxels = std::move(component);
+    candidate_backgrounds_.push_back(std::move(candidate));
+    return true;
+  }
+
+  CandidateBackground& candidate = candidate_backgrounds_[best];
+  ++candidate.epochs;
+  const Vec3 delta = centroid - candidate.mean_centroid_m;
+  candidate.mean_centroid_m += delta / static_cast<double>(candidate.epochs);
+  candidate.centroid_m2 +=
+      delta.dot(centroid - candidate.mean_centroid_m);
+  candidate.centroid_m = centroid;
+  candidate.last_seen_s = time_s;
+  candidate.last_epoch_id = epoch_id_;
+  std::vector<size_t> merged;
+  merged.reserve(candidate.voxels.size() + component.size());
+  std::set_union(
+      candidate.voxels.begin(), candidate.voxels.end(),
+      component.begin(), component.end(), std::back_inserter(merged));
+  candidate.voxels = std::move(merged);
+
+  const double variance_m2 = candidate.epochs > 1U
+      ? candidate.centroid_m2 / static_cast<double>(candidate.epochs - 1U)
+      : 0.0;
+  if (candidate.epochs >= config_.unknown_promotion_epochs &&
+      variance_m2 > config_.unknown_position_sigma_m *
+          config_.unknown_position_sigma_m)
+  {
+    candidate_backgrounds_.erase(candidate_backgrounds_.begin() + best);
+    ++output->expired_unknown_candidates;
+    return false;
+  }
+  if (candidate.epochs < config_.unknown_promotion_epochs ||
+      time_s - candidate.first_seen_s < config_.unknown_promotion_time_s ||
+      variance_m2 > config_.unknown_position_sigma_m *
+          config_.unknown_position_sigma_m)
+    return true;
+  for (const size_t linear_index : candidate.voxels)
+  {
+    observeBackground(
+        geometry_.idxToCoord(
+            geometry_.indexFromLinear(linear_index)).cast<double>(),
+        time_s, epoch_id_, true, true);
+    ++output->background_voxels;
+  }
+  ++output->promoted_unknown_candidates;
+  candidate_backgrounds_.erase(candidate_backgrounds_.begin() + best);
+  return true;
+}
+
 std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     const double time_s)
 {
@@ -364,6 +524,18 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
 
   MapEpochCommit output;
   const double commit_time_s = epoch_start_time_s_ + duration_s;
+  const size_t candidates_before = candidate_backgrounds_.size();
+  candidate_backgrounds_.erase(
+      std::remove_if(
+          candidate_backgrounds_.begin(), candidate_backgrounds_.end(),
+          [this, time_s](const CandidateBackground& candidate)
+          {
+            return time_s - candidate.last_seen_s >
+                config_.unknown_candidate_timeout_s;
+          }),
+      candidate_backgrounds_.end());
+  output.expired_unknown_candidates =
+      candidates_before - candidate_backgrounds_.size();
   std::set<size_t> unvisited;
   for (const auto& item : epoch_returns_)
     unvisited.insert(item.first);
@@ -449,12 +621,34 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     const bool background_supported = !track_explained &&
         (background_adjacent ||
          background_distance_m < config_.background_attach_distance_m);
-    const bool free_violation = !track_explained && !background_supported &&
+    bool free_violation = !track_explained && !background_supported &&
         q_free >= config_.free_packet_ratio &&
         background_distance_m > config_.background_separate_distance_m;
-    const bool unknown_component = !track_explained &&
+    bool unknown_component = !track_explained &&
         !background_supported && !free_violation &&
         (q_unknown > 0.0 || q_free < config_.free_packet_ratio);
+
+    std::vector<size_t> candidate_voxels;
+    if (free_violation || unknown_component)
+    {
+      for (const size_t linear_index : component)
+      {
+        const EpochReturnVoxel& item = epoch_returns_.at(linear_index);
+        if (item.allow_background && item.track_explained_returns == 0U)
+          candidate_voxels.push_back(linear_index);
+      }
+    }
+    if (free_violation && updateUnknownCandidate(
+            candidate_voxels, commit_time_s, false, &output))
+    {
+      free_violation = false;
+      unknown_component = true;
+    }
+    else if (unknown_component)
+    {
+      updateUnknownCandidate(
+          candidate_voxels, commit_time_s, true, &output);
+    }
 
     if (track_explained)
       ++output.track_explained_components;
@@ -464,6 +658,8 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
       ++output.free_violation_components;
     else if (unknown_component)
       ++output.unknown_components;
+    if (unknown_component)
+      continue;
     for (const size_t linear_index : component)
     {
       const EpochReturnVoxel& item = epoch_returns_.at(linear_index);
@@ -497,6 +693,8 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
   }
   epoch_free_voxels_.clear();
   epoch_returns_.clear();
+  rebuildCandidateBackgroundIndex();
+  output.unknown_candidates = candidate_backgrounds_.size();
   ++epoch_id_;
   epoch_start_time_s_ = std::floor(time_s / duration_s) * duration_s;
   return output;
@@ -1394,6 +1592,11 @@ void SoftVofodCore::processBatch(
         epoch_commit->unknown_components;
     result->diagnostics.track_explained_components +=
         epoch_commit->track_explained_components;
+    result->diagnostics.unknown_candidates = epoch_commit->unknown_candidates;
+    result->diagnostics.promoted_unknown_candidates +=
+        epoch_commit->promoted_unknown_candidates;
+    result->diagnostics.expired_unknown_candidates +=
+        epoch_commit->expired_unknown_candidates;
   }
   const auto epoch_end = std::chrono::steady_clock::now();
   const double batch_time_s = rays.back().time_s;
@@ -1422,7 +1625,11 @@ void SoftVofodCore::processBatch(
             ? 0.0
             : background_map_.nearestStableBackgroundDistance(
                   ray.point_m, config_.map.event_background_search_m);
-    const bool event = birth_enabled && query.inside &&
+    const bool unresolved_candidate =
+        background_map_.nearCandidateBackground(ray.point_m);
+    if (unresolved_candidate)
+      ++result->diagnostics.unresolved_candidate_returns;
+    const bool event = birth_enabled && !unresolved_candidate && query.inside &&
         query.state == VoxelState::confident_free &&
         query.free_probability >= config_.map.event_free_probability_threshold &&
         background_distances[ray_index] >=

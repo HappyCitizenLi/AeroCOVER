@@ -234,6 +234,63 @@ TEST(BackgroundComponents, TrackExplainedSingletonNeverWritesBackground)
   EXPECT_EQ(map.voxel(target)->candidate_hits, 0U);
 }
 
+TEST(ColdStartBackground, PromotesOnlyPersistentWorldStaticComponent)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 wall(3.0, 0.0, 0.0);
+  map.advanceEpoch(0.0);
+  size_t promotions = 0U;
+  size_t released_violations = 0U;
+  for (uint32_t epoch = 0U; epoch < 7U; ++epoch)
+  {
+    map.accumulateReturn(wall, 0.01 + 0.2 * epoch, false, true);
+    const auto commit = map.advanceEpoch(0.2 * (epoch + 1U));
+    ASSERT_TRUE(commit.has_value());
+    promotions += commit->promoted_unknown_candidates;
+    released_violations += commit->free_violation_components;
+    if (epoch == 0U)
+    {
+      EXPECT_TRUE(map.nearCandidateBackground(wall));
+      map.addFreeEvidence(wall, 2.0, 0.21);
+      ASSERT_EQ(map.query(wall).state,
+                soft_vofod::VoxelState::confident_free);
+    }
+    if (epoch < 5U)
+    {
+      EXPECT_NE(map.query(wall).state,
+                soft_vofod::VoxelState::stable_background);
+    }
+  }
+  EXPECT_EQ(promotions, 1U);
+  EXPECT_EQ(released_violations, 0U);
+  EXPECT_EQ(map.candidateBackgroundCount(), 0U);
+  EXPECT_EQ(map.query(wall).state,
+            soft_vofod::VoxelState::stable_background);
+}
+
+TEST(ColdStartBackground, MovingUnknownComponentNeverPromotes)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  map.advanceEpoch(0.0);
+  size_t promotions = 0U;
+  std::vector<soft_vofod::Vec3> positions;
+  for (uint32_t epoch = 0U; epoch < 7U; ++epoch)
+  {
+    positions.emplace_back(2.0 + 0.25 * epoch, 0.0, 0.0);
+    map.accumulateReturn(
+        positions.back(), 0.01 + 0.2 * epoch, false, true);
+    const auto commit = map.advanceEpoch(0.2 * (epoch + 1U));
+    ASSERT_TRUE(commit.has_value());
+    promotions += commit->promoted_unknown_candidates;
+  }
+  EXPECT_EQ(promotions, 0U);
+  for (const soft_vofod::Vec3& position : positions)
+    EXPECT_NE(map.query(position).state,
+              soft_vofod::VoxelState::stable_background);
+}
+
 TEST(MotionModel, WhiteAccelerationScalesWithRealDt)
 {
   const soft_vofod::Mat6 f = soft_vofod::SoftVofodCore::transition(0.2);

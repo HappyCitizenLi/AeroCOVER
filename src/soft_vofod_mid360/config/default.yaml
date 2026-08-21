@@ -29,6 +29,11 @@ map:
   free_packet_ratio: 0.5
   track_explained_ratio: 0.25
   background_supported_weight: 5.0
+  unknown_promotion_epochs: 3
+  unknown_promotion_time_s: 1.0
+  unknown_position_sigma_m: 0.15
+  unknown_match_distance_m: 1.0
+  unknown_candidate_timeout_s: 1.0
   valid_free_weight: 1.0
   no_return_free_weight: 0.5
   background_weight: 1.0
@@ -98,10 +103,10 @@ ablation:
 safety:
   max_time_jump_s: 1.0
 
-# Map-only startup on real sensor data.  The benchmark source keeps targets
-# absent for longer than this interval; no truth or scenario event is used.
+# V2 cold-start background assimilation is data-driven; fixed map-only warm-up
+# is disabled and no truth/scenario event is used for readiness.
 initialization:
-  warmup_duration_s: 8.0
+  warmup_duration_s: 0.0
 
 output:
   map_every_n_scans: 5

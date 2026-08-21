@@ -11,6 +11,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace soft_vofod
@@ -64,6 +65,11 @@ struct MapConfig
   double free_packet_ratio = 0.5;
   double track_explained_ratio = 0.25;
   double background_supported_weight = 5.0;
+  uint32_t unknown_promotion_epochs = 3;
+  double unknown_promotion_time_s = 1.0;
+  double unknown_position_sigma_m = 0.15;
+  double unknown_match_distance_m = 1.0;
+  double unknown_candidate_timeout_s = 1.0;
   double valid_free_weight = 1.0;
   double no_return_free_weight = 0.5;
   double background_weight = 1.0;
@@ -247,6 +253,10 @@ struct ProcessDiagnostics
   size_t free_violation_components = 0;
   size_t unknown_components = 0;
   size_t track_explained_components = 0;
+  size_t unknown_candidates = 0;
+  size_t promoted_unknown_candidates = 0;
+  size_t expired_unknown_candidates = 0;
+  size_t unresolved_candidate_returns = 0;
 };
 
 struct ScanResult
@@ -282,6 +292,9 @@ struct MapEpochCommit
   size_t free_violation_components = 0;
   size_t unknown_components = 0;
   size_t track_explained_components = 0;
+  size_t unknown_candidates = 0;
+  size_t promoted_unknown_candidates = 0;
+  size_t expired_unknown_candidates = 0;
 };
 
 class BackgroundMap
@@ -310,11 +323,17 @@ public:
   void quarantine(const Vec3& point_m, double until_s);
   const BackgroundVoxel* voxel(const Vec3& point_m) const;
   std::vector<MapPoint> points(VoxelState state) const;
+  size_t candidateBackgroundCount() const noexcept;
+  bool nearCandidateBackground(const Vec3& point_m) const;
 
 private:
   void updateState(BackgroundVoxel* voxel, double time_s, bool allow_promotion);
   void addStableDistanceSource(size_t linear_index) const;
   void rebuildStableDistances() const;
+  bool updateUnknownCandidate(
+      std::vector<size_t> component, double time_s, bool allow_create,
+      MapEpochCommit* output);
+  void rebuildCandidateBackgroundIndex();
 
   MapConfig config_;
   vofod::VoxelMap geometry_;
@@ -333,6 +352,21 @@ private:
     bool allow_background = false;
   };
   std::unordered_map<size_t, EpochReturnVoxel> epoch_returns_;
+  struct CandidateBackground
+  {
+    uint64_t id = 0U;
+    Vec3 centroid_m = Vec3::Zero();
+    Vec3 mean_centroid_m = Vec3::Zero();
+    double centroid_m2 = 0.0;
+    double first_seen_s = 0.0;
+    double last_seen_s = 0.0;
+    uint32_t epochs = 0U;
+    uint64_t last_epoch_id = std::numeric_limits<uint64_t>::max();
+    std::vector<size_t> voxels;
+  };
+  uint64_t next_candidate_background_id_ = 1U;
+  std::vector<CandidateBackground> candidate_backgrounds_;
+  std::unordered_set<size_t> candidate_background_voxels_;
 };
 
 class SoftVofodCore

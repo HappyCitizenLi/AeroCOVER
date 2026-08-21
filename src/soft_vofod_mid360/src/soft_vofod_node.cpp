@@ -111,7 +111,7 @@ public:
         geometry_consistency_tolerance_m_, 0.01);
     private_nh_.param("input/expected_rays_per_bundle", expected_rays_, 0);
     private_nh_.param("safety/max_time_jump_s", max_time_jump_s_, 1.0);
-    private_nh_.param("initialization/warmup_duration_s", warmup_duration_s_, 8.0);
+    private_nh_.param("initialization/warmup_duration_s", warmup_duration_s_, 0.0);
     private_nh_.param("output/map_every_n_scans", map_every_n_scans_, 5);
     if (sync_queue_size_ <= 0 || geometry_consistency_tolerance_m_ <= 0.0 ||
         max_time_jump_s_ <= 0.0 || warmup_duration_s_ < 0.0 ||
@@ -193,6 +193,21 @@ private:
               &config->map.track_explained_ratio);
     parameter("map/background_supported_weight",
               &config->map.background_supported_weight);
+    int unknown_promotion_epochs =
+        static_cast<int>(config->map.unknown_promotion_epochs);
+    parameter("map/unknown_promotion_epochs", &unknown_promotion_epochs);
+    if (unknown_promotion_epochs <= 0)
+      throw std::invalid_argument("unknown promotion epochs must be positive");
+    config->map.unknown_promotion_epochs =
+        static_cast<uint32_t>(unknown_promotion_epochs);
+    parameter("map/unknown_promotion_time_s",
+              &config->map.unknown_promotion_time_s);
+    parameter("map/unknown_position_sigma_m",
+              &config->map.unknown_position_sigma_m);
+    parameter("map/unknown_match_distance_m",
+              &config->map.unknown_match_distance_m);
+    parameter("map/unknown_candidate_timeout_s",
+              &config->map.unknown_candidate_timeout_s);
     parameter("map/valid_free_weight", &config->map.valid_free_weight);
     parameter("map/no_return_free_weight",
               &config->map.no_return_free_weight);
@@ -662,6 +677,17 @@ private:
           "track_explained_components",
           number(diagnostics->track_explained_components)));
       status.values.push_back(diagnosticValue(
+          "unknown_candidates", number(diagnostics->unknown_candidates)));
+      status.values.push_back(diagnosticValue(
+          "promoted_unknown_candidates",
+          number(diagnostics->promoted_unknown_candidates)));
+      status.values.push_back(diagnosticValue(
+          "expired_unknown_candidates",
+          number(diagnostics->expired_unknown_candidates)));
+      status.values.push_back(diagnosticValue(
+          "unresolved_candidate_returns",
+          number(diagnostics->unresolved_candidate_returns)));
+      status.values.push_back(diagnosticValue(
           "deleted_existence", number(diagnostics->deleted_existence)));
       status.values.push_back(diagnosticValue(
           "deleted_tentative_timeout",
@@ -738,7 +764,7 @@ private:
   double geometry_consistency_tolerance_m_ = 0.01;
   int expected_rays_ = 0;
   double max_time_jump_s_ = 1.0;
-  double warmup_duration_s_ = 8.0;
+  double warmup_duration_s_ = 0.0;
   int map_every_n_scans_ = 5;
   uint64_t scan_count_ = 0U;
   ros::Time last_stamp_;

@@ -204,3 +204,24 @@
   6405/0.99797；TP 700→762、FN 72→10，但 raw-event birth 仍造成 1254 FP，留给 Phase 7–9。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 354 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 6 cold-start candidate background
+
+- U component 进入 component-level persistence manager，保存 centroid、voxel union、首次/
+  最近观测、epoch 数和 Welford centroid variance；统一使用 3 epochs、1.0 s、0.15 m sigma
+  标准，不再直接累积每 voxel background hits。
+- U candidate 延伸到历史 free 的 F component 时继续保持 unresolved；低方差 candidate 晋升
+  background，高方差 candidate 立即释放，超时 candidate 丢弃。candidate voxel index 用于在
+  ray classification 中暂缓 unresolved raw returns，不创建 map support。
+- SOFT 固定 `warmup_duration_s` 从 8 s 改为 0；readiness 由在线背景持久性产生，不读取 truth、
+  scene name、target ID 或 scenario event。
+- 新增 candidate/promoted/expired/unresolved-return 诊断；单测验证静态 U（包括后来落入历史
+  free）只在持久性门限后晋升，移动 U 不晋升。局部 build 无 warning，58 tests 零失败。
+- S06 第一次零 warm-up/1.0× run 因旧 raw-event birth 正反馈只有 44.8% coverage；加入 F↔U
+  unresolved 竞争后为 51.4%，两份失败证据分别保存在 `artifacts/v2_phase6_unresolved_bug/`
+  和 `artifacts/v2_phase6_unresolved_partial/`。
+- 0.5× 诊断 run coverage 有效，candidate promotions/unresolved returns 为 4/8805；但旧
+  raw-event 路径仍产生 7741 events、345 births、129 peak tracks，HOTA 0.071、p95 151 ms。
+  该结果不算实时/质量通过，明确要求 Phase 7 将 birth 输入改为 epoch-classified F packets。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 358 tests、0 error/failure/skipped。
