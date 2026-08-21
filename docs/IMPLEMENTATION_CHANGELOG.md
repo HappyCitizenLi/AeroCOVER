@@ -262,3 +262,22 @@
   改为 packet-only GNN。该结果不算实时/质量通过。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 366 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 9 packet-level maintenance + GNN
+
+- tracker maintenance 输入从所有 non-background raw returns 收紧为 map epoch 的 F/U/T
+  packets；raw return 只保留 map classification、opportunity 与 confirmed support protection，
+  不再直接更新 KF 或作为 GNN anchor。
+- association unit 改为 packet，继续使用 Mahalanobis gate + Hungarian（A2 ablation 保留
+  greedy）；innovation covariance 使用 packet covariance，并按 packet 到 epoch boundary 的延迟
+  做 CV time alignment。每个 packet 至多分配给一条 track，只有未分配 F packet 可进入 birth。
+- existence 仍逐 scan 做 survival，但 hit/miss 只在 5 Hz packet detector epoch 提交时更新，避免
+  10 Hz scan 中间帧被错误计为 detector miss。新增 F/U/T maintenance packet 诊断。
+- 新增 raw return 不立即维护、U packet 在 epoch 边界可维护已有轨迹的单测；ROS integration
+  验证 packet trajectory birth。局部 build 无 warning，68 tests 零失败。
+- S06/1.0× run coverage 100%，p95 84.3 ms，首次回到 100 ms 实时门槛内；相对 Phase 8 的
+  0.5× 有效诊断 run，births 244→109、peak tracks 98→53、FP 17769→9146、HOTA
+  0.084→0.114。结果仍有 53 条末帧轨迹和大量墙面 FP，明确留给 confirmed-only map
+  protection 与根因实验，不能判作最终质量达标。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 368 tests、0 error/failure/skipped。

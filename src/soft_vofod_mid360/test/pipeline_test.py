@@ -147,7 +147,7 @@ class PipelineTest(unittest.TestCase):
 
         packet_count = 0
         packet_point_counts = []
-        latest_tracks = None
+        born_track = None
         for scan_id in range(9, 19):
             self._publish(
                 scan_id, start + rospy.Duration(0.1 * scan_id), True
@@ -155,20 +155,20 @@ class PipelineTest(unittest.TestCase):
             events, tracks = self._wait_for_scan(scan_id)
             packet_count += len(events.events)
             packet_point_counts.extend(event.point_count for event in events.events)
-            latest_tracks = tracks
+            if tracks.tracks:
+                born_track = tracks.tracks[0]
 
         self._publish(19, start + rospy.Duration(1.9), False)
         events, tracks = self._wait_for_scan(19)
         packet_count += len(events.events)
         packet_point_counts.extend(event.point_count for event in events.events)
         if tracks.tracks:
-            latest_tracks = tracks
+            born_track = tracks.tracks[0]
 
         self.assertGreaterEqual(packet_count, 3)
         self.assertTrue(all(count == 1 for count in packet_point_counts))
-        self.assertIsNotNone(latest_tracks)
-        self.assertGreaterEqual(len(latest_tracks.tracks), 1)
-        self.assertAlmostEqual(latest_tracks.tracks[0].position.x, 5.0, places=3)
+        self.assertIsNotNone(born_track)
+        self.assertAlmostEqual(born_track.position.x, 5.0, places=3)
 
 
 if __name__ == "__main__":

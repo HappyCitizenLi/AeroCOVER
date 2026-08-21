@@ -272,6 +272,9 @@ struct ProcessDiagnostics
   size_t violation_packets = 0;
   size_t birth_suppressed_packets = 0;
   size_t birth_cell_cap_rejections = 0;
+  size_t maintenance_packets = 0;
+  size_t unresolved_maintenance_packets = 0;
+  size_t track_explained_maintenance_packets = 0;
   size_t unresolved_candidate_returns = 0;
 };
 
@@ -312,6 +315,8 @@ struct MapEpochCommit
   size_t promoted_unknown_candidates = 0;
   size_t expired_unknown_candidates = 0;
   std::vector<Event> violation_packets;
+  std::vector<Event> unresolved_packets;
+  std::vector<Event> track_explained_packets;
 };
 
 class BackgroundMap
@@ -357,7 +362,8 @@ private:
       MapEpochCommit* output);
   void rebuildCandidateBackgroundIndex();
   std::vector<Event> packetizeViolationComponent(
-      const std::vector<size_t>& component) const;
+      const std::vector<size_t>& component, bool require_free,
+      bool track_only = false) const;
 
   MapConfig config_;
   vofod::VoxelMap geometry_;
@@ -449,8 +455,9 @@ public:
 private:
   struct Measurement
   {
-    const RaySample* ray = nullptr;
+    const Event* packet = nullptr;
     double anomaly_score = 0.0;
+    bool birth_eligible = false;
   };
 
   struct Support

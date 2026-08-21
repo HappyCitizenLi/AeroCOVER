@@ -656,6 +656,14 @@ private:
       status.values.push_back(diagnosticValue(
           "birth_cell_cap_rejections",
           number(diagnostics->birth_cell_cap_rejections)));
+      status.values.push_back(diagnosticValue(
+          "maintenance_packets", number(diagnostics->maintenance_packets)));
+      status.values.push_back(diagnosticValue(
+          "unresolved_maintenance_packets",
+          number(diagnostics->unresolved_maintenance_packets)));
+      status.values.push_back(diagnosticValue(
+          "track_explained_maintenance_packets",
+          number(diagnostics->track_explained_maintenance_packets)));
       status.values.push_back(diagnosticValue("matches", number(diagnostics->matches)));
       status.values.push_back(diagnosticValue(
           "free_voxel_updates", number(diagnostics->free_voxel_updates)));

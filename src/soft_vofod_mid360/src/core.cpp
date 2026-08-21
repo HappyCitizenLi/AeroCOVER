@@ -515,7 +515,8 @@ bool BackgroundMap::updateUnknownCandidate(
 }
 
 std::vector<Event> BackgroundMap::packetizeViolationComponent(
-    const std::vector<size_t>& component) const
+    const std::vector<size_t>& component, const bool require_free,
+    const bool track_only) const
 {
   std::map<uint64_t, std::vector<const EpochReturnVoxel::Sample*>> windows;
   for (const size_t linear_index : component)
@@ -523,8 +524,9 @@ std::vector<Event> BackgroundMap::packetizeViolationComponent(
     for (const EpochReturnVoxel::Sample& sample :
          epoch_returns_.at(linear_index).samples)
     {
-      if (sample.track_explained ||
-          sample.free_confidence < config_.event_free_probability_threshold)
+      if (sample.track_explained != track_only ||
+          (require_free && sample.free_confidence <
+              config_.event_free_probability_threshold))
         continue;
       const uint64_t window = static_cast<uint64_t>(
           std::floor(sample.time_s / config_.packet_dt_s));
@@ -762,13 +764,21 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     }
 
     if (track_explained)
+    {
       ++output.track_explained_components;
+      std::vector<Event> packets = packetizeViolationComponent(
+          component, false, true);
+      output.track_explained_packets.insert(
+          output.track_explained_packets.end(),
+          std::make_move_iterator(packets.begin()),
+          std::make_move_iterator(packets.end()));
+    }
     else if (background_supported)
       ++output.background_components;
     else if (free_violation)
     {
       ++output.free_violation_components;
-      std::vector<Event> packets = packetizeViolationComponent(component);
+      std::vector<Event> packets = packetizeViolationComponent(component, true);
       output.violation_packets.insert(
           output.violation_packets.end(),
           std::make_move_iterator(packets.begin()),
@@ -777,7 +787,14 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     else if (unknown_component)
       ++output.unknown_components;
     if (unknown_component)
+    {
+      std::vector<Event> packets = packetizeViolationComponent(component, false);
+      output.unresolved_packets.insert(
+          output.unresolved_packets.end(),
+          std::make_move_iterator(packets.begin()),
+          std::make_move_iterator(packets.end()));
       continue;
+    }
     for (const size_t linear_index : component)
     {
       const EpochReturnVoxel& item = epoch_returns_.at(linear_index);
@@ -1797,6 +1814,8 @@ void SoftVofodCore::processBatch(
   if (!result || rays.empty())
     return;
   const auto batch_start = std::chrono::steady_clock::now();
+  std::vector<Event> maintenance_packets;
+  size_t violation_measurements = 0U;
   const std::optional<MapEpochCommit> epoch_commit =
       background_map_.advanceEpoch(rays.front().time_s);
   if (epoch_commit)
@@ -1825,13 +1844,28 @@ void SoftVofodCore::processBatch(
     result->diagnostics.violation_packets +=
         epoch_commit->violation_packets.size();
     result->diagnostics.events += epoch_commit->violation_packets.size();
+    violation_measurements = epoch_commit->violation_packets.size();
+    maintenance_packets.reserve(
+        violation_measurements + epoch_commit->unresolved_packets.size() +
+        epoch_commit->track_explained_packets.size());
     for (Event packet : epoch_commit->violation_packets)
     {
       packet.scan_id = scan_id;
       result->events.push_back(packet);
-      if (birth_enabled)
-        birth_buffer_.push_back(std::move(packet));
+      maintenance_packets.push_back(std::move(packet));
     }
+    maintenance_packets.insert(
+        maintenance_packets.end(), epoch_commit->unresolved_packets.begin(),
+        epoch_commit->unresolved_packets.end());
+    maintenance_packets.insert(
+        maintenance_packets.end(),
+        epoch_commit->track_explained_packets.begin(),
+        epoch_commit->track_explained_packets.end());
+    result->diagnostics.maintenance_packets += maintenance_packets.size();
+    result->diagnostics.unresolved_maintenance_packets +=
+        epoch_commit->unresolved_packets.size();
+    result->diagnostics.track_explained_maintenance_packets +=
+        epoch_commit->track_explained_packets.size();
   }
   const auto epoch_end = std::chrono::steady_clock::now();
   const double batch_time_s = rays.back().time_s;
@@ -1840,12 +1874,19 @@ void SoftVofodCore::processBatch(
   const size_t tracks_before_birth = tracks_.size();
 
   std::vector<Measurement> measurements;
+  measurements.reserve(maintenance_packets.size());
+  for (size_t index = 0U; index < maintenance_packets.size(); ++index)
+  {
+    Measurement measurement;
+    measurement.packet = &maintenance_packets[index];
+    measurement.anomaly_score = maintenance_packets[index].anomaly_score;
+    measurement.birth_eligible = index < violation_measurements;
+    measurements.push_back(measurement);
+  }
   std::vector<VoxelQuery> old_queries(rays.size());
   std::vector<double> background_distances(rays.size(),
       config_.map.event_background_search_m);
   std::vector<bool> ray_is_event(rays.size(), false);
-  std::vector<size_t> ray_measurement_index(
-      rays.size(), std::numeric_limits<size_t>::max());
 
   for (size_t ray_index = 0U; ray_index < rays.size(); ++ray_index)
   {
@@ -1869,32 +1910,11 @@ void SoftVofodCore::processBatch(
         query.free_probability >= config_.map.event_free_probability_threshold &&
         background_distances[ray_index] >=
             config_.map.event_background_exclusion_m;
-    const double distance_weight = std::min(
-        1.0, background_distances[ray_index] /
-            config_.map.event_distance_scale_m);
-    const double anomaly = event
-        ? query.confidence * query.free_probability * distance_weight : 0.0;
     ray_is_event[ray_index] = event;
 
-    const bool stable_background_consistent =
-        query.state == VoxelState::stable_background ||
-        background_distances[ray_index] <
-            config_.map.event_background_exclusion_m;
-    if (!stable_background_consistent)
-    {
-      Measurement measurement;
-      measurement.ray = &ray;
-      measurement.anomaly_score = anomaly;
-      ray_measurement_index[ray_index] = measurements.size();
-      measurements.push_back(measurement);
-    }
   }
   const auto classification_end = std::chrono::steady_clock::now();
 
-  const double measurement_variance =
-      config_.tracker.measurement_variance_m2 +
-      config_.tracker.shape_sigma_m * config_.tracker.shape_sigma_m;
-  const Mat3 measurement_covariance = measurement_variance * Mat3::Identity();
   const double unmatched_cost = config_.tracker.association_gate_d2 +
       config_.tracker.anomaly_cost_weight + 1.0;
   const double forbidden_cost = 1.0e12;
@@ -1905,17 +1925,21 @@ void SoftVofodCore::processBatch(
   {
     if (tracks_[track_index].state == TrackState::deleting)
       continue;
-    const Mat3 innovation_covariance =
-        tracks_[track_index].covariance.block<3, 3>(0, 0) +
-        measurement_covariance;
-    const Eigen::LDLT<Mat3> decomposition(innovation_covariance);
-    if (decomposition.info() != Eigen::Success)
-      continue;
     for (size_t measurement_index = 0U;
          measurement_index < measurements.size(); ++measurement_index)
     {
-      const Vec3 innovation = measurements[measurement_index].ray->point_m -
-          tracks_[track_index].x.head<3>();
+      const Event& packet = *measurements[measurement_index].packet;
+      const Mat3 innovation_covariance =
+          tracks_[track_index].covariance.block<3, 3>(0, 0) +
+          packet.covariance;
+      const Eigen::LDLT<Mat3> decomposition(innovation_covariance);
+      if (decomposition.info() != Eigen::Success)
+        continue;
+      const Vec3 measurement = packet.position_m +
+          tracks_[track_index].x.tail<3>() *
+              std::max(0.0, batch_time_s - packet.time_s);
+      const Vec3 innovation =
+          measurement - tracks_[track_index].x.head<3>();
       const double distance_squared = innovation.dot(decomposition.solve(innovation));
       if (std::isfinite(distance_squared) &&
           distance_squared <= config_.tracker.association_gate_d2)
@@ -1954,65 +1978,27 @@ void SoftVofodCore::processBatch(
     }
   }
   std::vector<int> measurement_owner(measurements.size(), -1);
-  std::vector<int> anchor(tracks_before_birth, -1);
   for (size_t track_index = 0U; track_index < assignment.size(); ++track_index)
   {
     if (assignment[track_index] >= 0)
-    {
-      anchor[track_index] = assignment[track_index];
       measurement_owner[static_cast<size_t>(assignment[track_index])] =
           static_cast<int>(track_index);
-    }
-  }
-
-  // Assign each remaining local point to only its closest Hungarian anchor.
-  for (size_t measurement_index = 0U;
-       measurement_index < measurements.size(); ++measurement_index)
-  {
-    if (measurement_owner[measurement_index] >= 0)
-      continue;
-    double best_distance = config_.tracker.target_radius_m;
-    int best_track = -1;
-    for (size_t track_index = 0U; track_index < tracks_before_birth; ++track_index)
-    {
-      if (anchor[track_index] < 0)
-        continue;
-      const Vec3 anchor_position =
-          measurements[static_cast<size_t>(anchor[track_index])].ray->point_m;
-      const double distance =
-          (measurements[measurement_index].ray->point_m - anchor_position).norm();
-      if (distance <= best_distance)
-      {
-        best_distance = distance;
-        best_track = static_cast<int>(track_index);
-      }
-    }
-    if (best_track >= 0)
-      measurement_owner[measurement_index] = best_track;
   }
 
   std::vector<bool> matched(tracks_before_birth, false);
   std::vector<double> likelihoods(tracks_before_birth, 1.0);
   for (size_t track_index = 0U; track_index < tracks_before_birth; ++track_index)
   {
-    if (anchor[track_index] < 0)
+    if (assignment[track_index] < 0)
       continue;
-    std::vector<double> xs, ys, zs;
-    for (size_t measurement_index = 0U;
-         measurement_index < measurements.size(); ++measurement_index)
-    {
-      if (measurement_owner[measurement_index] != static_cast<int>(track_index))
-        continue;
-      const Vec3& point = measurements[measurement_index].ray->point_m;
-      xs.push_back(point.x());
-      ys.push_back(point.y());
-      zs.push_back(point.z());
-    }
-    const Vec3 measurement(median(xs), median(ys), median(zs));
+    const Event& packet = *measurements[
+        static_cast<size_t>(assignment[track_index])].packet;
     Track& track = tracks_[track_index];
+    const Vec3 measurement = packet.position_m + track.x.tail<3>() *
+        std::max(0.0, batch_time_s - packet.time_s);
     const Vec3 innovation = measurement - track.x.head<3>();
     const Mat3 innovation_covariance =
-        track.covariance.block<3, 3>(0, 0) + measurement_covariance;
+        track.covariance.block<3, 3>(0, 0) + packet.covariance;
     const Eigen::LDLT<Mat3> decomposition(innovation_covariance);
     if (decomposition.info() != Eigen::Success ||
         innovation_covariance.determinant() <= 0.0)
@@ -2031,12 +2017,24 @@ void SoftVofodCore::processBatch(
     const Mat6 identity = Mat6::Identity();
     const Mat6 residual_gain = identity - gain * observation;
     track.covariance = residual_gain * track.covariance *
-        residual_gain.transpose() + gain * measurement_covariance * gain.transpose();
+        residual_gain.transpose() +
+        gain * packet.covariance * gain.transpose();
     track.covariance = 0.5 * (track.covariance + track.covariance.transpose());
     track.last_measurement_time_s = batch_time_s;
     ++track.positive_updates;
     matched[track_index] = true;
     ++result->diagnostics.matches;
+  }
+
+  if (birth_enabled)
+  {
+    for (size_t measurement_index = 0U;
+         measurement_index < measurements.size(); ++measurement_index)
+    {
+      if (measurement_owner[measurement_index] < 0 &&
+          measurements[measurement_index].birth_eligible)
+        birth_buffer_.push_back(*measurements[measurement_index].packet);
+    }
   }
 
   prune(batch_time_s);
@@ -2160,12 +2158,7 @@ void SoftVofodCore::processBatch(
     const RaySample& ray = rays[ray_index];
     if (ray.status != ReturnStatus::valid_return || !ray.has_point)
       continue;
-    bool track_protected_endpoint = false;
-    const size_t measurement_index = ray_measurement_index[ray_index];
-    if (measurement_index != std::numeric_limits<size_t>::max() &&
-        measurement_owner[measurement_index] >= 0)
-      track_protected_endpoint = true;
-    track_protected_endpoint = track_protected_endpoint ||
+    const bool track_protected_endpoint =
         pointInsideSupport(ray.point_m, target_supports);
     if (track_protected_endpoint)
     {
@@ -2288,7 +2281,8 @@ ScanResult SoftVofodCore::processScan(
           std::max(kProbabilityEpsilon, evidence->measurement_likelihood),
           config_.tracker.clutter_density);
     }
-    else if (evidence != result.opportunities.end())
+    else if (evidence != result.opportunities.end() &&
+             result.diagnostics.map_epochs_committed > 0U)
     {
       track.existence_probability = missedExistence(
           track.existence_probability, evidence->detection_probability);

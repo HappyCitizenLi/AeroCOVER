@@ -561,6 +561,9 @@ TEST(Existence, UpdatesOncePerScanAcrossMicroBatches)
 {
   soft_vofod::Config config = testConfig();
   soft_vofod::SoftVofodCore core(config);
+  const soft_vofod::RaySample initial = ray(
+      0.0, soft_vofod::ReturnStatus::invalid_range);
+  core.processScan(0U, 0.0, {initial});
   soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
   track.id = 1U;
   track.existence_probability = 0.9;
@@ -570,13 +573,13 @@ TEST(Existence, UpdatesOncePerScanAcrossMicroBatches)
   core.addTrackForTest(track);
 
   const std::vector<soft_vofod::RaySample> rays = {
-      ray(0.01, soft_vofod::ReturnStatus::no_return),
-      ray(0.03, soft_vofod::ReturnStatus::no_return)};
-  const soft_vofod::ScanResult result = core.processScan(1U, 0.03, rays);
+      ray(0.21, soft_vofod::ReturnStatus::no_return),
+      ray(0.23, soft_vofod::ReturnStatus::no_return)};
+  const soft_vofod::ScanResult result = core.processScan(1U, 0.23, rays);
   ASSERT_EQ(result.opportunities.size(), 1U);
   ASSERT_EQ(result.tracks.size(), 1U);
   const double survived = soft_vofod::SoftVofodCore::survivalExistence(
-      0.9, config.tracker.survival_lambda_per_s, 0.03);
+      0.9, config.tracker.survival_lambda_per_s, 0.23);
   const double expected = soft_vofod::SoftVofodCore::missedExistence(
       survived, result.opportunities.front().detection_probability);
   EXPECT_NEAR(result.tracks.front().existence_probability, expected, 1.0e-12);
@@ -649,6 +652,34 @@ TEST(TrackManagement, TentativeAndConfirmedHaveSeparateDeadlines)
   result = confirmed_core.processScan(1U, invalid.time_s, {invalid});
   ASSERT_EQ(result.tracks.size(), 1U);
   EXPECT_EQ(result.tracks.front().deletion_reason, "confirmed_timeout");
+}
+
+TEST(PacketMaintenance, RawReturnWaitsForPacketAndUnknownCanMaintainTrack)
+{
+  soft_vofod::Config config = testConfig();
+  config.tracker.survival_lambda_per_s = 0.0;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.9;
+  track.last_prediction_time_s = 0.0;
+  track.last_existence_time_s = 0.0;
+  track.last_measurement_time_s = 0.0;
+  core.addTrackForTest(track);
+
+  const soft_vofod::RaySample raw = ray(
+      0.01, soft_vofod::ReturnStatus::valid_return, 5.8);
+  soft_vofod::ScanResult result = core.processScan(1U, raw.time_s, {raw});
+  EXPECT_EQ(result.diagnostics.matches, 0U);
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_DOUBLE_EQ(result.tracks.front().last_measurement_time_s, 0.0);
+
+  const soft_vofod::RaySample flush = ray(
+      0.2, soft_vofod::ReturnStatus::invalid_range);
+  result = core.processScan(2U, flush.time_s, {flush});
+  EXPECT_EQ(result.diagnostics.unresolved_maintenance_packets, 1U);
+  EXPECT_EQ(result.diagnostics.matches, 1U);
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_DOUBLE_EQ(result.tracks.front().last_measurement_time_s, 0.2);
 }
 
 TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
@@ -767,12 +798,16 @@ TEST(Pipeline, ExistenceHysteresisAndHardTimeoutReason)
   soft_vofod::RaySample hit = ray(
       0.9, soft_vofod::ReturnStatus::valid_return, 5.0);
   soft_vofod::ScanResult result = core.processScan(9U, hit.time_s, {hit});
+  soft_vofod::RaySample packet_boundary = ray(
+      1.0, soft_vofod::ReturnStatus::no_return);
+  result = core.processScan(
+      10U, packet_boundary.time_s, {packet_boundary});
   ASSERT_EQ(result.tracks.size(), 1U);
   EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::confirmed);
 
   soft_vofod::RaySample invalid = ray(
-      1.2, soft_vofod::ReturnStatus::invalid_range);
-  result = core.processScan(10U, invalid.time_s, {invalid});
+      1.3, soft_vofod::ReturnStatus::invalid_range);
+  result = core.processScan(11U, invalid.time_s, {invalid});
   ASSERT_EQ(result.tracks.size(), 1U);
   EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::deleting);
   EXPECT_EQ(result.tracks.front().deletion_reason, "hard_timeout");
