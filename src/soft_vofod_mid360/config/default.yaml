@@ -21,6 +21,9 @@ map:
   background_probability_threshold: 0.7
   background_promotion_groups: 3
   background_promotion_duration_s: 1.0
+  map_epoch_hz: 5.0
+  free_saturation_n0: 1.0
+  free_epoch_weight: 1.0
   valid_free_weight: 1.0
   no_return_free_weight: 0.5
   background_weight: 1.0

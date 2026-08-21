@@ -148,10 +148,45 @@ TEST(BackgroundMap, GrazingFreeRayDoesNotEraseCandidateEndpoint)
   map.observeBackground(point, 0.0, 0U, true);
   ASSERT_NE(map.voxel(point), nullptr);
   const double free_before = map.voxel(point)->free_evidence;
+  map.advanceEpoch(0.0);
   map.carveFreeRay(ray(0.1, soft_vofod::ReturnStatus::no_return), 4.0, 1.0);
+  map.advanceEpoch(0.2);
   EXPECT_DOUBLE_EQ(map.voxel(point)->free_evidence, free_before);
   EXPECT_EQ(map.query(point).state,
             soft_vofod::VoxelState::candidate_background);
+}
+
+TEST(MapEpoch, DefersAndSaturatesCorrelatedFreeRays)
+{
+  soft_vofod::Config config = testConfig();
+  const soft_vofod::Vec3 point(2.0, 0.0, 0.0);
+  auto evidence_after = [&config, &point](const size_t ray_count)
+  {
+    soft_vofod::BackgroundMap map(config.map);
+    EXPECT_FALSE(map.advanceEpoch(0.0).has_value());
+    const std::vector<soft_vofod::RaySample> rays(
+        ray_count, ray(0.01, soft_vofod::ReturnStatus::no_return));
+    map.carveFreeRays(
+        rays, std::vector<double>(ray_count, 4.0),
+        std::vector<double>(ray_count, 1.0));
+    const soft_vofod::BackgroundVoxel* voxel = map.voxel(point);
+    EXPECT_NE(voxel, nullptr);
+    if (!voxel)
+      return 0.0;
+    EXPECT_DOUBLE_EQ(voxel->free_evidence, 0.0);
+    EXPECT_FALSE(map.advanceEpoch(0.19).has_value());
+    const auto commit = map.advanceEpoch(0.2);
+    EXPECT_TRUE(commit.has_value());
+    if (!commit)
+      return 0.0;
+    EXPECT_GT(commit->raw_free_evidence, commit->committed_free_evidence);
+    return map.voxel(point)->free_evidence;
+  };
+
+  const double one_hundred = evidence_after(100U);
+  const double one_thousand = evidence_after(1000U);
+  EXPECT_GT(one_hundred, 0.0);
+  EXPECT_LT(one_thousand, 1.01 * one_hundred);
 }
 
 TEST(MotionModel, WhiteAccelerationScalesWithRealDt)
@@ -434,10 +469,17 @@ TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
     sample.original_index = 0U;
     core.processScan(scan, sample.time_s, {sample});
   }
+  EXPECT_EQ(core.backgroundMap().query(
+      soft_vofod::Vec3(5.0, 0.0, 0.0)).state,
+      soft_vofod::VoxelState::unknown);
+  soft_vofod::RaySample boundary = ray(
+      0.4, soft_vofod::ReturnStatus::no_return);
+  boundary.original_index = 0U;
+  core.processScan(4U, boundary.time_s, {boundary});
   EXPECT_EQ(core.backgroundMap().query(soft_vofod::Vec3(5.0, 0.0, 0.0)).state,
             soft_vofod::VoxelState::confident_free);
 
-  for (uint32_t scan = 4U; scan < 8U; ++scan)
+  for (uint32_t scan = 5U; scan < 9U; ++scan)
   {
     soft_vofod::RaySample sample = ray(
         0.1 * scan, soft_vofod::ReturnStatus::valid_return, 5.0);

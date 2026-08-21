@@ -181,6 +181,9 @@ private:
         static_cast<uint32_t>(promotion_groups);
     parameter("map/background_promotion_duration_s",
               &config->map.background_promotion_duration_s);
+    parameter("map/map_epoch_hz", &config->map.map_epoch_hz);
+    parameter("map/free_saturation_n0", &config->map.free_saturation_n0);
+    parameter("map/free_epoch_weight", &config->map.free_epoch_weight);
     parameter("map/valid_free_weight", &config->map.valid_free_weight);
     parameter("map/no_return_free_weight",
               &config->map.no_return_free_weight);
@@ -623,6 +626,21 @@ private:
           "track_count", number(diagnostics->track_count)));
       status.values.push_back(diagnosticValue(
           "support_count", number(diagnostics->support_count)));
+      status.values.push_back(diagnosticValue(
+          "map_epochs_committed",
+          number(diagnostics->map_epochs_committed)));
+      status.values.push_back(diagnosticValue(
+          "map_epoch_free_voxels",
+          number(diagnostics->map_epoch_free_voxels)));
+      status.values.push_back(diagnosticValue(
+          "map_epoch_background_voxels",
+          number(diagnostics->map_epoch_background_voxels)));
+      status.values.push_back(diagnosticValue(
+          "map_epoch_raw_free_evidence",
+          number(diagnostics->map_epoch_raw_free_evidence)));
+      status.values.push_back(diagnosticValue(
+          "map_epoch_committed_free_evidence",
+          number(diagnostics->map_epoch_committed_free_evidence)));
       status.values.push_back(diagnosticValue(
           "deleted_existence", number(diagnostics->deleted_existence)));
       status.values.push_back(diagnosticValue(

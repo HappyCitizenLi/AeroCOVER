@@ -56,6 +56,9 @@ struct MapConfig
   double background_probability_threshold = 0.7;
   uint32_t background_promotion_groups = 3;
   double background_promotion_duration_s = 1.0;
+  double map_epoch_hz = 5.0;
+  double free_saturation_n0 = 1.0;
+  double free_epoch_weight = 1.0;
   double valid_free_weight = 1.0;
   double no_return_free_weight = 0.5;
   double background_weight = 1.0;
@@ -230,6 +233,11 @@ struct ProcessDiagnostics
   size_t map_voxel_count = 0;
   size_t track_count = 0;
   size_t support_count = 0;
+  size_t map_epochs_committed = 0;
+  size_t map_epoch_free_voxels = 0;
+  size_t map_epoch_background_voxels = 0;
+  double map_epoch_raw_free_evidence = 0.0;
+  double map_epoch_committed_free_evidence = 0.0;
 };
 
 struct ScanResult
@@ -255,6 +263,14 @@ struct BackgroundVoxel
   VoxelState state = VoxelState::unknown;
 };
 
+struct MapEpochCommit
+{
+  size_t free_voxels = 0;
+  size_t background_voxels = 0;
+  double raw_free_evidence = 0.0;
+  double committed_free_evidence = 0.0;
+};
+
 class BackgroundMap
 {
 public:
@@ -271,6 +287,9 @@ public:
       const std::vector<RaySample>& rays,
       const std::vector<double>& lengths_m,
       const std::vector<double>& weights);
+  std::optional<MapEpochCommit> advanceEpoch(double time_s);
+  void accumulateBackground(
+      const Vec3& point_m, double time_s, bool allow_promotion);
   void observeBackground(
       const Vec3& point_m, double time_s, uint64_t group_id,
       bool allow_promotion);
@@ -288,6 +307,11 @@ private:
   std::vector<BackgroundVoxel> voxels_;
   mutable std::vector<double> stable_distances_m_;
   mutable bool stable_distances_dirty_ = false;
+  double epoch_start_time_s_ = std::numeric_limits<double>::quiet_NaN();
+  uint64_t epoch_id_ = 0U;
+  std::vector<double> epoch_free_evidence_;
+  std::vector<size_t> epoch_free_voxels_;
+  std::unordered_map<size_t, std::pair<double, bool>> epoch_background_voxels_;
 };
 
 class SoftVofodCore

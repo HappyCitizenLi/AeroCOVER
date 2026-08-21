@@ -48,6 +48,9 @@ void validateConfig(const Config& config)
       (config.map.dimensions_m.array() <= 0.0).any() ||
       !finitePositive(config.map.voxel_size_m) ||
       !finitePositive(config.map.evidence_scale) ||
+      !finitePositive(config.map.map_epoch_hz) ||
+      !finitePositive(config.map.free_saturation_n0) ||
+      !finitePositive(config.map.free_epoch_weight) ||
       !finitePositive(config.map.valid_free_weight) ||
       !finitePositive(config.map.no_return_free_weight) ||
       config.map.no_return_free_weight > config.map.valid_free_weight ||
@@ -129,6 +132,7 @@ BackgroundMap::BackgroundMap(const MapConfig& config)
   voxels_.resize(geometry_.size());
   stable_distances_m_.assign(
       geometry_.size(), config_.event_background_search_m);
+  epoch_free_evidence_.assign(geometry_.size(), 0.0);
 }
 
 const MapConfig& BackgroundMap::config() const noexcept
@@ -299,9 +303,7 @@ size_t BackgroundMap::carveFreeRays(
 {
   if (rays.size() != lengths_m.size() || rays.size() != weights.size())
     throw std::invalid_argument("free-ray batch arrays have different sizes");
-  std::vector<double> evidence(voxels_.size(), 0.0);
-  std::vector<double> update_times(voxels_.size(), 0.0);
-  std::vector<size_t> touched;
+  const size_t touched_before = epoch_free_voxels_.size();
   for (size_t ray_index = 0U; ray_index < rays.size(); ++ray_index)
   {
     const RaySample& ray = rays[ray_index];
@@ -315,7 +317,7 @@ size_t BackgroundMap::carveFreeRays(
     geometry_.traceRay(
         ray.origin_m.cast<float>(), ray.direction_unit.cast<float>(),
         static_cast<float>(lengths_m[ray_index]),
-        [this, &ray, &evidence, &update_times, &touched,
+        [this, &ray,
          weight = weights[ray_index]](
             const size_t linear_index, const vofod::VoxelMap::vec3i_t&,
             const float segment_length)
@@ -328,26 +330,87 @@ size_t BackgroundMap::carveFreeRays(
           if (voxels_[linear_index].state == VoxelState::candidate_background ||
               voxels_[linear_index].state == VoxelState::stable_background)
             return;
-          if (evidence[linear_index] == 0.0)
-            touched.push_back(linear_index);
-          evidence[linear_index] += weight *
+          if (epoch_free_evidence_[linear_index] == 0.0)
+            epoch_free_voxels_.push_back(linear_index);
+          epoch_free_evidence_[linear_index] += weight *
               static_cast<double>(segment_length) / config_.voxel_size_m;
-          update_times[linear_index] = std::max(
-              update_times[linear_index], ray.time_s);
         });
   }
-  for (const size_t linear_index : touched)
+  return epoch_free_voxels_.size() - touched_before;
+}
+
+std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
+    const double time_s)
+{
+  if (!std::isfinite(time_s))
+    throw std::invalid_argument("invalid map epoch time");
+  const double duration_s = 1.0 / config_.map_epoch_hz;
+  if (!std::isfinite(epoch_start_time_s_))
   {
-    BackgroundVoxel& voxel = voxels_[linear_index];
-    const VoxelState previous_state = voxel.state;
-    voxel.free_evidence += evidence[linear_index];
-    voxel.last_update_time_s = update_times[linear_index];
-    updateState(&voxel, update_times[linear_index], true);
-    if (previous_state == VoxelState::stable_background &&
-        voxel.state != VoxelState::stable_background)
-      stable_distances_dirty_ = true;
+    epoch_start_time_s_ = std::floor(time_s / duration_s) * duration_s;
+    return std::nullopt;
   }
-  return touched.size();
+  if (time_s < epoch_start_time_s_)
+    throw std::invalid_argument("map epoch time regressed");
+  if (time_s + 1.0e-12 < epoch_start_time_s_ + duration_s)
+    return std::nullopt;
+
+  MapEpochCommit output;
+  output.background_voxels = epoch_background_voxels_.size();
+  const double commit_time_s = epoch_start_time_s_ + duration_s;
+  for (const auto& item : epoch_background_voxels_)
+  {
+    observeBackground(
+        geometry_.idxToCoord(
+            geometry_.indexFromLinear(item.first)).cast<double>(),
+        commit_time_s, epoch_id_, item.second.second);
+  }
+  for (const size_t linear_index : epoch_free_voxels_)
+  {
+    const double raw = epoch_free_evidence_[linear_index];
+    output.raw_free_evidence += raw;
+    if (epoch_background_voxels_.count(linear_index) == 0U)
+    {
+      const double evidence = config_.free_epoch_weight *
+          (1.0 - std::exp(-raw / config_.free_saturation_n0));
+      addFreeEvidence(
+          geometry_.idxToCoord(
+              geometry_.indexFromLinear(linear_index)).cast<double>(),
+          evidence, commit_time_s);
+      output.committed_free_evidence += evidence;
+      ++output.free_voxels;
+    }
+    epoch_free_evidence_[linear_index] = 0.0;
+  }
+  epoch_free_voxels_.clear();
+  epoch_background_voxels_.clear();
+  ++epoch_id_;
+  epoch_start_time_s_ = std::floor(time_s / duration_s) * duration_s;
+  return output;
+}
+
+void BackgroundMap::accumulateBackground(
+    const Vec3& point_m, const double time_s, const bool allow_promotion)
+{
+  if (!point_m.allFinite() || !std::isfinite(time_s))
+    throw std::invalid_argument("invalid deferred background endpoint");
+  if (!geometry_.inLimits(
+          static_cast<float>(point_m.x()), static_cast<float>(point_m.y()),
+          static_cast<float>(point_m.z())))
+    return;
+  size_t linear_index = 0U;
+  if (!geometry_.tryLinearIndex(
+          geometry_.coordToIdx(point_m.cast<float>()), &linear_index))
+    return;
+  auto inserted = epoch_background_voxels_.emplace(
+      linear_index, std::make_pair(time_s, allow_promotion));
+  if (!inserted.second)
+  {
+    inserted.first->second.first = std::max(
+        inserted.first->second.first, time_s);
+    inserted.first->second.second =
+        inserted.first->second.second || allow_promotion;
+  }
 }
 
 void BackgroundMap::observeBackground(
@@ -1191,6 +1254,20 @@ void SoftVofodCore::processBatch(
   if (!result || rays.empty())
     return;
   const auto batch_start = std::chrono::steady_clock::now();
+  const std::optional<MapEpochCommit> epoch_commit =
+      background_map_.advanceEpoch(rays.front().time_s);
+  if (epoch_commit)
+  {
+    ++result->diagnostics.map_epochs_committed;
+    result->diagnostics.map_epoch_free_voxels += epoch_commit->free_voxels;
+    result->diagnostics.map_epoch_background_voxels +=
+        epoch_commit->background_voxels;
+    result->diagnostics.map_epoch_raw_free_evidence +=
+        epoch_commit->raw_free_evidence;
+    result->diagnostics.map_epoch_committed_free_evidence +=
+        epoch_commit->committed_free_evidence;
+  }
+  const auto epoch_end = std::chrono::steady_clock::now();
   const double batch_time_s = rays.back().time_s;
   prune(batch_time_s);
   predictTracks(batch_time_s);
@@ -1560,21 +1637,19 @@ void SoftVofodCore::processBatch(
     }
     else if (background_endpoint_updates_enabled)
     {
-      const uint64_t group_id = static_cast<uint64_t>(std::floor(
-          ray.time_s / config_.birth.event_group_dt_s));
-      background_map_.observeBackground(
-          ray.point_m, ray.time_s, group_id, true);
+      background_map_.accumulateBackground(ray.point_m, ray.time_s, true);
     }
   }
   const auto map_end = std::chrono::steady_clock::now();
   result->diagnostics.classification_ms +=
       std::chrono::duration<double, std::milli>(
-          classification_end - batch_start).count();
+          classification_end - epoch_end).count();
   result->diagnostics.tracking_ms +=
       std::chrono::duration<double, std::milli>(
           tracking_end - classification_end).count();
   result->diagnostics.map_commit_ms +=
-      std::chrono::duration<double, std::milli>(map_end - tracking_end).count();
+      std::chrono::duration<double, std::milli>(map_end - tracking_end).count() +
+      std::chrono::duration<double, std::milli>(epoch_end - batch_start).count();
 }
 
 ScanResult SoftVofodCore::processScan(

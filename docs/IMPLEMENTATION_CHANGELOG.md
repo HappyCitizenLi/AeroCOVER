@@ -170,3 +170,19 @@
   packet-level birth/maintenance 仍是必要工作。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 348 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 4 deferred map epoch
+
+- 生产 map 写路径改为 5 Hz/0.2 s epoch：micro-batch ray 只累积 voxel traversal，endpoint
+  每 voxel/epoch 最多保留一次；长期 free/background 状态只在 epoch 边界提交。
+- free traversal 采用 `w_F * (1 - exp(-n_F/n0))` 指数饱和；endpoint 与同 epoch 的 coarse
+  free traversal 冲突时 endpoint 优先，避免静态表面被离散化 grazing ray 冲掉。
+- 新增 map epoch commit 数、free/background voxel 数、raw/committed free evidence 诊断；
+  新单测验证边界前不可见和 1000 vs 100 correlated rays 的长期增量比小于 1.01。
+- S01/A3 单因素 run 共提交 156 epochs/31.2 s（约 5 Hz）；raw free evidence
+  `1.093e8` 压缩为 `1.140e7`，比值 0.104。HOTA 0.294→0.576、TP 85→119、
+  fragmentation 13→6、p95 53.0→43.3 ms，false-free 0.2639→0.2641。
+- `soft_vofod_mid360` build 3/3 成功且无 warning，50 tests 零失败；S01 input/coverage
+  gates 通过。该 phase 仍按 voxel 聚合 endpoint；连通域背景吸收在 Phase 5 实现。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 350 tests、0 error/failure/skipped。
