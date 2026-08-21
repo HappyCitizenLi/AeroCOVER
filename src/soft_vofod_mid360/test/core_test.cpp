@@ -189,6 +189,51 @@ TEST(MapEpoch, DefersAndSaturatesCorrelatedFreeRays)
   EXPECT_LT(one_thousand, 1.01 * one_hundred);
 }
 
+TEST(BackgroundComponents, ExpandsStableAdjacencyAndKeepsViolationsFree)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 stable(4.0, 0.0, 0.0);
+  map.observeBackground(stable, 0.0, 0U, true);
+  map.observeBackground(stable, 0.1, 1U, true);
+  map.observeBackground(stable, 0.2, 2U, true);
+  ASSERT_EQ(map.query(stable).state,
+            soft_vofod::VoxelState::stable_background);
+
+  const soft_vofod::Vec3 adjacent(4.5, 0.0, 0.0);
+  const soft_vofod::Vec3 violation(2.0, 0.0, 0.0);
+  map.addFreeEvidence(violation, 2.0, 1.0);
+  ASSERT_EQ(map.query(violation).state,
+            soft_vofod::VoxelState::confident_free);
+  map.advanceEpoch(2.0);
+  map.accumulateReturn(adjacent, 2.01, false, true);
+  map.accumulateReturn(violation, 2.01, false, true);
+  const auto commit = map.advanceEpoch(2.2);
+  ASSERT_TRUE(commit.has_value());
+  EXPECT_EQ(commit->background_components, 1U);
+  EXPECT_EQ(commit->free_violation_components, 1U);
+  EXPECT_EQ(map.query(adjacent).state,
+            soft_vofod::VoxelState::stable_background);
+  EXPECT_EQ(map.query(violation).state,
+            soft_vofod::VoxelState::confident_free);
+  EXPECT_DOUBLE_EQ(map.voxel(violation)->background_evidence, 0.0);
+}
+
+TEST(BackgroundComponents, TrackExplainedSingletonNeverWritesBackground)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 target(3.0, 0.0, 0.0);
+  map.advanceEpoch(0.0);
+  map.accumulateReturn(target, 0.01, true, true);
+  const auto commit = map.advanceEpoch(0.2);
+  ASSERT_TRUE(commit.has_value());
+  EXPECT_EQ(commit->track_explained_components, 1U);
+  ASSERT_NE(map.voxel(target), nullptr);
+  EXPECT_DOUBLE_EQ(map.voxel(target)->background_evidence, 0.0);
+  EXPECT_EQ(map.voxel(target)->candidate_hits, 0U);
+}
+
 TEST(MotionModel, WhiteAccelerationScalesWithRealDt)
 {
   const soft_vofod::Mat6 f = soft_vofod::SoftVofodCore::transition(0.2);

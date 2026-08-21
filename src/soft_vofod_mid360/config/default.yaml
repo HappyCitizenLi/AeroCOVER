@@ -24,6 +24,11 @@ map:
   map_epoch_hz: 5.0
   free_saturation_n0: 1.0
   free_epoch_weight: 1.0
+  background_attach_distance_m: 0.8
+  background_separate_distance_m: 1.0
+  free_packet_ratio: 0.5
+  track_explained_ratio: 0.25
+  background_supported_weight: 5.0
   valid_free_weight: 1.0
   no_return_free_weight: 0.5
   background_weight: 1.0

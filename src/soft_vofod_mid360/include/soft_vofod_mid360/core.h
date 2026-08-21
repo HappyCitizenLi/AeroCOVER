@@ -59,6 +59,11 @@ struct MapConfig
   double map_epoch_hz = 5.0;
   double free_saturation_n0 = 1.0;
   double free_epoch_weight = 1.0;
+  double background_attach_distance_m = 0.8;
+  double background_separate_distance_m = 1.0;
+  double free_packet_ratio = 0.5;
+  double track_explained_ratio = 0.25;
+  double background_supported_weight = 5.0;
   double valid_free_weight = 1.0;
   double no_return_free_weight = 0.5;
   double background_weight = 1.0;
@@ -238,6 +243,10 @@ struct ProcessDiagnostics
   size_t map_epoch_background_voxels = 0;
   double map_epoch_raw_free_evidence = 0.0;
   double map_epoch_committed_free_evidence = 0.0;
+  size_t background_components = 0;
+  size_t free_violation_components = 0;
+  size_t unknown_components = 0;
+  size_t track_explained_components = 0;
 };
 
 struct ScanResult
@@ -269,6 +278,10 @@ struct MapEpochCommit
   size_t background_voxels = 0;
   double raw_free_evidence = 0.0;
   double committed_free_evidence = 0.0;
+  size_t background_components = 0;
+  size_t free_violation_components = 0;
+  size_t unknown_components = 0;
+  size_t track_explained_components = 0;
 };
 
 class BackgroundMap
@@ -288,11 +301,12 @@ public:
       const std::vector<double>& lengths_m,
       const std::vector<double>& weights);
   std::optional<MapEpochCommit> advanceEpoch(double time_s);
-  void accumulateBackground(
-      const Vec3& point_m, double time_s, bool allow_promotion);
+  void accumulateReturn(
+      const Vec3& point_m, double time_s, bool track_explained,
+      bool allow_background);
   void observeBackground(
       const Vec3& point_m, double time_s, uint64_t group_id,
-      bool allow_promotion);
+      bool allow_promotion, bool background_supported = false);
   void quarantine(const Vec3& point_m, double until_s);
   const BackgroundVoxel* voxel(const Vec3& point_m) const;
   std::vector<MapPoint> points(VoxelState state) const;
@@ -311,7 +325,14 @@ private:
   uint64_t epoch_id_ = 0U;
   std::vector<double> epoch_free_evidence_;
   std::vector<size_t> epoch_free_voxels_;
-  std::unordered_map<size_t, std::pair<double, bool>> epoch_background_voxels_;
+  struct EpochReturnVoxel
+  {
+    double last_time_s = 0.0;
+    size_t returns = 0;
+    size_t track_explained_returns = 0;
+    bool allow_background = false;
+  };
+  std::unordered_map<size_t, EpochReturnVoxel> epoch_returns_;
 };
 
 class SoftVofodCore

@@ -186,3 +186,21 @@
   gates 通过。该 phase 仍按 voxel 聚合 endpoint；连通域背景吸收在 Phase 5 实现。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 350 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 5 background component assimilation
+
+- epoch valid returns 先按 0.5 m voxel downsample，再用确定性 26 邻域 connected components
+  聚合；singleton 保持合法。component 计算历史 stable-background 距离、free/unknown 比例和
+  tentative/confirmed track overlap，分类为 B/F/U/T。
+- B component 必须与 stable background 邻接或小于 0.8 m attach distance 且 track overlap
+  低，使用 supported evidence 快速扩展；F、T component 完全不写 background；U 暂时沿用
+  保守 voxel persistence，正式 candidate manager 留给 Phase 6。
+- 新增 B/F/U/T component 诊断；component seed 改用有序集合，避免新稳定背景的同 epoch
+  扩展结果依赖 unordered hash 遍历顺序。
+- 新单测验证 stable adjacency expansion、free-space violation 不被吸收、track-explained
+  singleton 不写 background。局部 build 3/3 成功且无 warning，54 tests 零失败。
+- S03 moving-observer run 在 246 epochs 中得到 B/F/U/T = 5067/41/248/373；static-background
+  recall 0.080→0.180，p95 67.2→48.6 ms。event count/precision 完全不变为
+  6405/0.99797；TP 700→762、FN 72→10，但 raw-event birth 仍造成 1254 FP，留给 Phase 7–9。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 354 tests、0 error/failure/skipped。

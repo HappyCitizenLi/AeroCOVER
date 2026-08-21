@@ -8,6 +8,7 @@
 #include <cmath>
 #include <map>
 #include <numeric>
+#include <set>
 #include <stdexcept>
 #include <unordered_set>
 
@@ -51,6 +52,10 @@ void validateConfig(const Config& config)
       !finitePositive(config.map.map_epoch_hz) ||
       !finitePositive(config.map.free_saturation_n0) ||
       !finitePositive(config.map.free_epoch_weight) ||
+      config.map.background_attach_distance_m < 0.0 ||
+      config.map.background_separate_distance_m <
+          config.map.background_attach_distance_m ||
+      !finitePositive(config.map.background_supported_weight) ||
       !finitePositive(config.map.valid_free_weight) ||
       !finitePositive(config.map.no_return_free_weight) ||
       config.map.no_return_free_weight > config.map.valid_free_weight ||
@@ -66,6 +71,8 @@ void validateConfig(const Config& config)
            config.map.free_probability_threshold,
            config.map.background_probability_threshold,
            config.map.event_free_probability_threshold,
+           config.map.free_packet_ratio,
+           config.map.track_explained_ratio,
            config.tracker.birth_existence,
            config.tracker.confirm_threshold,
            config.tracker.delete_threshold,
@@ -356,20 +363,126 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     return std::nullopt;
 
   MapEpochCommit output;
-  output.background_voxels = epoch_background_voxels_.size();
   const double commit_time_s = epoch_start_time_s_ + duration_s;
-  for (const auto& item : epoch_background_voxels_)
+  std::set<size_t> unvisited;
+  for (const auto& item : epoch_returns_)
+    unvisited.insert(item.first);
+  while (!unvisited.empty())
   {
-    observeBackground(
-        geometry_.idxToCoord(
-            geometry_.indexFromLinear(item.first)).cast<double>(),
-        commit_time_s, epoch_id_, item.second.second);
+    std::vector<size_t> component;
+    std::vector<size_t> queue = {*unvisited.begin()};
+    unvisited.erase(queue.front());
+    for (size_t cursor = 0U; cursor < queue.size(); ++cursor)
+    {
+      const size_t linear_index = queue[cursor];
+      component.push_back(linear_index);
+      const vofod::VoxelMap::vec3i_t index =
+          geometry_.indexFromLinear(linear_index);
+      for (int dx = -1; dx <= 1; ++dx)
+      {
+        for (int dy = -1; dy <= 1; ++dy)
+        {
+          for (int dz = -1; dz <= 1; ++dz)
+          {
+            if (dx == 0 && dy == 0 && dz == 0)
+              continue;
+            size_t neighbor = 0U;
+            if (geometry_.tryLinearIndex(
+                    index + vofod::VoxelMap::vec3i_t(dx, dy, dz), &neighbor) &&
+                unvisited.erase(neighbor) > 0U)
+              queue.push_back(neighbor);
+          }
+        }
+      }
+    }
+
+    size_t free_voxels = 0U;
+    size_t unknown_voxels = 0U;
+    size_t returns = 0U;
+    size_t track_returns = 0U;
+    bool background_adjacent = false;
+    double background_distance_m = config_.event_background_search_m;
+    for (const size_t linear_index : component)
+    {
+      const EpochReturnVoxel& item = epoch_returns_.at(linear_index);
+      returns += item.returns;
+      track_returns += item.track_explained_returns;
+      if (voxels_[linear_index].state == VoxelState::confident_free)
+        ++free_voxels;
+      else if (voxels_[linear_index].state == VoxelState::unknown)
+        ++unknown_voxels;
+      const Vec3 center = geometry_.idxToCoord(
+          geometry_.indexFromLinear(linear_index)).cast<double>();
+      background_distance_m = std::min(
+          background_distance_m,
+          nearestStableBackgroundDistance(
+              center, config_.event_background_search_m));
+      const vofod::VoxelMap::vec3i_t index =
+          geometry_.indexFromLinear(linear_index);
+      for (int dx = -1; dx <= 1 && !background_adjacent; ++dx)
+      {
+        for (int dy = -1; dy <= 1 && !background_adjacent; ++dy)
+        {
+          for (int dz = -1; dz <= 1; ++dz)
+          {
+            size_t neighbor = 0U;
+            if (geometry_.tryLinearIndex(
+                    index + vofod::VoxelMap::vec3i_t(dx, dy, dz), &neighbor) &&
+                voxels_[neighbor].state == VoxelState::stable_background)
+            {
+              background_adjacent = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    const double q_free = static_cast<double>(free_voxels) /
+        static_cast<double>(component.size());
+    const double q_unknown = static_cast<double>(unknown_voxels) /
+        static_cast<double>(component.size());
+    const double q_track = returns > 0U
+        ? static_cast<double>(track_returns) / static_cast<double>(returns)
+        : 0.0;
+    const bool track_explained =
+        q_track >= config_.track_explained_ratio;
+    const bool background_supported = !track_explained &&
+        (background_adjacent ||
+         background_distance_m < config_.background_attach_distance_m);
+    const bool free_violation = !track_explained && !background_supported &&
+        q_free >= config_.free_packet_ratio &&
+        background_distance_m > config_.background_separate_distance_m;
+    const bool unknown_component = !track_explained &&
+        !background_supported && !free_violation &&
+        (q_unknown > 0.0 || q_free < config_.free_packet_ratio);
+
+    if (track_explained)
+      ++output.track_explained_components;
+    else if (background_supported)
+      ++output.background_components;
+    else if (free_violation)
+      ++output.free_violation_components;
+    else if (unknown_component)
+      ++output.unknown_components;
+    for (const size_t linear_index : component)
+    {
+      const EpochReturnVoxel& item = epoch_returns_.at(linear_index);
+      if ((!background_supported && !unknown_component) || free_violation ||
+          track_explained || !item.allow_background ||
+          item.track_explained_returns > 0U)
+        continue;
+      observeBackground(
+          geometry_.idxToCoord(
+              geometry_.indexFromLinear(linear_index)).cast<double>(),
+          commit_time_s, epoch_id_, true, background_supported);
+      ++output.background_voxels;
+    }
   }
   for (const size_t linear_index : epoch_free_voxels_)
   {
     const double raw = epoch_free_evidence_[linear_index];
     output.raw_free_evidence += raw;
-    if (epoch_background_voxels_.count(linear_index) == 0U)
+    if (epoch_returns_.count(linear_index) == 0U)
     {
       const double evidence = config_.free_epoch_weight *
           (1.0 - std::exp(-raw / config_.free_saturation_n0));
@@ -383,14 +496,15 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     epoch_free_evidence_[linear_index] = 0.0;
   }
   epoch_free_voxels_.clear();
-  epoch_background_voxels_.clear();
+  epoch_returns_.clear();
   ++epoch_id_;
   epoch_start_time_s_ = std::floor(time_s / duration_s) * duration_s;
   return output;
 }
 
-void BackgroundMap::accumulateBackground(
-    const Vec3& point_m, const double time_s, const bool allow_promotion)
+void BackgroundMap::accumulateReturn(
+    const Vec3& point_m, const double time_s, const bool track_explained,
+    const bool allow_background)
 {
   if (!point_m.allFinite() || !std::isfinite(time_s))
     throw std::invalid_argument("invalid deferred background endpoint");
@@ -402,20 +516,17 @@ void BackgroundMap::accumulateBackground(
   if (!geometry_.tryLinearIndex(
           geometry_.coordToIdx(point_m.cast<float>()), &linear_index))
     return;
-  auto inserted = epoch_background_voxels_.emplace(
-      linear_index, std::make_pair(time_s, allow_promotion));
-  if (!inserted.second)
-  {
-    inserted.first->second.first = std::max(
-        inserted.first->second.first, time_s);
-    inserted.first->second.second =
-        inserted.first->second.second || allow_promotion;
-  }
+  EpochReturnVoxel& item = epoch_returns_[linear_index];
+  item.last_time_s = std::max(item.last_time_s, time_s);
+  ++item.returns;
+  if (track_explained)
+    ++item.track_explained_returns;
+  item.allow_background = item.allow_background || allow_background;
 }
 
 void BackgroundMap::observeBackground(
     const Vec3& point_m, const double time_s, const uint64_t group_id,
-    const bool allow_promotion)
+    const bool allow_promotion, const bool background_supported)
 {
   if (!point_m.allFinite() || !std::isfinite(time_s))
     throw std::invalid_argument("invalid background endpoint");
@@ -441,7 +552,16 @@ void BackgroundMap::observeBackground(
     ++voxel.candidate_hits;
     voxel.candidate_last_group = group_id;
     voxel.candidate_last_time_s = time_s;
-    voxel.background_evidence += config_.background_weight;
+    voxel.background_evidence += background_supported
+        ? config_.background_supported_weight : config_.background_weight;
+    if (background_supported)
+    {
+      voxel.candidate_hits = std::max(
+          voxel.candidate_hits, config_.background_promotion_groups);
+      voxel.candidate_first_time_s = std::min(
+          voxel.candidate_first_time_s,
+          time_s - config_.background_promotion_duration_s);
+    }
   }
   voxel.last_update_time_s = time_s;
   updateState(&voxel, time_s, allow_promotion);
@@ -1266,6 +1386,14 @@ void SoftVofodCore::processBatch(
         epoch_commit->raw_free_evidence;
     result->diagnostics.map_epoch_committed_free_evidence +=
         epoch_commit->committed_free_evidence;
+    result->diagnostics.background_components +=
+        epoch_commit->background_components;
+    result->diagnostics.free_violation_components +=
+        epoch_commit->free_violation_components;
+    result->diagnostics.unknown_components +=
+        epoch_commit->unknown_components;
+    result->diagnostics.track_explained_components +=
+        epoch_commit->track_explained_components;
   }
   const auto epoch_end = std::chrono::steady_clock::now();
   const double batch_time_s = rays.back().time_s;
@@ -1635,10 +1763,9 @@ void SoftVofodCore::processBatch(
       background_map_.quarantine(
           ray.point_m, batch_time_s + config_.micro_batch_dt_s);
     }
-    else if (background_endpoint_updates_enabled)
-    {
-      background_map_.accumulateBackground(ray.point_m, ray.time_s, true);
-    }
+    background_map_.accumulateReturn(
+        ray.point_m, ray.time_s, track_protected_endpoint,
+        background_endpoint_updates_enabled);
   }
   const auto map_end = std::chrono::steady_clock::now();
   result->diagnostics.classification_ms +=

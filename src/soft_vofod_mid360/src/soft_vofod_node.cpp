@@ -184,6 +184,15 @@ private:
     parameter("map/map_epoch_hz", &config->map.map_epoch_hz);
     parameter("map/free_saturation_n0", &config->map.free_saturation_n0);
     parameter("map/free_epoch_weight", &config->map.free_epoch_weight);
+    parameter("map/background_attach_distance_m",
+              &config->map.background_attach_distance_m);
+    parameter("map/background_separate_distance_m",
+              &config->map.background_separate_distance_m);
+    parameter("map/free_packet_ratio", &config->map.free_packet_ratio);
+    parameter("map/track_explained_ratio",
+              &config->map.track_explained_ratio);
+    parameter("map/background_supported_weight",
+              &config->map.background_supported_weight);
     parameter("map/valid_free_weight", &config->map.valid_free_weight);
     parameter("map/no_return_free_weight",
               &config->map.no_return_free_weight);
@@ -641,6 +650,17 @@ private:
       status.values.push_back(diagnosticValue(
           "map_epoch_committed_free_evidence",
           number(diagnostics->map_epoch_committed_free_evidence)));
+      status.values.push_back(diagnosticValue(
+          "background_components",
+          number(diagnostics->background_components)));
+      status.values.push_back(diagnosticValue(
+          "free_violation_components",
+          number(diagnostics->free_violation_components)));
+      status.values.push_back(diagnosticValue(
+          "unknown_components", number(diagnostics->unknown_components)));
+      status.values.push_back(diagnosticValue(
+          "track_explained_components",
+          number(diagnostics->track_explained_components)));
       status.values.push_back(diagnosticValue(
           "deleted_existence", number(diagnostics->deleted_existence)));
       status.values.push_back(diagnosticValue(
