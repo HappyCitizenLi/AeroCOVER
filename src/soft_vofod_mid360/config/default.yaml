@@ -61,6 +61,15 @@ tracker:
   confirm_threshold: 0.8
   delete_threshold: 0.1
   clutter_density: 0.001
+  survival_lambda_per_s: 0.05
+  tentative_max_age_s: 1.0
+  tentative_max_no_measurement_s: 0.3
+  confirmed_max_no_measurement_s: 6.0
+  duplicate_merge_position_d2: 1.0
+  duplicate_merge_distance_m: 0.25
+  duplicate_merge_velocity_mps: 0.5
+  duplicate_merge_measurement_dt_s: 0.05
+  duplicate_merge_birth_dt_s: 0.5
   hard_timeout_s: 30.0
   quarantine_duration_s: 2.0
 

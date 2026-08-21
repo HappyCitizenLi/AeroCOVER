@@ -148,3 +148,25 @@
   全 ray opportunity，故尚未达到 100 ms 门槛。
 - `soft_vofod_mid360` build 3/3 成功、42 tests 零失败；S07 run 190/190 scored diagnostics，
   handshake/coverage gates 通过。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 3 survival 与 ghost-track 生命周期
+
+- existence 每帧先用 `exp(-lambda_S * dt)` 做 survival prediction，再根据整帧聚合的
+  detection opportunity 做一次 hit/miss Bayes update；`P_D=0` 不产生观测惩罚，但轨迹仍会
+  随 survival 缓慢衰减。
+- 修正最初把 survival/miss 放进 10 ms micro-batch 的时间尺度错误。该错误会把同一帧重复
+  计罚，导致 S07 HOTA 0.101→0.0365、fragmentation 3→23；错误 run 已保存在
+  `artifacts/v2_phase3_microbatch_bug/`，并新增跨 micro-batch 的帧级 existence 回归测试。
+- tentative 使用 1.0 s confirmation/max-age deadline 和 0.3 s no-measurement deadline；
+  confirmed 使用 6.0 s no-measurement deadline，30 s hard timeout 仅作 safety fallback。
+- 新增保守 duplicate merge：同时要求 0.25 m absolute distance、position Mahalanobis、
+  velocity、birth/last-measurement history 与 support overlap 通过；只保留状态/存在概率/
+  正更新数/年龄/协方差更优者，不融合状态，0.5/1/2 m 邻近真实目标不会仅凭距离被合并。
+- 修正版 S07 相对 Phase 2：HOTA 0.1012→0.1083、TP 176→187、FN 14→3、fragmentation
+  3→0；track mean/peak/final 40.7/213/157→31.0/172/73，duplicate merge 触发 2 次；
+  runtime mean/p95 108.5/260.7 ms→92.3/220.6 ms，processing load 1.085→0.923。
+- `soft_vofod_mid360` build 3/3 成功、48 tests 零失败；S07 190/190 scored frames、输入握手和
+  coverage gates 均通过。S07 仍有 8,134 FP 和 73 个末帧轨迹，后续 map assimilation 与
+  packet-level birth/maintenance 仍是必要工作。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 348 tests、0 error/failure/skipped。

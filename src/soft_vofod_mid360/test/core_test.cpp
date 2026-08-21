@@ -312,15 +312,114 @@ TEST(Opportunity, ConfirmedFrontTrackOccludesBackTrack)
   EXPECT_DOUBLE_EQ(back_opportunity.detection_probability, 0.0);
 }
 
-TEST(Existence, OnlyOpportunityMakesAMissNegativeEvidence)
+TEST(Existence, SurvivalDecaysWithoutInventingAnObservationMiss)
 {
   EXPECT_DOUBLE_EQ(
       soft_vofod::SoftVofodCore::missedExistence(0.7, 0.0), 0.7);
+  const double survived = soft_vofod::SoftVofodCore::survivalExistence(
+      0.7, 0.1, 1.0);
+  EXPECT_LT(survived, 0.7);
+  EXPECT_DOUBLE_EQ(
+      soft_vofod::SoftVofodCore::missedExistence(survived, 0.0), survived);
   EXPECT_LT(
       soft_vofod::SoftVofodCore::missedExistence(0.7, 0.9), 0.7);
   EXPECT_GT(
       soft_vofod::SoftVofodCore::hitExistence(0.6, 0.5, 1.0, 1.0e-3),
       0.8);
+}
+
+TEST(Existence, UpdatesOncePerScanAcrossMicroBatches)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.id = 1U;
+  track.existence_probability = 0.9;
+  track.last_prediction_time_s = 0.0;
+  track.last_existence_time_s = 0.0;
+  track.last_measurement_time_s = 0.0;
+  core.addTrackForTest(track);
+
+  const std::vector<soft_vofod::RaySample> rays = {
+      ray(0.01, soft_vofod::ReturnStatus::no_return),
+      ray(0.03, soft_vofod::ReturnStatus::no_return)};
+  const soft_vofod::ScanResult result = core.processScan(1U, 0.03, rays);
+  ASSERT_EQ(result.opportunities.size(), 1U);
+  ASSERT_EQ(result.tracks.size(), 1U);
+  const double survived = soft_vofod::SoftVofodCore::survivalExistence(
+      0.9, config.tracker.survival_lambda_per_s, 0.03);
+  const double expected = soft_vofod::SoftVofodCore::missedExistence(
+      survived, result.opportunities.front().detection_probability);
+  EXPECT_NEAR(result.tracks.front().existence_probability, expected, 1.0e-12);
+}
+
+TEST(TrackManagement, MergesOnlyNearHistoryConsistentDuplicates)
+{
+  soft_vofod::Config config = testConfig();
+  config.tracker.survival_lambda_per_s = 0.0;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track first = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  soft_vofod::Track second = trackAt(soft_vofod::Vec3(5.1, 0.0, 0.0));
+  first.id = 1U;
+  second.id = 2U;
+  for (soft_vofod::Track* track : {&first, &second})
+  {
+    track->existence_probability = 0.9;
+    track->birth_time_s = 0.5;
+    track->last_prediction_time_s = 1.0;
+    track->last_existence_time_s = 1.0;
+    track->last_measurement_time_s = 1.0;
+    track->positive_updates = track->id;
+  }
+  core.addTrackForTest(first);
+  core.addTrackForTest(second);
+  const soft_vofod::RaySample invalid = ray(
+      1.01, soft_vofod::ReturnStatus::invalid_range);
+  soft_vofod::ScanResult result =
+      core.processScan(1U, invalid.time_s, {invalid});
+  EXPECT_EQ(result.diagnostics.merged_duplicates, 1U);
+  EXPECT_EQ(std::count_if(
+      result.tracks.begin(), result.tracks.end(),
+      [](const soft_vofod::Track& track)
+      { return track.state == soft_vofod::TrackState::deleting; }), 1);
+
+  soft_vofod::SoftVofodCore separate(config);
+  second.x.head<3>() = soft_vofod::Vec3(5.5, 0.0, 0.0);
+  separate.addTrackForTest(first);
+  separate.addTrackForTest(second);
+  result = separate.processScan(1U, invalid.time_s, {invalid});
+  EXPECT_EQ(result.diagnostics.merged_duplicates, 0U);
+  EXPECT_EQ(result.tracks.size(), 2U);
+}
+
+TEST(TrackManagement, TentativeAndConfirmedHaveSeparateDeadlines)
+{
+  soft_vofod::Config config = testConfig();
+  config.tracker.survival_lambda_per_s = 0.0;
+  soft_vofod::Track tentative = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  tentative.state = soft_vofod::TrackState::tentative;
+  tentative.existence_probability = 0.6;
+  tentative.last_prediction_time_s = 0.0;
+  tentative.last_existence_time_s = 0.0;
+  tentative.last_measurement_time_s = 0.0;
+  soft_vofod::SoftVofodCore tentative_core(config);
+  tentative_core.addTrackForTest(tentative);
+  soft_vofod::RaySample invalid = ray(
+      0.31, soft_vofod::ReturnStatus::invalid_range);
+  soft_vofod::ScanResult result = tentative_core.processScan(
+      1U, invalid.time_s, {invalid});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().deletion_reason, "tentative_timeout");
+
+  soft_vofod::Track confirmed = trackAt(
+      soft_vofod::Vec3(5.0, 0.0, 0.0));
+  confirmed.existence_probability = 0.9;
+  soft_vofod::SoftVofodCore confirmed_core(config);
+  confirmed_core.addTrackForTest(confirmed);
+  invalid.time_s = config.tracker.confirmed_max_no_measurement_s + 0.01;
+  result = confirmed_core.processScan(1U, invalid.time_s, {invalid});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().deletion_reason, "confirmed_timeout");
 }
 
 TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)

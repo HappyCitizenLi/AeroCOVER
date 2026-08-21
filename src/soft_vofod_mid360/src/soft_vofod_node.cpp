@@ -239,6 +239,24 @@ private:
     parameter("tracker/confirm_threshold", &config->tracker.confirm_threshold);
     parameter("tracker/delete_threshold", &config->tracker.delete_threshold);
     parameter("tracker/clutter_density", &config->tracker.clutter_density);
+    parameter("tracker/survival_lambda_per_s",
+              &config->tracker.survival_lambda_per_s);
+    parameter("tracker/tentative_max_age_s",
+              &config->tracker.tentative_max_age_s);
+    parameter("tracker/tentative_max_no_measurement_s",
+              &config->tracker.tentative_max_no_measurement_s);
+    parameter("tracker/confirmed_max_no_measurement_s",
+              &config->tracker.confirmed_max_no_measurement_s);
+    parameter("tracker/duplicate_merge_position_d2",
+              &config->tracker.duplicate_merge_position_d2);
+    parameter("tracker/duplicate_merge_distance_m",
+              &config->tracker.duplicate_merge_distance_m);
+    parameter("tracker/duplicate_merge_velocity_mps",
+              &config->tracker.duplicate_merge_velocity_mps);
+    parameter("tracker/duplicate_merge_measurement_dt_s",
+              &config->tracker.duplicate_merge_measurement_dt_s);
+    parameter("tracker/duplicate_merge_birth_dt_s",
+              &config->tracker.duplicate_merge_birth_dt_s);
     parameter("tracker/hard_timeout_s", &config->tracker.hard_timeout_s);
     parameter("tracker/quarantine_duration_s",
               &config->tracker.quarantine_duration_s);
@@ -608,7 +626,15 @@ private:
       status.values.push_back(diagnosticValue(
           "deleted_existence", number(diagnostics->deleted_existence)));
       status.values.push_back(diagnosticValue(
+          "deleted_tentative_timeout",
+          number(diagnostics->deleted_tentative_timeout)));
+      status.values.push_back(diagnosticValue(
+          "deleted_confirmed_timeout",
+          number(diagnostics->deleted_confirmed_timeout)));
+      status.values.push_back(diagnosticValue(
           "deleted_hard_timeout", number(diagnostics->deleted_hard_timeout)));
+      status.values.push_back(diagnosticValue(
+          "merged_duplicates", number(diagnostics->merged_duplicates)));
     }
     array.status.push_back(status);
     diagnostics_pub_.publish(array);

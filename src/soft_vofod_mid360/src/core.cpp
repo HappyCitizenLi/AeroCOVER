@@ -98,6 +98,15 @@ void validateConfig(const Config& config)
       config.tracker.map_support_sigma < 0.0 ||
       config.tracker.map_support_uncertainty_cap_m < 0.0 ||
       !finitePositive(config.tracker.clutter_density) ||
+      config.tracker.survival_lambda_per_s < 0.0 ||
+      !finitePositive(config.tracker.tentative_max_age_s) ||
+      !finitePositive(config.tracker.tentative_max_no_measurement_s) ||
+      !finitePositive(config.tracker.confirmed_max_no_measurement_s) ||
+      !finitePositive(config.tracker.duplicate_merge_position_d2) ||
+      !finitePositive(config.tracker.duplicate_merge_distance_m) ||
+      config.tracker.duplicate_merge_velocity_mps < 0.0 ||
+      config.tracker.duplicate_merge_measurement_dt_s < 0.0 ||
+      config.tracker.duplicate_merge_birth_dt_s < 0.0 ||
       !finitePositive(config.tracker.hard_timeout_s) ||
       config.tracker.quarantine_duration_s < 0.0 ||
       !finitePositive(config.opportunity.max_ray_range_m) ||
@@ -499,6 +508,15 @@ double SoftVofodCore::missedExistence(
   return clampProbability(r * (1.0 - pd) / denominator);
 }
 
+double SoftVofodCore::survivalExistence(
+    const double prior, const double lambda_per_s, const double dt_s)
+{
+  if (!std::isfinite(lambda_per_s) || lambda_per_s < 0.0 ||
+      !std::isfinite(dt_s) || dt_s < 0.0)
+    throw std::invalid_argument("survival prediction requires nonnegative values");
+  return clampProbability(prior) * std::exp(-lambda_per_s * dt_s);
+}
+
 double SoftVofodCore::hitExistence(
     const double prior, const double detection_probability,
     const double likelihood, const double clutter_density)
@@ -684,9 +702,74 @@ void SoftVofodCore::predictTracks(const double time_s)
   }
 }
 
+bool SoftVofodCore::duplicateTracks(
+    const Track& first, const Track& second) const
+{
+  if (first.id == second.id || first.state == TrackState::deleting ||
+      second.state == TrackState::deleting ||
+      std::abs(first.birth_time_s - second.birth_time_s) >
+          config_.tracker.duplicate_merge_birth_dt_s ||
+      std::abs(first.last_measurement_time_s - second.last_measurement_time_s) >
+          config_.tracker.duplicate_merge_measurement_dt_s ||
+      (first.x.tail<3>() - second.x.tail<3>()).norm() >
+          config_.tracker.duplicate_merge_velocity_mps)
+    return false;
+  const Vec3 difference = first.x.head<3>() - second.x.head<3>();
+  if (difference.norm() > config_.tracker.duplicate_merge_distance_m ||
+      difference.norm() >= 2.0 * config_.tracker.target_radius_m)
+    return false;
+  const Mat3 covariance = first.covariance.block<3, 3>(0, 0) +
+      second.covariance.block<3, 3>(0, 0);
+  const Eigen::LDLT<Mat3> decomposition(covariance);
+  return decomposition.info() == Eigen::Success &&
+      difference.dot(decomposition.solve(difference)) <=
+          config_.tracker.duplicate_merge_position_d2;
+}
+
+void SoftVofodCore::mergeDuplicateTracks(ScanResult* const result)
+{
+  if (!result)
+    throw std::invalid_argument("duplicate merge requires diagnostics output");
+  auto better = [](const Track& first, const Track& second)
+  {
+    if (first.state != second.state)
+      return first.state == TrackState::confirmed;
+    if (first.existence_probability != second.existence_probability)
+      return first.existence_probability > second.existence_probability;
+    if (first.positive_updates != second.positive_updates)
+      return first.positive_updates > second.positive_updates;
+    if (first.birth_time_s != second.birth_time_s)
+      return first.birth_time_s < second.birth_time_s;
+    return first.covariance.trace() <= second.covariance.trace();
+  };
+  for (size_t first = 0U; first < tracks_.size(); ++first)
+  {
+    if (tracks_[first].state == TrackState::deleting)
+      continue;
+    for (size_t second = first + 1U; second < tracks_.size(); ++second)
+    {
+      if (!duplicateTracks(tracks_[first], tracks_[second]))
+        continue;
+      const size_t loser = better(tracks_[first], tracks_[second])
+          ? second : first;
+      tracks_[loser].state = TrackState::deleting;
+      tracks_[loser].deletion_reason = "duplicate_merge";
+      ++result->diagnostics.merged_duplicates;
+      if (loser == first)
+        break;
+    }
+  }
+}
+
 void SoftVofodCore::addBirthEventForTest(const Event& event)
 {
   birth_buffer_.push_back(event);
+}
+
+void SoftVofodCore::addTrackForTest(const Track& track)
+{
+  tracks_.push_back(track);
+  next_track_id_ = std::max(next_track_id_, track.id + 1U);
 }
 
 std::optional<SoftVofodCore::BirthCandidate>
@@ -852,6 +935,7 @@ std::optional<Track> SoftVofodCore::createBirth(const double time_s)
   track.existence_probability = config_.tracker.birth_existence;
   track.birth_time_s = time_s;
   track.last_prediction_time_s = time_s;
+  track.last_existence_time_s = time_s;
   track.last_measurement_time_s = time_s;
   track.positive_updates = candidate->groups;
   return track;
@@ -1374,6 +1458,8 @@ void SoftVofodCore::processBatch(
                    config_.opportunity.detection_probability_cap);
       opportunity_result.matched = has_match;
     }
+    if (has_match && !is_new)
+      opportunity_result.measurement_likelihood = likelihoods[track_index];
     tracks_[track_index].cumulative_effective_opportunity +=
         opportunity_result.effective_opportunity;
 
@@ -1385,64 +1471,28 @@ void SoftVofodCore::processBatch(
       result->opportunities.push_back(opportunity_result);
     else
     {
-      existing->detection_probability = std::min(
-          config_.opportunity.detection_probability_cap,
-          1.0 - (1.0 - existing->detection_probability) *
-              (1.0 - opportunity_result.detection_probability));
-      existing->effective_opportunity += opportunity_result.effective_opportunity;
-      existing->matched = existing->matched || opportunity_result.matched;
-    }
-
-    Track& track = tracks_[track_index];
-    const bool was_confirmed = track.state == TrackState::confirmed;
-    if (!is_new)
-    {
-      if (has_match)
+      if (config_.ablation.opportunity_aware_existence)
       {
-        const double observed_pd = std::max(
-            opportunity_result.detection_probability,
-            std::min(config_.opportunity.return_probability,
-                     config_.opportunity.detection_probability_cap));
-        track.existence_probability = hitExistence(
-            track.existence_probability, observed_pd,
-            std::max(kProbabilityEpsilon, likelihoods[track_index]),
-            config_.tracker.clutter_density);
+        existing->detection_probability = std::min(
+            config_.opportunity.detection_probability_cap,
+            1.0 - (1.0 - existing->detection_probability) *
+                (1.0 - opportunity_result.detection_probability));
       }
       else
       {
-        track.existence_probability = missedExistence(
-            track.existence_probability,
+        existing->detection_probability = std::max(
+            existing->detection_probability,
             opportunity_result.detection_probability);
       }
-    }
-
-    if (track.state == TrackState::tentative &&
-        track.existence_probability >= config_.tracker.confirm_threshold)
-      track.state = TrackState::confirmed;
-    if (track.state != TrackState::deleting &&
-        batch_time_s - track.last_measurement_time_s >
-            config_.tracker.hard_timeout_s)
-    {
-      track.state = TrackState::deleting;
-      track.deletion_reason = "hard_timeout";
-      ++result->diagnostics.deleted_hard_timeout;
-    }
-    else if (track.state != TrackState::deleting &&
-             track.existence_probability <= config_.tracker.delete_threshold)
-    {
-      track.state = TrackState::deleting;
-      track.deletion_reason = "existence_probability";
-      ++result->diagnostics.deleted_existence;
-    }
-    if (track.state == TrackState::deleting &&
-        config_.ablation.target_feedback && was_confirmed)
-    {
-      addQuarantine(
-          track.x.head<3>(), config_.tracker.target_radius_m +
-              config_.tracker.map_support_uncertainty_cap_m,
-          batch_time_s + config_.tracker.quarantine_duration_s);
+      existing->effective_opportunity += opportunity_result.effective_opportunity;
+      existing->measurement_likelihood = std::max(
+          existing->measurement_likelihood,
+          opportunity_result.measurement_likelihood);
+      existing->matched = existing->matched || opportunity_result.matched;
     }
   }
+
+  mergeDuplicateTracks(result);
 
   const SupportIndex target_supports = indexSupports(
       config_.ablation.target_feedback ? supports(batch_time_s)
@@ -1555,6 +1605,11 @@ ScanResult SoftVofodCore::processScan(
           [](const Track& track) { return track.state == TrackState::deleting; }),
       tracks_.end());
 
+  std::unordered_set<uint32_t> existing_track_ids;
+  existing_track_ids.reserve(tracks_.size());
+  for (const Track& track : tracks_)
+    existing_track_ids.insert(track.id);
+
   for (size_t index = 0U; index < rays.size(); ++index)
   {
     const RaySample& ray = rays[index];
@@ -1582,6 +1637,86 @@ ScanResult SoftVofodCore::processScan(
   {
     prune(scan_stamp_s);
     predictTracks(scan_stamp_s);
+  }
+
+  const double existence_time_s = rays.empty() ? scan_stamp_s : rays.back().time_s;
+  for (Track& track : tracks_)
+  {
+    if (track.state == TrackState::deleting ||
+        existing_track_ids.count(track.id) == 0U)
+      continue;
+    const bool was_confirmed = track.state == TrackState::confirmed;
+    const auto evidence = std::find_if(
+        result.opportunities.begin(), result.opportunities.end(),
+        [&track](const OpportunityResult& item)
+        { return item.track_id == track.id; });
+    const double existence_dt = std::max(
+        0.0, existence_time_s - track.last_existence_time_s);
+    track.existence_probability = survivalExistence(
+        track.existence_probability,
+        config_.tracker.survival_lambda_per_s, existence_dt);
+    track.last_existence_time_s = existence_time_s;
+    if (evidence != result.opportunities.end() && evidence->matched)
+    {
+      const double observed_pd = std::max(
+          evidence->detection_probability,
+          std::min(config_.opportunity.return_probability,
+                   config_.opportunity.detection_probability_cap));
+      track.existence_probability = hitExistence(
+          track.existence_probability, observed_pd,
+          std::max(kProbabilityEpsilon, evidence->measurement_likelihood),
+          config_.tracker.clutter_density);
+    }
+    else if (evidence != result.opportunities.end())
+    {
+      track.existence_probability = missedExistence(
+          track.existence_probability, evidence->detection_probability);
+    }
+
+    if (track.state == TrackState::tentative &&
+        track.existence_probability >= config_.tracker.confirm_threshold)
+      track.state = TrackState::confirmed;
+    if (track.state == TrackState::tentative &&
+        (existence_time_s - track.birth_time_s >
+             config_.tracker.tentative_max_age_s ||
+         existence_time_s - track.last_measurement_time_s >
+             config_.tracker.tentative_max_no_measurement_s))
+    {
+      track.state = TrackState::deleting;
+      track.deletion_reason = "tentative_timeout";
+      ++result.diagnostics.deleted_tentative_timeout;
+    }
+    else if (track.state == TrackState::confirmed &&
+             existence_time_s - track.last_measurement_time_s >
+                 config_.tracker.confirmed_max_no_measurement_s)
+    {
+      track.state = TrackState::deleting;
+      track.deletion_reason = "confirmed_timeout";
+      ++result.diagnostics.deleted_confirmed_timeout;
+    }
+    else if (track.state != TrackState::deleting &&
+             existence_time_s - track.last_measurement_time_s >
+                 config_.tracker.hard_timeout_s)
+    {
+      track.state = TrackState::deleting;
+      track.deletion_reason = "hard_timeout";
+      ++result.diagnostics.deleted_hard_timeout;
+    }
+    else if (track.state != TrackState::deleting &&
+             track.existence_probability <= config_.tracker.delete_threshold)
+    {
+      track.state = TrackState::deleting;
+      track.deletion_reason = "existence_probability";
+      ++result.diagnostics.deleted_existence;
+    }
+    if (track.state == TrackState::deleting &&
+        config_.ablation.target_feedback && was_confirmed)
+    {
+      addQuarantine(
+          track.x.head<3>(), config_.tracker.target_radius_m +
+              config_.tracker.map_support_uncertainty_cap_m,
+          existence_time_s + config_.tracker.quarantine_duration_s);
+    }
   }
   result.tracks = tracks_;
   result.diagnostics.map_voxel_count = background_map_.geometry().size();

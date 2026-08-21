@@ -98,6 +98,15 @@ struct TrackerConfig
   double confirm_threshold = 0.8;
   double delete_threshold = 0.1;
   double clutter_density = 1.0e-3;
+  double survival_lambda_per_s = 0.05;
+  double tentative_max_age_s = 1.0;
+  double tentative_max_no_measurement_s = 0.3;
+  double confirmed_max_no_measurement_s = 6.0;
+  double duplicate_merge_position_d2 = 1.0;
+  double duplicate_merge_distance_m = 0.25;
+  double duplicate_merge_velocity_mps = 0.5;
+  double duplicate_merge_measurement_dt_s = 0.05;
+  double duplicate_merge_birth_dt_s = 0.5;
   double hard_timeout_s = 30.0;
   double quarantine_duration_s = 2.0;
 };
@@ -164,6 +173,7 @@ struct Track
   double existence_probability = 0.0;
   double birth_time_s = 0.0;
   double last_prediction_time_s = 0.0;
+  double last_existence_time_s = 0.0;
   double last_measurement_time_s = 0.0;
   uint32_t positive_updates = 0;
   double cumulative_effective_opportunity = 0.0;
@@ -175,6 +185,7 @@ struct OpportunityResult
   uint32_t track_id = 0;
   double detection_probability = 0.0;
   double effective_opportunity = 0.0;
+  double measurement_likelihood = 0.0;
   bool matched = false;
 };
 
@@ -202,7 +213,10 @@ struct ProcessDiagnostics
   size_t births = 0;
   size_t matches = 0;
   size_t deleted_existence = 0;
+  size_t deleted_tentative_timeout = 0;
+  size_t deleted_confirmed_timeout = 0;
   size_t deleted_hard_timeout = 0;
+  size_t merged_duplicates = 0;
   size_t free_voxel_updates = 0;
   bool background_endpoint_updates_enabled = true;
   bool birth_enabled = true;
@@ -295,6 +309,8 @@ public:
   static Mat6 transition(double dt_s);
   static Mat6 processNoise(double dt_s, double acceleration_sigma_mps2);
   static double missedExistence(double prior, double detection_probability);
+  static double survivalExistence(
+      double prior, double lambda_per_s, double dt_s);
   static double hitExistence(
       double prior, double detection_probability, double likelihood,
       double clutter_density);
@@ -309,6 +325,7 @@ public:
       double return_probability, double cap);
 
   void addBirthEventForTest(const Event& event);
+  void addTrackForTest(const Track& track);
   std::optional<Track> tryBirthForTest(double time_s);
   OpportunityResult opportunityForTest(
       const Track& track, const std::vector<RaySample>& rays,
@@ -351,6 +368,8 @@ private:
       bool background_endpoint_updates_enabled, bool birth_enabled,
       ScanResult* result);
   void predictTracks(double time_s);
+  void mergeDuplicateTracks(ScanResult* result);
+  bool duplicateTracks(const Track& first, const Track& second) const;
   std::optional<BirthCandidate> bestBirthCandidate(double time_s) const;
   std::optional<Track> createBirth(double time_s);
   std::vector<Support> supports(double time_s) const;
