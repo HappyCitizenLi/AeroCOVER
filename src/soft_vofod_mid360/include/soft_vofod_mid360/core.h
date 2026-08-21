@@ -10,6 +10,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace soft_vofod
@@ -214,6 +215,7 @@ struct ProcessDiagnostics
   double map_commit_ms = 0.0;
   size_t map_voxel_count = 0;
   size_t track_count = 0;
+  size_t support_count = 0;
 };
 
 struct ScanResult
@@ -328,6 +330,12 @@ private:
     double until_s = 0.0;
   };
 
+  struct SupportIndex
+  {
+    std::vector<Support> supports;
+    std::unordered_map<size_t, std::vector<size_t>> by_voxel;
+  };
+
   struct BirthCandidate
   {
     Vec6 x = Vec6::Zero();
@@ -346,9 +354,12 @@ private:
   std::optional<BirthCandidate> bestBirthCandidate(double time_s) const;
   std::optional<Track> createBirth(double time_s);
   std::vector<Support> supports(double time_s) const;
+  SupportIndex indexSupports(std::vector<Support> supports) const;
   double truncateBeforeSupport(
       const RaySample& ray, double desired_length_m,
-      const std::vector<Support>& supports) const;
+      const SupportIndex& supports) const;
+  bool pointInsideSupport(
+      const Vec3& point_m, const SupportIndex& supports) const;
   OpportunityResult opportunity(
       const Track& track, const std::vector<RaySample>& rays,
       const std::vector<Track>& tracks, bool matched) const;

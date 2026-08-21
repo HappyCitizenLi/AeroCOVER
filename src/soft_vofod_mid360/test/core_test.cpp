@@ -375,6 +375,25 @@ TEST(Pipeline, DisabledBirthIsMapOnlyWarmup)
   EXPECT_TRUE(core.tracks().empty());
 }
 
+TEST(Pipeline, RawEventNeverCreatesAMapSupport)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::SoftVofodCore core(config);
+  for (uint32_t scan = 0U; scan < 4U; ++scan)
+  {
+    const soft_vofod::RaySample empty = ray(
+        0.1 * scan, soft_vofod::ReturnStatus::no_return);
+    core.processScan(scan, empty.time_s, {empty});
+  }
+  const soft_vofod::RaySample hit = ray(
+      0.4, soft_vofod::ReturnStatus::valid_return, 5.0);
+  const soft_vofod::ScanResult result =
+      core.processScan(4U, hit.time_s, {hit});
+  ASSERT_EQ(result.events.size(), 1U);
+  EXPECT_TRUE(result.tracks.empty());
+  EXPECT_EQ(result.diagnostics.support_count, 0U);
+}
+
 TEST(Pipeline, NoReturnAndValidRaysStopBeforeTargetSupport)
 {
   soft_vofod::Config config = testConfig();
@@ -387,7 +406,9 @@ TEST(Pipeline, NoReturnAndValidRaysStopBeforeTargetSupport)
             soft_vofod::VoxelState::unknown);
   soft_vofod::RaySample far_return = ray(
       0.8, soft_vofod::ReturnStatus::valid_return, 8.0);
-  core.processScan(8U, far_return.time_s, {far_return});
+  const soft_vofod::ScanResult result =
+      core.processScan(8U, far_return.time_s, {far_return});
+  EXPECT_EQ(result.diagnostics.support_count, 1U);
   EXPECT_EQ(core.backgroundMap().query(behind_target).state,
             soft_vofod::VoxelState::unknown);
 }

@@ -901,14 +901,19 @@ std::vector<SoftVofodCore::Support> SoftVofodCore::supports(
   {
     if (track.state == TrackState::deleting)
       continue;
-    Eigen::SelfAdjointEigenSolver<Mat3> solver(track.covariance.block<3, 3>(0, 0));
-    const double largest_variance = solver.info() == Eigen::Success
-        ? std::max(0.0, solver.eigenvalues().maxCoeff()) : 0.0;
     Support support;
     support.center_m = track.x.head<3>();
-    support.radius_m = config_.tracker.target_radius_m + std::min(
-        config_.tracker.map_support_uncertainty_cap_m,
-        config_.tracker.map_support_sigma * std::sqrt(largest_variance));
+    support.radius_m = config_.tracker.target_radius_m;
+    if (track.state == TrackState::confirmed)
+    {
+      Eigen::SelfAdjointEigenSolver<Mat3> solver(
+          track.covariance.block<3, 3>(0, 0));
+      const double largest_variance = solver.info() == Eigen::Success
+          ? std::max(0.0, solver.eigenvalues().maxCoeff()) : 0.0;
+      support.radius_m += std::min(
+          config_.tracker.map_support_uncertainty_cap_m,
+          config_.tracker.map_support_sigma * std::sqrt(largest_variance));
+    }
     support.until_s = time_s;
     output.push_back(support);
   }
@@ -920,13 +925,61 @@ std::vector<SoftVofodCore::Support> SoftVofodCore::supports(
   return output;
 }
 
+SoftVofodCore::SupportIndex SoftVofodCore::indexSupports(
+    std::vector<Support> supports) const
+{
+  SupportIndex output;
+  output.supports = std::move(supports);
+  const vofod::VoxelMap& geometry = background_map_.geometry();
+  for (size_t support_index = 0U;
+       support_index < output.supports.size(); ++support_index)
+  {
+    const Support& support = output.supports[support_index];
+    const Vec3 radius = support.radius_m * Vec3::Ones();
+    const vofod::VoxelMap::vec3i_t minimum =
+        geometry.coordToIdx((support.center_m - radius).cast<float>());
+    const vofod::VoxelMap::vec3i_t maximum =
+        geometry.coordToIdx((support.center_m + radius).cast<float>());
+    for (int x = minimum.x(); x <= maximum.x(); ++x)
+    {
+      for (int y = minimum.y(); y <= maximum.y(); ++y)
+      {
+        for (int z = minimum.z(); z <= maximum.z(); ++z)
+        {
+          size_t linear_index = 0U;
+          if (geometry.tryLinearIndex(
+                  vofod::VoxelMap::vec3i_t(x, y, z), &linear_index))
+            output.by_voxel[linear_index].push_back(support_index);
+        }
+      }
+    }
+  }
+  return output;
+}
+
 double SoftVofodCore::truncateBeforeSupport(
     const RaySample& ray, const double desired_length_m,
-    const std::vector<Support>& target_supports) const
+    const SupportIndex& target_supports) const
 {
   double length = desired_length_m;
-  for (const Support& support : target_supports)
+  std::vector<size_t> candidates;
+  background_map_.geometry().traceRay(
+      ray.origin_m.cast<float>(), ray.direction_unit.cast<float>(),
+      static_cast<float>(desired_length_m),
+      [&target_supports, &candidates](
+          const size_t linear_index, const vofod::VoxelMap::vec3i_t&, float)
+      {
+        const auto found = target_supports.by_voxel.find(linear_index);
+        if (found != target_supports.by_voxel.end())
+          candidates.insert(
+              candidates.end(), found->second.begin(), found->second.end());
+      });
+  std::sort(candidates.begin(), candidates.end());
+  candidates.erase(std::unique(candidates.begin(), candidates.end()),
+                   candidates.end());
+  for (const size_t candidate : candidates)
   {
+    const Support& support = target_supports.supports[candidate];
     const std::optional<double> near = raySphereNearRange(
         ray.origin_m, ray.direction_unit, support.center_m, support.radius_m,
         desired_length_m);
@@ -935,6 +988,30 @@ double SoftVofodCore::truncateBeforeSupport(
           std::max(0.0, *near - config_.map.target_guard_m));
   }
   return length;
+}
+
+bool SoftVofodCore::pointInsideSupport(
+    const Vec3& point_m, const SupportIndex& target_supports) const
+{
+  const vofod::VoxelMap& geometry = background_map_.geometry();
+  if (!point_m.allFinite() || !geometry.inLimits(
+          static_cast<float>(point_m.x()), static_cast<float>(point_m.y()),
+          static_cast<float>(point_m.z())))
+    return false;
+  size_t linear_index = 0U;
+  if (!geometry.tryLinearIndex(
+          geometry.coordToIdx(point_m.cast<float>()), &linear_index))
+    return false;
+  const auto found = target_supports.by_voxel.find(linear_index);
+  if (found == target_supports.by_voxel.end())
+    return false;
+  return std::any_of(
+      found->second.begin(), found->second.end(),
+      [&target_supports, &point_m](const size_t candidate)
+      {
+        const Support& support = target_supports.supports[candidate];
+        return (point_m - support.center_m).norm() <= support.radius_m;
+      });
 }
 
 OpportunityResult SoftVofodCore::opportunity(
@@ -1317,6 +1394,7 @@ void SoftVofodCore::processBatch(
     }
 
     Track& track = tracks_[track_index];
+    const bool was_confirmed = track.state == TrackState::confirmed;
     if (!is_new)
     {
       if (has_match)
@@ -1357,7 +1435,7 @@ void SoftVofodCore::processBatch(
       ++result->diagnostics.deleted_existence;
     }
     if (track.state == TrackState::deleting &&
-        config_.ablation.target_feedback)
+        config_.ablation.target_feedback && was_confirmed)
     {
       addQuarantine(
           track.x.head<3>(), config_.tracker.target_radius_m +
@@ -1366,20 +1444,11 @@ void SoftVofodCore::processBatch(
     }
   }
 
-  if (config_.ablation.target_feedback)
-  {
-    for (size_t ray_index = 0U; ray_index < rays.size(); ++ray_index)
-    {
-      if (!ray_is_event[ray_index])
-        continue;
-      addQuarantine(
-          rays[ray_index].point_m, config_.tracker.target_radius_m,
-          batch_time_s + config_.tracker.quarantine_duration_s);
-    }
-  }
-  const std::vector<Support> target_supports =
+  const SupportIndex target_supports = indexSupports(
       config_.ablation.target_feedback ? supports(batch_time_s)
-                                       : std::vector<Support>();
+                                       : std::vector<Support>());
+  result->diagnostics.support_count = std::max(
+      result->diagnostics.support_count, target_supports.supports.size());
   const auto tracking_end = std::chrono::steady_clock::now();
 
   std::vector<RaySample> free_rays;
@@ -1422,23 +1491,22 @@ void SoftVofodCore::processBatch(
     const RaySample& ray = rays[ray_index];
     if (ray.status != ReturnStatus::valid_return || !ray.has_point)
       continue;
-    bool protected_endpoint = ray_is_event[ray_index];
+    bool track_protected_endpoint = false;
     const size_t measurement_index = ray_measurement_index[ray_index];
     if (measurement_index != std::numeric_limits<size_t>::max() &&
         measurement_owner[measurement_index] >= 0)
-      protected_endpoint = true;
-    for (const Support& support : target_supports)
-    {
-      if ((ray.point_m - support.center_m).norm() <= support.radius_m)
-      {
-        protected_endpoint = true;
-        break;
-      }
-    }
-    if (protected_endpoint)
+      track_protected_endpoint = true;
+    track_protected_endpoint = track_protected_endpoint ||
+        pointInsideSupport(ray.point_m, target_supports);
+    if (track_protected_endpoint)
     {
       background_map_.quarantine(
           ray.point_m, batch_time_s + config_.tracker.quarantine_duration_s);
+    }
+    else if (ray_is_event[ray_index])
+    {
+      background_map_.quarantine(
+          ray.point_m, batch_time_s + config_.micro_batch_dt_s);
     }
     else if (background_endpoint_updates_enabled)
     {

@@ -604,6 +604,8 @@ private:
       status.values.push_back(diagnosticValue(
           "track_count", number(diagnostics->track_count)));
       status.values.push_back(diagnosticValue(
+          "support_count", number(diagnostics->support_count)));
+      status.values.push_back(diagnosticValue(
           "deleted_existence", number(diagnostics->deleted_existence)));
       status.values.push_back(diagnosticValue(
           "deleted_hard_timeout", number(diagnostics->deleted_hard_timeout)));

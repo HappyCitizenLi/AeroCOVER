@@ -133,3 +133,18 @@
 - 新旧 S06/B0 HOTA/IDF1/TP/FP/FN 完全相同（0.7423686/0.7106017/124/15/86）；28-run summary、
   aggregate 和 ablation deltas 已重新生成。
 - 定向 build 9/9 成功且无 warning；evaluation/B0/SOFT tests 分别 9/57/40，零失败。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 2 event-support 正反馈
+
+- 删除 raw event 的 0.75 m/2 s spherical support；raw event 只冻结自身 voxel 一个 10 ms
+  micro-batch。tentative track 只使用物理半径，confirmed track 才增加 capped uncertainty margin；
+  只有刚删除的 confirmed track 保留短时 support。
+- 复用现有 `VoxelMap` geometry/DDA 建立 support-to-voxel index；ray 只收集沿 DDA cells 的候选，
+  endpoint 只查询所在 voxel，不再对全部 supports 线性扫描。
+- diagnostics 新增直接测量的 `support_count`；新增 raw event 不产生 map support 的单元测试。
+- S07 no-event-support 单因素 run：support mean/peak 74.4/234（track peak 213），旧估计 peak
+  7,761；map-commit mean/peak 208.3/792.4 ms 降到 37.2/49.5 ms；total p95 1001.6→260.7 ms。
+- event count 17,837→16,402，false-free 0.354→0.328，FP 15,434→10,790；仍有 ghost tracks 和
+  全 ray opportunity，故尚未达到 100 ms 门槛。
+- `soft_vofod_mid360` build 3/3 成功、42 tests 零失败；S07 run 190/190 scored diagnostics，
+  handshake/coverage gates 通过。
