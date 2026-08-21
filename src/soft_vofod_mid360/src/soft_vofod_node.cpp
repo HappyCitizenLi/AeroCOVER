@@ -249,10 +249,21 @@ private:
     parameter("birth/pair_dt_max_s", &config->birth.pair_dt_max_s);
     parameter("birth/max_speed_mps", &config->birth.max_speed_mps);
     parameter("birth/max_residual_m", &config->birth.max_residual_m);
+    parameter("birth/inlier_gate_d2", &config->birth.inlier_gate_d2);
     parameter("birth/min_total_anomaly_score",
               &config->birth.min_total_anomaly_score);
     parameter("birth/suppression_radius_m",
               &config->birth.suppression_radius_m);
+    parameter("birth/birth_spatial_cell_m",
+              &config->birth.birth_spatial_cell_m);
+    int max_births_per_cell = static_cast<int>(
+        config->birth.max_births_per_spatial_cell_per_epoch);
+    parameter("birth/max_births_per_spatial_cell_per_epoch",
+              &max_births_per_cell);
+    if (max_births_per_cell <= 0)
+      throw std::invalid_argument("birth cell cap must be positive");
+    config->birth.max_births_per_spatial_cell_per_epoch =
+        static_cast<uint32_t>(max_births_per_cell);
 
     parameter("tracker/acceleration_sigma_mps2",
               &config->tracker.acceleration_sigma_mps2);
@@ -639,6 +650,12 @@ private:
       status.values.push_back(diagnosticValue(
           "violation_packets", number(diagnostics->violation_packets)));
       status.values.push_back(diagnosticValue("births", number(diagnostics->births)));
+      status.values.push_back(diagnosticValue(
+          "birth_suppressed_packets",
+          number(diagnostics->birth_suppressed_packets)));
+      status.values.push_back(diagnosticValue(
+          "birth_cell_cap_rejections",
+          number(diagnostics->birth_cell_cap_rejections)));
       status.values.push_back(diagnosticValue("matches", number(diagnostics->matches)));
       status.values.push_back(diagnosticValue(
           "free_voxel_updates", number(diagnostics->free_voxel_updates)));

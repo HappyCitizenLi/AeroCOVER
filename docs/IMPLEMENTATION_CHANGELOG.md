@@ -243,3 +243,22 @@
 - ROS integration warm-up 改为覆盖至少三个完整 map epochs，不再依赖测试启动时绝对 ROS
   time 与 0.2 s 边界的偶然相位；修正后全工作区串行 tests 11/11 成功，
   `catkin_test_results build` 为 362 tests、0 error/failure/skipped（build 11/11、无 warning）。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 8 packet trajectory birth
+
+- 保留既有 3D CV pair-seed/RANSAC 流程，但 inlier 和 refit 改用 packet covariance 的
+  Mahalanobis gate；weighted refit 同时使用 anomaly 与 inverse mean variance，初始位置协方差
+  来自 packet covariance + residual spread。
+- 一个 packet 仍只能被一个 birth 消费；成功 birth 后，预测 footprint 1 m 内所有未消费
+  packets 一并 suppression。新增 1 m spatial cell/0.2 s epoch 的单次 birth cap，并清理过期
+  cell records。
+- 新增 suppressed packets/cell-cap diagnostics；单测验证未消费 packet footprint 被清空和同
+  cell/epoch 第二次 birth 被拒绝。局部 build 无 warning，66 tests 零失败。
+- S06/1.0× run 为 94.3% coverage，按 95% gate 判失败并保存到
+  `artifacts/v2_phase8_realtime_fail/`；births 285→243、suppressed packets 880，但伪 birth
+  分散在不同 wall cells，cell cap 未触发，不能靠收紧单 cell 参数解决。
+- S06/0.5× 诊断 run coverage 有效：563 scored packets、244 births、98 peak tracks、HOTA
+  0.084、p95 128 ms；maintenance 仍向所有 raw non-background returns 开放，Phase 9 必须
+  改为 packet-only GNN。该结果不算实时/质量通过。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 366 tests、0 error/failure/skipped。

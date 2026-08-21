@@ -98,8 +98,11 @@ struct BirthConfig
   double pair_dt_max_s = 2.0;
   double max_speed_mps = 15.0;
   double max_residual_m = 0.8;
+  double inlier_gate_d2 = 11.345;
   double min_total_anomaly_score = 1.5;
   double suppression_radius_m = 1.0;
+  double birth_spatial_cell_m = 1.0;
+  uint32_t max_births_per_spatial_cell_per_epoch = 1U;
 };
 
 struct TrackerConfig
@@ -267,6 +270,8 @@ struct ProcessDiagnostics
   size_t promoted_unknown_candidates = 0;
   size_t expired_unknown_candidates = 0;
   size_t violation_packets = 0;
+  size_t birth_suppressed_packets = 0;
+  size_t birth_cell_cap_rejections = 0;
   size_t unresolved_candidate_returns = 0;
 };
 
@@ -479,7 +484,10 @@ private:
   void mergeDuplicateTracks(ScanResult* result);
   bool duplicateTracks(const Track& first, const Track& second) const;
   std::optional<BirthCandidate> bestBirthCandidate(double time_s) const;
-  std::optional<Track> createBirth(double time_s);
+  std::optional<Track> createBirth(
+      double time_s, ProcessDiagnostics* diagnostics = nullptr);
+  bool birthCellAvailable(const Vec3& position_m, double time_s) const;
+  void recordBirthCell(const Vec3& position_m, double time_s);
   std::vector<Support> supports(double time_s) const;
   SupportIndex indexSupports(std::vector<Support> supports) const;
   double truncateBeforeSupport(
@@ -497,6 +505,15 @@ private:
   BackgroundMap background_map_;
   std::vector<Track> tracks_;
   std::deque<Event> birth_buffer_;
+  struct BirthCellRecord
+  {
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    uint64_t epoch = 0U;
+    uint32_t births = 0U;
+  };
+  std::vector<BirthCellRecord> birth_cells_;
   std::vector<Support> quarantines_;
   uint32_t next_track_id_ = 1;
 };

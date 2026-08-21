@@ -417,6 +417,44 @@ TEST(Birth, RejectsImpossibleOrInconsistentEvents)
   }
 }
 
+TEST(Birth, ConsumesUnusedPacketsInsideBornFootprint)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::SoftVofodCore core(config);
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    const double time_s = 0.1 * group;
+    core.addBirthEventForTest(event(
+        time_s, soft_vofod::Vec3(time_s, 0.0, 0.0), group));
+    core.addBirthEventForTest(event(
+        time_s, soft_vofod::Vec3(time_s, 0.05, 0.0), group));
+  }
+  EXPECT_TRUE(core.tryBirthForTest(0.2).has_value());
+  EXPECT_EQ(core.birthBufferSize(), 0U);
+}
+
+TEST(Birth, CapsSameSpatialCellWithinMapEpoch)
+{
+  soft_vofod::Config config = testConfig();
+  config.birth.min_duration_s = 0.04;
+  soft_vofod::SoftVofodCore core(config);
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    const double time_s = 0.01 + 0.04 * group;
+    core.addBirthEventForTest(event(
+        time_s, soft_vofod::Vec3(time_s, 0.0, 0.0), group));
+  }
+  EXPECT_TRUE(core.tryBirthForTest(0.09).has_value());
+  for (uint64_t group = 3U; group < 6U; ++group)
+  {
+    const double time_s = 0.11 + 0.04 * (group - 3U);
+    core.addBirthEventForTest(event(
+        time_s, soft_vofod::Vec3(time_s, 0.0, 0.0), group));
+  }
+  EXPECT_FALSE(core.tryBirthForTest(0.19).has_value());
+  EXPECT_EQ(core.birthBufferSize(), 0U);
+}
+
 TEST(Association, HungarianIsOneToOneAndHandlesSingleton)
 {
   const std::vector<std::vector<double>> costs = {

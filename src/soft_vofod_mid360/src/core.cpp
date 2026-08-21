@@ -107,8 +107,11 @@ void validateConfig(const Config& config)
       config.birth.pair_dt_max_s < config.birth.pair_dt_min_s ||
       !finitePositive(config.birth.max_speed_mps) ||
       !finitePositive(config.birth.max_residual_m) ||
+      !finitePositive(config.birth.inlier_gate_d2) ||
       config.birth.min_total_anomaly_score < 0.0 ||
       config.birth.suppression_radius_m < 0.0 ||
+      !finitePositive(config.birth.birth_spatial_cell_m) ||
+      config.birth.max_births_per_spatial_cell_per_epoch == 0U ||
       !finitePositive(config.tracker.acceleration_sigma_mps2) ||
       !finitePositive(config.tracker.measurement_variance_m2) ||
       config.tracker.shape_sigma_m < 0.0 ||
@@ -1318,8 +1321,13 @@ SoftVofodCore::bestBirthCandidate(const double time_s) const
       {
         const Event& event = birth_buffer_[index];
         const Vec3 predicted = a.position_m + velocity * (event.time_s - a.time_s);
-        const double residual = (event.position_m - predicted).norm();
-        if (residual > config_.birth.max_residual_m)
+        const Vec3 difference = event.position_m - predicted;
+        const double residual = difference.norm();
+        const Eigen::LDLT<Mat3> decomposition(event.covariance);
+        if (residual > config_.birth.max_residual_m ||
+            decomposition.info() != Eigen::Success ||
+            difference.dot(decomposition.solve(difference)) >
+                config_.birth.inlier_gate_d2)
           continue;
         const auto found = group_inliers.find(event.group_id);
         if (found == group_inliers.end() || residual < found->second.first)
@@ -1339,7 +1347,8 @@ SoftVofodCore::bestBirthCandidate(const double time_s) const
       {
         (void)group;
         const Event& event = birth_buffer_[inlier.second];
-        const double weight = std::max(0.05, event.anomaly_score);
+        const double weight = std::max(0.05, event.anomaly_score) /
+            std::max(0.01, event.covariance.trace() / 3.0);
         total_weight += weight;
         weighted_time += weight * event.time_s;
         weighted_position += weight * event.position_m;
@@ -1355,13 +1364,16 @@ SoftVofodCore::bestBirthCandidate(const double time_s) const
       double denominator = 0.0;
       Vec3 numerator = Vec3::Zero();
       double anomaly_score = 0.0;
+      Mat3 packet_covariance = Mat3::Zero();
       for (const size_t index : indices)
       {
         const Event& event = birth_buffer_[index];
-        const double weight = std::max(0.05, event.anomaly_score);
+        const double weight = std::max(0.05, event.anomaly_score) /
+            std::max(0.01, event.covariance.trace() / 3.0);
         const double centered_time = event.time_s - mean_time;
         denominator += weight * centered_time * centered_time;
         numerator += weight * centered_time * (event.position_m - mean_position);
+        packet_covariance += weight * event.covariance;
         anomaly_score += event.anomaly_score;
       }
       if (denominator <= 1.0e-12 ||
@@ -1373,28 +1385,37 @@ SoftVofodCore::bestBirthCandidate(const double time_s) const
         continue;
 
       double weighted_squared_residual = 0.0;
+      bool refit_inliers_valid = true;
       for (const size_t index : indices)
       {
         const Event& event = birth_buffer_[index];
-        const double weight = std::max(0.05, event.anomaly_score);
+        const double weight = std::max(0.05, event.anomaly_score) /
+            std::max(0.01, event.covariance.trace() / 3.0);
         const Vec3 predicted = mean_position +
             fitted_velocity * (event.time_s - mean_time);
+        const Vec3 difference = event.position_m - predicted;
         weighted_squared_residual +=
-            weight * (event.position_m - predicted).squaredNorm();
+            weight * difference.squaredNorm();
+        const Eigen::LDLT<Mat3> decomposition(event.covariance);
+        if (decomposition.info() != Eigen::Success ||
+            difference.dot(decomposition.solve(difference)) >
+                config_.birth.inlier_gate_d2)
+          refit_inliers_valid = false;
       }
       const double residual_rms =
           std::sqrt(weighted_squared_residual / total_weight);
-      if (residual_rms > config_.birth.max_residual_m)
+      if (!refit_inliers_valid ||
+          residual_rms > config_.birth.max_residual_m)
         continue;
 
       BirthCandidate candidate;
       candidate.x.head<3>() = mean_position + fitted_velocity * (time_s - mean_time);
       candidate.x.tail<3>() = fitted_velocity;
-      const double position_variance = config_.tracker.measurement_variance_m2 +
-          config_.tracker.shape_sigma_m * config_.tracker.shape_sigma_m;
       candidate.covariance.setZero();
-      candidate.covariance.block<3, 3>(0, 0) =
-          position_variance * Mat3::Identity();
+      const Mat3 position_covariance = packet_covariance / total_weight +
+          residual_rms * residual_rms * Mat3::Identity();
+      candidate.covariance.block<3, 3>(0, 0) = position_covariance;
+      const double position_variance = position_covariance.trace() / 3.0;
       candidate.covariance.block<3, 3>(3, 3) = std::max(
           config_.tracker.initial_velocity_variance_m2ps2,
           position_variance / std::max(0.01, duration * duration)) *
@@ -1430,7 +1451,48 @@ SoftVofodCore::bestBirthCandidate(const double time_s) const
   return best;
 }
 
-std::optional<Track> SoftVofodCore::createBirth(const double time_s)
+bool SoftVofodCore::birthCellAvailable(
+    const Vec3& position_m, const double time_s) const
+{
+  const double cell_m = config_.birth.birth_spatial_cell_m;
+  const int x = static_cast<int>(std::floor(position_m.x() / cell_m));
+  const int y = static_cast<int>(std::floor(position_m.y() / cell_m));
+  const int z = static_cast<int>(std::floor(position_m.z() / cell_m));
+  const uint64_t epoch = static_cast<uint64_t>(std::floor(
+      time_s * config_.map.map_epoch_hz));
+  for (const BirthCellRecord& record : birth_cells_)
+  {
+    if (record.x == x && record.y == y && record.z == z &&
+        record.epoch == epoch)
+      return record.births <
+          config_.birth.max_births_per_spatial_cell_per_epoch;
+  }
+  return true;
+}
+
+void SoftVofodCore::recordBirthCell(
+    const Vec3& position_m, const double time_s)
+{
+  const double cell_m = config_.birth.birth_spatial_cell_m;
+  const int x = static_cast<int>(std::floor(position_m.x() / cell_m));
+  const int y = static_cast<int>(std::floor(position_m.y() / cell_m));
+  const int z = static_cast<int>(std::floor(position_m.z() / cell_m));
+  const uint64_t epoch = static_cast<uint64_t>(std::floor(
+      time_s * config_.map.map_epoch_hz));
+  for (BirthCellRecord& record : birth_cells_)
+  {
+    if (record.x == x && record.y == y && record.z == z &&
+        record.epoch == epoch)
+    {
+      ++record.births;
+      return;
+    }
+  }
+  birth_cells_.push_back({x, y, z, epoch, 1U});
+}
+
+std::optional<Track> SoftVofodCore::createBirth(
+    const double time_s, ProcessDiagnostics* const diagnostics)
 {
   const std::optional<BirthCandidate> candidate = bestBirthCandidate(time_s);
   if (!candidate)
@@ -1439,12 +1501,29 @@ std::optional<Track> SoftVofodCore::createBirth(const double time_s)
   std::unordered_set<size_t> used(
       candidate->buffer_indices.begin(), candidate->buffer_indices.end());
   std::deque<Event> retained;
+  size_t suppressed_packets = 0U;
   for (size_t index = 0U; index < birth_buffer_.size(); ++index)
   {
-    if (used.count(index) == 0U)
-      retained.push_back(birth_buffer_[index]);
+    const Event& packet = birth_buffer_[index];
+    const Vec3 predicted = candidate->x.head<3>() +
+        candidate->x.tail<3>() * (packet.time_s - time_s);
+    if (used.count(index) == 0U &&
+        (packet.position_m - predicted).norm() >=
+            config_.birth.suppression_radius_m)
+      retained.push_back(packet);
+    else
+      ++suppressed_packets;
   }
   birth_buffer_.swap(retained);
+  if (diagnostics)
+    diagnostics->birth_suppressed_packets += suppressed_packets;
+  if (!birthCellAvailable(candidate->x.head<3>(), time_s))
+  {
+    if (diagnostics)
+      ++diagnostics->birth_cell_cap_rejections;
+    return std::nullopt;
+  }
+  recordBirthCell(candidate->x.head<3>(), time_s);
 
   Track track;
   track.id = next_track_id_++;
@@ -1493,6 +1572,14 @@ void SoftVofodCore::prune(const double time_s)
     birth_buffer_.pop_front();
   while (birth_buffer_.size() > config_.birth.max_buffer_events)
     birth_buffer_.pop_front();
+  const uint64_t epoch = static_cast<uint64_t>(std::floor(
+      time_s * config_.map.map_epoch_hz));
+  birth_cells_.erase(
+      std::remove_if(
+          birth_cells_.begin(), birth_cells_.end(),
+          [epoch](const BirthCellRecord& record)
+          { return record.epoch + 1U < epoch; }),
+      birth_cells_.end());
 }
 
 std::vector<SoftVofodCore::Support> SoftVofodCore::supports(
@@ -1959,7 +2046,8 @@ void SoftVofodCore::processBatch(
   {
     for (size_t births = 0U; births < 8U; ++births)
     {
-      std::optional<Track> birth = createBirth(batch_time_s);
+      std::optional<Track> birth = createBirth(
+          batch_time_s, &result->diagnostics);
       if (!birth)
         break;
       born_ids.insert(birth->id);

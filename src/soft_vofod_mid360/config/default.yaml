@@ -62,8 +62,11 @@ birth:
   pair_dt_max_s: 2.0
   max_speed_mps: 15.0
   max_residual_m: 0.8
+  inlier_gate_d2: 11.345
   min_total_anomaly_score: 1.5
   suppression_radius_m: 1.0
+  birth_spatial_cell_m: 1.0
+  max_births_per_spatial_cell_per_epoch: 1
 
 tracker:
   acceleration_sigma_mps2: 3.0
