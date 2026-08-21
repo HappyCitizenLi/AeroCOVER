@@ -350,3 +350,33 @@
 - 定向 9-package build 无 warning；SOFT/runner/evaluator/scenario tests 均通过。全工作区
   `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 379 tests、0 error/failure/skipped。
+
+## 2026-08-22 — SOFT-VoFOD V2 Phase 13 CAL tuning
+
+- 新增与 S01–S08 严格分离的 CAL01–CAL05：静态地图、移动观测器地图、稀疏 birth、
+  range-return 和移动观测器诱导的 2 s/4 s 遮挡。runner 支持 CAL scene 与显式
+  `--soft-config-overlay`；修复 B3/B4 launch 参数覆盖 overlay、导致 birth/survival 候选实际上
+  未生效的问题。正式运行默认只加载 `soft_vofod_v2_canonical.yaml`，CAL overlay 最终恢复为空。
+- CAL01 暴露 cold-start component 质心漂移会在 1 s 时间门槛前错误过期；候选背景改为记录
+  per-voxel epoch hits，时间/epoch 门槛满足后只晋升重复体素。CAL01 packets 2.5→0/min、
+  false confirmed 7.5→0/min、static recall 0.132→0.149；CAL02 保持 0 birth/0 track，
+  moving-observer background expansion recall 0.974。
+- `birth_min_groups` 在 CAL03 从 3 标定为 5：冷启动总 birth 12→3，FP 88→56，HOTA
+  0.845→0.885；TTFT 0.597→0.802 s，仍无 IDSW/fragmentation。CAL01 交叉验证同样消除
+  false confirmed，因此冻结到 canonical 与 launch default。
+- evaluator 新增 scored-window `sensor_return_probability`。CAL04 得到无遮挡 target-intersection
+  条件回波率 0–10/10–20/20–30 m = 0.916/0.878/0.877；30 m+ 无无遮挡样本，保守回退
+  0.5。core 按 ray near range 查表并在 sigma weights 内应用。相对常数 0.5，CAL04
+  TP/FP/FN、HOTA、fragmentation 不变，Brier 0.1156→0.1158；该项证明参数来源而非性能收益。
+- CAL05 最终使用静止 x=25 m target 与移动 observer 进出完整墙影，避免把 target 穿墙、
+  遮挡内急停、partial sigma visibility 或 free-carving 范围外 birth 混入 survival 标定。
+  `lambda=0.05` 与 `0.10/s` 均为 HOTA 0.974、295/0/16、0 fragmentation/IDSW、
+  max stale 4.11 s；`0.10/s` 将 stale mean existence 0.848→0.731，故冻结为 canonical。
+- 拒绝并未留生产开关的候选包括：`free_saturation_n0=10`、`sigma_a=6`、低 packet covariance、
+  `P_D_max=0.88/0.5`、以及从背景占优组件无条件剥离 track packet。后者曾将 CAL05 FP 增至
+  712，已完整回退。所有接受/拒绝候选的小型 metrics/manifest 保留在
+  `artifacts/calibration/`；CAL01–CAL05 大 source/output bags 因磁盘约束删除，只能确定性重跑恢复。
+- 全工作区 `catkin build` 11/11 成功且无 warning。并发全测因多个 Gazebo rostest 争用同一
+  master 出现 3 个 spawn timeout；受影响的 preprocessor、B0 和 scenario 包随后逐包串行
+  28/28、57/57、94/94 通过。最终 `catkin_test_results build` 为 385 tests、
+  0 error/failure/skipped。

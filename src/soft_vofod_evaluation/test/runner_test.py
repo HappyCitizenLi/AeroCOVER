@@ -47,6 +47,17 @@ class RunnerTest(unittest.TestCase):
         with self.assertRaises(Exception):
             RUNNER.comma_list("A4", RUNNER.ALGORITHMS)
 
+    def test_calibration_overlay_selects_the_last_explicit_value(self):
+        with tempfile.TemporaryDirectory() as directory:
+            canonical = os.path.join(directory, "canonical.yaml")
+            overlay = os.path.join(directory, "overlay.yaml")
+            with open(canonical, "w", encoding="utf-8") as stream:
+                yaml.safe_dump({"birth": {"min_groups": 3}}, stream)
+            with open(overlay, "w", encoding="utf-8") as stream:
+                yaml.safe_dump({"birth": {"min_groups": 5}}, stream)
+            self.assertEqual(RUNNER.overlaid_value(
+                (canonical, overlay), "birth", "min_groups"), 5)
+
     def test_input_readiness_and_run_level_warmup_gate(self):
         state = ([], [
             ("/points", ["/soft_vofod"]),

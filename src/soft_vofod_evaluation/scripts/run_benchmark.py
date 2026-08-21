@@ -27,7 +27,8 @@ import yaml
 ALGORITHMS = ("B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3")
 DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
 SCENES = DEFAULT_SCENES + (
-    "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04")
+    "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04",
+    "CAL01", "CAL02", "CAL03", "CAL04", "CAL05")
 WORLD_FILES = {
     "E0_open": "E0_open.world",
     "E1_sparse": "E1_sparse.world",
@@ -222,6 +223,18 @@ def aggregate_results(output_root):
 def load_yaml(path):
     with open(path, encoding="utf-8") as stream:
         return yaml.safe_load(stream)
+
+
+def overlaid_value(paths, section, name):
+    value = None
+    for path in paths:
+        section_values = (load_yaml(path) or {}).get(section, {})
+        if name in section_values:
+            value = section_values[name]
+    if value is None:
+        raise RuntimeError("missing configuration value {}/{}".format(
+            section, name))
+    return value
 
 
 def stop(process, timeout=10.0):
@@ -428,6 +441,9 @@ class BenchmarkRunner:
         rospack = rospkg.RosPack()
         self.sim_root = rospack.get_path("mid360_multi_uav_sim")
         self.soft_root = rospack.get_path("soft_vofod_mid360")
+        if not arguments.soft_config_overlay:
+            arguments.soft_config_overlay = os.path.join(
+                self.soft_root, "config", "no_overlay.yaml")
         self.evaluation_root = rospack.get_path("soft_vofod_evaluation")
         self.vofod_root = rospack.get_path("vofod_mid360")
         self.tracker_root = rospack.get_path("lidar_tracker_mid360")
@@ -496,10 +512,13 @@ class BenchmarkRunner:
                 os.path.join(self.vofod_root, "config", "b0_mid360_canonical.yaml"),
                 os.path.join(self.tracker_root, "config", "tracking.yaml"),
             ]
-        paths = [os.path.join(self.soft_root, "config", "default.yaml")]
+        paths = [os.path.join(
+            self.soft_root, "config", "soft_vofod_v2_canonical.yaml")]
         if algorithm in ("A1", "A2"):
             paths.append(os.path.join(
                 self.soft_root, "config", algorithm.lower() + ".yaml"))
+        if self.arguments.soft_config_overlay:
+            paths.append(self.arguments.soft_config_overlay)
         return paths
 
     def algorithm_implementation_paths(self, algorithm):
@@ -735,19 +754,29 @@ class BenchmarkRunner:
         if algorithm == "B0":
             return time_prefix + ["roslaunch", "tclv_evaluation", "b0_canonical.launch",
                                   "output:=log"]
+        calibrated_paths = [os.path.join(
+            self.soft_root, "config", "soft_vofod_v2_canonical.yaml"),
+            self.arguments.soft_config_overlay]
+        calibrated_groups = str(overlaid_value(
+            calibrated_paths, "birth", "min_groups"))
+        calibrated_survival = str(overlaid_value(
+            calibrated_paths, "tracker", "survival_lambda_per_s"))
         values = {
             "A1": ("2", "false", "false", "false"),
             "A2": ("3", "false", "false", "false"),
             "A3": ("3", "true", "true", "true"),
             "B1": ("2", "false", "false", "true", "0.0"),
             "B2": ("3", "false", "false", "true", "0.0"),
-            "B3": ("3", "true", "false", "true", "0.05"),
-            "B4": ("3", "true", "true", "true", "0.05"),
+            "B3": (calibrated_groups, "true", "false", "true",
+                   calibrated_survival),
+            "B4": (calibrated_groups, "true", "true", "true",
+                   calibrated_survival),
         }[algorithm]
         if len(values) == 4:
             values += ("0.05",)
         return time_prefix + [
             "roslaunch", "soft_vofod_mid360", "soft_vofod.launch", "output:=log",
+            "config_overlay:=" + self.arguments.soft_config_overlay,
             "birth_min_groups:=" + values[0],
             "opportunity_aware_existence:=" + values[1],
             "target_feedback:=" + values[2],
@@ -962,6 +991,7 @@ def parse_arguments():
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--replay-rate", type=float, default=1.0)
     parser.add_argument("--output", default="artifacts")
+    parser.add_argument("--soft-config-overlay", default="")
     arguments = parser.parse_args()
     arguments.algorithms = comma_list(arguments.algorithms, ALGORITHMS)
     arguments.scenes = comma_list(arguments.scenes, SCENES)
@@ -975,6 +1005,9 @@ def parse_arguments():
     if not math.isfinite(arguments.replay_rate) or arguments.replay_rate <= 0.0:
         raise SystemExit("--replay-rate must be finite and positive")
     arguments.output = os.path.abspath(arguments.output)
+    if arguments.soft_config_overlay:
+        arguments.soft_config_overlay = os.path.abspath(
+            arguments.soft_config_overlay)
     os.makedirs(arguments.output, exist_ok=True)
     return arguments
 

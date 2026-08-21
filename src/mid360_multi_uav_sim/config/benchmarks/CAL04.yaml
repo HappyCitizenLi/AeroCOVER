@@ -1,0 +1,29 @@
+schema_version: 1
+scenario_id: CAL04_opportunity_return
+world: E1_sparse
+seed: 2004
+start_delay_s: 4.0
+duration_s: 45.0
+score_start_s: 10.5
+score_end_s: 44.5
+purpose: calibrate emitted-return probability across range bins
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0}
+    - {t: 45.0, x: 0.0, y: 0.0, z: 2.0}
+targets:
+  - id: uav2
+    spawn_time_s: 10.5
+    waypoints:
+      - {t: 0.0, x: 6.0, y: 0.0, z: 2.5}
+      - {t: 16.0, x: 6.0, y: 0.0, z: 2.5}
+      - {t: 20.0, x: 12.0, y: 0.0, z: 3.0}
+      - {t: 26.0, x: 12.0, y: 0.0, z: 3.0}
+      - {t: 31.0, x: 22.0, y: 0.0, z: 3.5}
+      - {t: 37.0, x: 22.0, y: 0.0, z: 3.5}
+      - {t: 42.0, x: 30.0, y: 0.0, z: 4.0}
+      - {t: 45.0, x: 30.0, y: 0.0, z: 4.0}
+events:
+  - {t: 16.0, id: range_6_end}
+  - {t: 26.0, id: range_12_end}
+  - {t: 37.0, id: range_22_end}

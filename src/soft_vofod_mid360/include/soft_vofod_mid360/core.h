@@ -136,6 +136,8 @@ struct TrackerConfig
 struct OpportunityConfig
 {
   double return_probability = 0.5;
+  std::vector<double> return_probability_range_edges_m;
+  std::vector<double> return_probability_bins;
   double detection_probability_cap = 0.95;
   double max_ray_range_m = 60.0;
   double occlusion_margin_m = 0.15;
@@ -411,6 +413,7 @@ private:
     uint32_t epochs = 0U;
     uint64_t last_epoch_id = std::numeric_limits<uint64_t>::max();
     std::vector<size_t> voxels;
+    std::unordered_map<size_t, uint32_t> voxel_hits;
   };
   uint64_t next_candidate_background_id_ = 1U;
   std::vector<CandidateBackground> candidate_backgrounds_;
@@ -530,6 +533,7 @@ private:
       const Track& track, const std::vector<RaySample>& rays,
       const std::vector<Track>& tracks, bool matched,
       const RayAngularIndex& index, size_t* candidate_count = nullptr) const;
+  double returnProbability(double range_m) const;
   void addQuarantine(const Vec3& center_m, double radius_m, double until_s);
   void prune(double time_s);
 

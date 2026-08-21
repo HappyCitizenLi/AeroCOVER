@@ -346,6 +346,33 @@ TEST(ColdStartBackground, MovingUnknownComponentNeverPromotes)
               soft_vofod::VoxelState::stable_background);
 }
 
+TEST(ColdStartBackground, RepeatedVoxelSurvivesChangingComponentCentroid)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 anchor(3.0, 0.0, 0.0);
+  const std::vector<soft_vofod::Vec3> changing = {
+      {3.0, 0.5, 0.0}, {3.0, -0.5, 0.0}, {3.0, 0.0, 0.5}};
+  map.advanceEpoch(0.0);
+  size_t promotions = 0U;
+  for (uint32_t epoch = 0U; epoch < 6U; ++epoch)
+  {
+    map.accumulateReturn(anchor, 0.01 + 0.2 * epoch, false, true);
+    map.accumulateReturn(
+        changing[epoch % changing.size()], 0.01 + 0.2 * epoch,
+        false, true);
+    const auto commit = map.advanceEpoch(0.2 * (epoch + 1U));
+    ASSERT_TRUE(commit.has_value());
+    promotions += commit->promoted_unknown_candidates;
+  }
+  EXPECT_EQ(promotions, 1U);
+  EXPECT_EQ(map.query(anchor).state,
+            soft_vofod::VoxelState::stable_background);
+  for (const soft_vofod::Vec3& point : changing)
+    EXPECT_NE(map.query(point).state,
+              soft_vofod::VoxelState::stable_background);
+}
+
 TEST(Packetizer, AggregatesReturnsAndKeepsSingleton)
 {
   soft_vofod::Config config = testConfig();
@@ -594,6 +621,26 @@ TEST(Opportunity, ConfirmedFrontTrackOccludesBackTrack)
   const auto back_opportunity = core.opportunityForTest(
       back, {ray(0.0, soft_vofod::ReturnStatus::no_return)}, {front, back});
   EXPECT_DOUBLE_EQ(back_opportunity.detection_probability, 0.0);
+}
+
+TEST(Opportunity, UsesCalibratedReturnProbabilityRangeBins)
+{
+  soft_vofod::Config config = testConfig();
+  config.opportunity.return_probability_range_edges_m = {10.0};
+  config.opportunity.return_probability_bins = {0.2, 0.8};
+  soft_vofod::SoftVofodCore core(config);
+  const soft_vofod::Track near_track = trackAt(
+      soft_vofod::Vec3(5.0, 0.0, 0.0));
+  const soft_vofod::Track far_track = trackAt(
+      soft_vofod::Vec3(15.0, 0.0, 0.0));
+  const auto near = core.opportunityForTest(
+      near_track, {ray(0.0, soft_vofod::ReturnStatus::no_return)},
+      {near_track});
+  const auto far = core.opportunityForTest(
+      far_track, {ray(0.0, soft_vofod::ReturnStatus::no_return)},
+      {far_track});
+  EXPECT_NEAR(near.detection_probability, 0.2, 1.0e-12);
+  EXPECT_NEAR(far.detection_probability, 0.8, 1.0e-12);
 }
 
 TEST(Opportunity, AngularIndexKeepsExactNearbyRayAndRejectsOffAxisRays)

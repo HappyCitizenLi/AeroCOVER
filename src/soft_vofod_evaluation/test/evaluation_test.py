@@ -63,6 +63,14 @@ class EvaluationTest(unittest.TestCase):
         self.assertLess(opportunity["Brier"], 0.03)
         self.assertEqual(opportunity["no_opportunity_samples"], 1)
 
+        sensor = METRICS.return_probability_metrics([{
+            "observer": (0.0, 0.0, 0.0),
+            "truth": [{"position": (5.0, 0.0, 0.0),
+                       "unblocked_opportunity": 10, "actual_returns": 4}],
+        }])
+        self.assertEqual(sensor["0-10"]["p_ret"], 0.4)
+        self.assertIsNone(sensor["10-20"]["p_ret"])
+
         truth = [(0.0, [{"position": (1.0, 0.0, 1.0)}]),
                  (1.0, [{"position": (1.5, 0.0, 1.0)}])]
         path, _ = METRICS.target_path_voxels(truth)

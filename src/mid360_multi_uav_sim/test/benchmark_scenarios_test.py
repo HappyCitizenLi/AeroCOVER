@@ -54,6 +54,30 @@ class BenchmarkScenariosTest(unittest.TestCase):
         self.assertEqual(len({(item["x"], item["y"], item["z"])
                               for item in stationary}), 1)
 
+    def test_calibration_splits_are_disjoint_and_semantic(self):
+        expected = {
+            "CAL01": ("map_static", 0),
+            "CAL02": ("map_moving_observer", 0),
+            "CAL03": ("birth_sparse", 1),
+            "CAL04": ("opportunity_return", 1),
+            "CAL05": ("track_survival", 1),
+        }
+        for scene, (suffix, targets) in expected.items():
+            config = self.load(scene)
+            self.assertEqual(config["scenario_id"], scene + "_" + suffix)
+            self.assertEqual(len(config["targets"]), targets)
+            self.assertNotIn(config["scenario_id"], {
+                self.load(test_scene)["scenario_id"]
+                for test_scene in ("S01", "S02", "S03", "S04", "S05",
+                                   "S06", "S07", "S08A", "S08B", "S08C")})
+        cal05 = self.load("CAL05")
+        self.assertEqual(len({
+            (item["x"], item["y"], item["z"])
+            for item in cal05["targets"][0]["waypoints"]}), 1)
+        self.assertGreater(len({
+            (item["x"], item["y"], item["z"])
+            for item in cal05["observer"]["waypoints"]}), 1)
+
     def test_required_semantic_stressors_are_declared(self):
         s01 = self.load("S01")
         self.assertIn("hover", s01["purpose"])

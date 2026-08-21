@@ -94,6 +94,22 @@ void validateConfig(const Config& config)
     if (!std::isfinite(probability) || probability < 0.0 || probability > 1.0)
       throw std::invalid_argument("SOFT-VoFOD probability is outside [0,1]");
   }
+  const auto& edges = config.opportunity.return_probability_range_edges_m;
+  const auto& bins = config.opportunity.return_probability_bins;
+  if (bins.empty() != edges.empty() ||
+      (!bins.empty() && bins.size() != edges.size() + 1U))
+    throw std::invalid_argument("invalid opportunity return-probability bins");
+  for (size_t index = 0U; index < edges.size(); ++index)
+  {
+    if (!finitePositive(edges[index]) ||
+        (index > 0U && edges[index] <= edges[index - 1U]))
+      throw std::invalid_argument("opportunity range edges must increase");
+  }
+  for (const double probability : bins)
+  {
+    if (!std::isfinite(probability) || probability < 0.0 || probability > 1.0)
+      throw std::invalid_argument("opportunity return bin is outside [0,1]");
+  }
   if (config.tracker.delete_threshold >= config.tracker.confirm_threshold)
     throw std::invalid_argument("track delete threshold must be below confirm threshold");
   if (config.map.background_promotion_groups == 0U ||
@@ -465,7 +481,9 @@ bool BackgroundMap::updateUnknownCandidate(
     candidate.last_seen_s = time_s;
     candidate.epochs = 1U;
     candidate.last_epoch_id = epoch_id_;
-    candidate.voxels = std::move(component);
+    candidate.voxels = component;
+    for (const size_t linear_index : component)
+      candidate.voxel_hits[linear_index] = 1U;
     candidate_backgrounds_.push_back(std::move(candidate));
     return true;
   }
@@ -479,6 +497,8 @@ bool BackgroundMap::updateUnknownCandidate(
   candidate.centroid_m = centroid;
   candidate.last_seen_s = time_s;
   candidate.last_epoch_id = epoch_id_;
+  for (const size_t linear_index : component)
+    ++candidate.voxel_hits[linear_index];
   std::vector<size_t> merged;
   merged.reserve(candidate.voxels.size() + component.size());
   std::set_union(
@@ -489,20 +509,27 @@ bool BackgroundMap::updateUnknownCandidate(
   const double variance_m2 = candidate.epochs > 1U
       ? candidate.centroid_m2 / static_cast<double>(candidate.epochs - 1U)
       : 0.0;
-  if (candidate.epochs >= config_.unknown_promotion_epochs &&
-      variance_m2 > config_.unknown_position_sigma_m *
-          config_.unknown_position_sigma_m)
+  if (candidate.epochs < config_.unknown_promotion_epochs ||
+      time_s - candidate.first_seen_s < config_.unknown_promotion_time_s)
+    return true;
+  std::vector<size_t> stable_voxels;
+  for (const size_t linear_index : candidate.voxels)
+  {
+    if (candidate.voxel_hits[linear_index] >=
+        config_.unknown_promotion_epochs)
+      stable_voxels.push_back(linear_index);
+  }
+  const bool stable_centroid = variance_m2 <=
+      config_.unknown_position_sigma_m * config_.unknown_position_sigma_m;
+  if (stable_voxels.empty() && stable_centroid)
+    stable_voxels = candidate.voxels;
+  if (stable_voxels.empty())
   {
     candidate_backgrounds_.erase(candidate_backgrounds_.begin() + best);
     ++output->expired_unknown_candidates;
     return false;
   }
-  if (candidate.epochs < config_.unknown_promotion_epochs ||
-      time_s - candidate.first_seen_s < config_.unknown_promotion_time_s ||
-      variance_m2 > config_.unknown_position_sigma_m *
-          config_.unknown_position_sigma_m)
-    return true;
-  for (const size_t linear_index : candidate.voxels)
+  for (const size_t linear_index : stable_voxels)
   {
     observeBackground(
         geometry_.idxToCoord(
@@ -1911,7 +1938,9 @@ OpportunityResult SoftVofodCore::opportunity(
   if (candidate_count)
     *candidate_count = candidate_rays.size();
   std::vector<double> effective_opportunities;
+  std::vector<double> effective_return_probabilities;
   effective_opportunities.reserve(candidate_rays.size());
+  effective_return_probabilities.reserve(candidate_rays.size());
   for (const size_t ray_index : candidate_rays)
   {
     const RaySample& ray = rays[ray_index];
@@ -1924,6 +1953,7 @@ OpportunityResult SoftVofodCore::opportunity(
       continue;
 
     double effective = 0.0;
+    double effective_return_probability = 0.0;
     for (const Vec3& sigma_point : sigma_points)
     {
       const double dt = ray.time_s - track.last_prediction_time_s;
@@ -1955,17 +1985,35 @@ OpportunityResult SoftVofodCore::opportunity(
         }
       }
       if (!front_track)
-        effective += 1.0 / static_cast<double>(sigma_points.size());
+      {
+        const double weight = 1.0 / static_cast<double>(sigma_points.size());
+        effective += weight;
+        effective_return_probability += weight * returnProbability(*near);
+      }
     }
     if (effective > 0.0)
+    {
       effective_opportunities.push_back(effective);
+      effective_return_probabilities.push_back(
+          effective_return_probability);
+    }
   }
   output.effective_opportunity = std::accumulate(
       effective_opportunities.begin(), effective_opportunities.end(), 0.0);
   output.detection_probability = detectionProbability(
-      effective_opportunities, config_.opportunity.return_probability,
+      effective_return_probabilities, 1.0,
       config_.opportunity.detection_probability_cap);
   return output;
+}
+
+double SoftVofodCore::returnProbability(const double range_m) const
+{
+  const auto& edges = config_.opportunity.return_probability_range_edges_m;
+  const auto& bins = config_.opportunity.return_probability_bins;
+  if (bins.empty())
+    return config_.opportunity.return_probability;
+  return bins[static_cast<size_t>(
+      std::upper_bound(edges.begin(), edges.end(), range_m) - edges.begin())];
 }
 
 void SoftVofodCore::processBatch(

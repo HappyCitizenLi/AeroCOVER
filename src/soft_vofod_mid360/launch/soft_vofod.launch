@@ -5,17 +5,21 @@
   <arg name="world_frame_id" default="world"/>
   <arg name="points_world" default="/$(arg uav_name)/mid360/points_world"/>
   <arg name="rays_checked" default="/$(arg uav_name)/mid360/rays_checked"/>
-  <arg name="config" default="$(find soft_vofod_mid360)/config/default.yaml"/>
-  <arg name="birth_min_groups" default="3"/>
+  <arg name="config"
+       default="$(find soft_vofod_mid360)/config/soft_vofod_v2_canonical.yaml"/>
+  <arg name="config_overlay"
+       default="$(find soft_vofod_mid360)/config/no_overlay.yaml"/>
+  <arg name="birth_min_groups" default="5"/>
   <arg name="opportunity_aware_existence" default="true"/>
   <arg name="target_feedback" default="true"/>
   <arg name="hungarian_association" default="true"/>
-  <arg name="survival_lambda_per_s" default="0.05"/>
+  <arg name="survival_lambda_per_s" default="0.1"/>
   <arg name="output" default="screen"/>
 
   <node pkg="soft_vofod_mid360" type="soft_vofod_node"
         name="soft_vofod" output="$(arg output)">
     <rosparam file="$(arg config)"/>
+    <rosparam file="$(arg config_overlay)"/>
     <param name="world_frame_id" value="$(arg world_frame_id)"/>
     <param name="input/points_world_topic" value="$(arg points_world)"/>
     <param name="input/rays_checked_topic" value="$(arg rays_checked)"/>

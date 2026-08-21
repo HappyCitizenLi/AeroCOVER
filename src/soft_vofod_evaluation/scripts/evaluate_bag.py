@@ -377,6 +377,7 @@ def load_source(path, allow_empty_truth=False):
                     "line_of_sight": getattr(target, "line_of_sight", True),
                     "actual_returns": getattr(target, "true_actual_target_return_count", 0),
                     "opportunity": target.true_emitted_ray_intersection_count,
+                    "unblocked_opportunity": target.true_unblocked_ray_count,
                     "visibility": target.true_visibility_fraction,
                     "occlusion": target.true_occlusion_type,
                 } for target in message.targets]))
@@ -586,6 +587,30 @@ def opportunity_metrics(opportunities, detector_stamps=None):
     }
 
 
+def return_probability_metrics(frames):
+    bins = {key: {"frames": 0, "unblocked_intersections": 0,
+                  "actual_returns": 0}
+            for key in ("0-10", "10-20", "20-30", "30+")}
+    for frame in frames:
+        observer = np.asarray(frame["observer"])
+        for target in frame["truth"]:
+            target_range = float(np.linalg.norm(
+                np.asarray(target["position"]) - observer))
+            key = "0-10" if target_range < 10.0 else \
+                "10-20" if target_range < 20.0 else \
+                "20-30" if target_range < 30.0 else "30+"
+            item = bins[key]
+            item["frames"] += 1
+            item["unblocked_intersections"] += int(
+                target.get("unblocked_opportunity", 0))
+            item["actual_returns"] += int(target.get("actual_returns", 0))
+    for item in bins.values():
+        denominator = item["unblocked_intersections"]
+        item["p_ret"] = item["actual_returns"] / float(denominator) \
+            if denominator else None
+    return bins
+
+
 def distribution(values):
     values = [float(value) for value in values if math.isfinite(float(value))]
     return {
@@ -746,6 +771,7 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
             [stamp for stamp, values in diagnostics
              if values.get("map_epochs_committed", 0.0) > 0.0]
             if algorithm != "B0" else None),
+        "sensor_return_probability": return_probability_metrics(frames),
         "map": map_metrics(
             background, candidate_background, free, truth_frames,
             scenario["world"]),

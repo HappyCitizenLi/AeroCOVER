@@ -309,6 +309,10 @@ private:
 
     parameter("opportunity/return_probability",
               &config->opportunity.return_probability);
+    parameter("opportunity/return_probability_range_edges_m",
+              &config->opportunity.return_probability_range_edges_m);
+    parameter("opportunity/return_probability_bins",
+              &config->opportunity.return_probability_bins);
     parameter("opportunity/detection_probability_cap",
               &config->opportunity.detection_probability_cap);
     parameter("opportunity/max_ray_range_m",

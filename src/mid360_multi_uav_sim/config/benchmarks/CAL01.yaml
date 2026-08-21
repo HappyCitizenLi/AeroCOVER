@@ -1,0 +1,15 @@
+schema_version: 1
+scenario_id: CAL01_map_static
+world: E0_open
+seed: 2001
+start_delay_s: 4.0
+duration_s: 35.0
+score_start_s: 10.5
+score_end_s: 34.5
+purpose: calibrate static-ground free/background balance without targets
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0}
+    - {t: 35.0, x: 0.0, y: 0.0, z: 2.0}
+targets: []
+events: []

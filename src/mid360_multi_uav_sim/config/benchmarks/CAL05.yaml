@@ -1,0 +1,32 @@
+schema_version: 1
+scenario_id: CAL05_track_survival
+world: E2_occlusion_arena
+seed: 2005
+start_delay_s: 4.0
+duration_s: 42.0
+score_start_s: 10.5
+score_end_s: 41.5
+purpose: calibrate survival of a static target under observer-induced occlusions
+observer:
+  waypoints:
+    - {t: 0.0, x: 7.0, y: 5.0, z: 2.0}
+    - {t: 15.0, x: 7.0, y: 5.0, z: 2.0}
+    - {t: 16.0, x: 7.0, y: 0.0, z: 2.0}
+    - {t: 18.0, x: 7.0, y: 0.0, z: 2.0}
+    - {t: 19.0, x: 7.0, y: 5.0, z: 2.0}
+    - {t: 25.0, x: 7.0, y: 5.0, z: 2.0}
+    - {t: 26.0, x: 7.0, y: 0.0, z: 2.0}
+    - {t: 30.0, x: 7.0, y: 0.0, z: 2.0}
+    - {t: 31.0, x: 7.0, y: 5.0, z: 2.0}
+    - {t: 42.0, x: 7.0, y: 5.0, z: 2.0}
+targets:
+  - id: uav2
+    spawn_time_s: 10.5
+    waypoints:
+      - {t: 0.0, x: 25.0, y: 0.0, z: 2.5}
+      - {t: 42.0, x: 25.0, y: 0.0, z: 2.5}
+events:
+  - {t: 16.0, id: occlusion_2s_start}
+  - {t: 18.0, id: occlusion_2s_end}
+  - {t: 26.0, id: occlusion_4s_start}
+  - {t: 30.0, id: occlusion_4s_end}
