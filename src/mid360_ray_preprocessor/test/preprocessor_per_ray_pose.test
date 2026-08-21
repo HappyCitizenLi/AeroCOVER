@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<launch>
+  <node pkg="mid360_ray_preprocessor"
+        type="mid360_ray_preprocessor_node"
+        name="preprocessor_per_ray_pose_node"
+        output="screen">
+    <rosparam command="load" file="$(find mid360_ray_preprocessor)/config/default.yaml"/>
+    <param name="input_points_topic" value="/test/per_ray_pose/points_raw"/>
+    <param name="input_rays_topic" value="/test/per_ray_pose/rays_raw"/>
+    <param name="input_scan_identity_topic" value="/test/per_ray_pose/scan_identity"/>
+    <param name="output_points_topic" value="/test/per_ray_pose/points_valid"/>
+    <param name="output_world_points_topic" value="/test/per_ray_pose/points_world"/>
+    <param name="output_rays_topic" value="/test/per_ray_pose/rays_checked"/>
+    <param name="diagnostics_topic" value="/test/per_ray_pose/diagnostics"/>
+    <param name="ray_time_geometry_mode" value="per_ray_pose"/>
+  </node>
+
+  <test test-name="preprocessor_per_ray_pose_contract"
+        pkg="mid360_ray_preprocessor"
+        type="preprocessor_integration_test.py"
+        time-limit="30">
+    <param name="mode" value="per_ray_pose"/>
+    <param name="sensor_frame" value="sensor_per_ray_pose"/>
+    <param name="input_points_topic" value="/test/per_ray_pose/points_raw"/>
+    <param name="input_rays_topic" value="/test/per_ray_pose/rays_raw"/>
+    <param name="input_scan_identity_topic" value="/test/per_ray_pose/scan_identity"/>
+    <param name="output_points_topic" value="/test/per_ray_pose/points_valid"/>
+    <param name="output_world_points_topic" value="/test/per_ray_pose/points_world"/>
+    <param name="output_rays_topic" value="/test/per_ray_pose/rays_checked"/>
+    <param name="diagnostics_topic" value="/test/per_ray_pose/diagnostics"/>
+  </test>
+</launch>

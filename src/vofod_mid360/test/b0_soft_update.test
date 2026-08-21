@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Pure ROS synthetic contract: no Gazebo, TF, tracker, truth, evaluator,
+       scenario authority, or TCLV process is launched. -->
+  <param name="use_sim_time" value="false"/>
+
+  <include file="$(find vofod_mid360)/launch/b0.launch">
+    <arg name="uav_name" value="uav1"/>
+    <arg name="world_frame_id" value="world"/>
+    <arg name="points_world_topic" value="/test/b0/points_world"/>
+    <arg name="rays_checked_topic" value="/test/b0/rays_checked"/>
+    <arg name="b0_config"
+         value="$(find vofod_mid360)/test/b0_soft_update.yaml"/>
+    <arg name="raycast_config"
+         value="$(find vofod_mid360)/test/b0_soft_update_raycast.yaml"/>
+    <arg name="sensor_config"
+         value="$(find vofod_mid360)/test/b0_soft_update_sensor.yaml"/>
+    <arg name="output" value="screen"/>
+  </include>
+
+  <test test-name="b0_soft_update_contract"
+        pkg="vofod_mid360"
+        type="b0_soft_update_test.py"
+        time-limit="45">
+    <param name="timeout_wall_sec" value="30.0"/>
+    <param name="points_topic" value="/test/b0/points_world"/>
+    <param name="rays_topic" value="/test/b0/rays_checked"/>
+    <param name="diagnostics_topic"
+           value="/uav1/vofod_mid360/map_update_diagnostics"/>
+    <param name="map_revision_evidence_topic"
+           value="/uav1/vofod_mid360/map_revision_evidence"/>
+    <param name="query_service"
+           value="/uav1/vofod_mid360/query_voxels"/>
+    <param name="production_node" value="/uav1/vofod_mid360"/>
+  </test>
+</launch>

@@ -1,0 +1,21 @@
+geometry_msgs/Point[] points
+---
+bool map_initialized
+uint64 map_revision
+# Lower corner of voxel [0,0,0], followed by exact voxel counts and edge size.
+geometry_msgs/Point map_origin
+uint32 map_size_x
+uint32 map_size_y
+uint32 map_size_z
+float32 voxel_size_m
+float32 sure_obstacle_threshold
+# Exact number of unprotected finite voxels receiving free evidence in the
+# current map_revision.
+uint64 last_revision_free_update_count
+bool[] in_bounds
+float32[] scores
+uint32[] update_counts
+uint8[] last_update_classes
+# Request-aligned revisions.  Zero means that update kind has never occurred.
+uint64[] last_update_revisions
+uint64[] last_free_update_revisions

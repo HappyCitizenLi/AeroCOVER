@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="pillar">
+    <static>true</static>
+    <link name="pillar_link">
+      <collision name="pillar_collision">
+        <pose>0 0 2.0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.60</radius>
+            <length>4.0</length>
+          </cylinder>
+        </geometry>
+        <surface>
+          <contact>
+            <collide_without_contact>true</collide_without_contact>
+          </contact>
+        </surface>
+      </collision>
+      <visual name="pillar_visual">
+        <pose>0 0 2.0 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.60</radius>
+            <length>4.0</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.42 0.30 0.16 1</ambient>
+          <diffuse>0.62 0.44 0.23 1</diffuse>
+          <specular>0.02 0.02 0.02 1</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

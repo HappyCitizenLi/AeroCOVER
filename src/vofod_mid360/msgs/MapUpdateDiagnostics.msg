@@ -1,0 +1,57 @@
+std_msgs/Header header
+uint32 scan_id
+
+string source_mode
+string ray_time_geometry_mode
+
+uint32 input_point_count
+uint32 input_ray_count
+uint32 accepted_valid_return
+uint32 accepted_no_return
+uint32 rejected_below_min_range
+uint32 rejected_invalid_range
+uint32 rejected_unknown_status
+uint32 rejected_body_mask
+uint32 rejected_self_occlusion
+uint32 rejected_transform
+uint32 rejected_geometry
+uint32 rejected_nonpositive_endpoint
+uint32 start_outside_map
+
+uint32 positive_ray_segments
+uint32 touched_voxels
+uint32 protected_voxels
+uint32 free_updated_voxels
+uint32 point_updated_voxels
+uint32 unknown_updated_voxels
+
+float64 valid_return_path_m
+float64 no_return_path_m
+
+float32 free_update_weight_valid_return
+float32 free_update_weight_no_return
+float32 valid_return_safety_margin
+float32 raycast_max_distance
+float32 reliable_no_return_distance
+
+uint32 cluster_count
+uint32 detection_count
+uint32 warmup_background_clusters
+bool background_warmup_active
+bool background_warmup_complete
+float32 background_warmup_elapsed_sec
+float32 background_warmup_duration_sec
+uint64 historical_occupied_voxels
+float64 background_required_voxels
+bool background_points_sufficient
+bool sure_background_sufficient
+uint64 map_revision
+
+float32 point_update_ms
+float32 ray_accumulation_ms
+float32 ray_apply_ms
+float32 classification_ms
+float32 total_ms
+
+bool empty_valid_cloud_processed
+bool update_before_classification

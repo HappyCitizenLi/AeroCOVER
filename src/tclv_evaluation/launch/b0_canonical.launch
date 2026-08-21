@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- The only canonical B0 pipeline. Sensor, TF and clock are supplied by
+       the caller or an immutable source bag; truth is never subscribed. -->
+  <arg name="uav_name" default="uav1"/>
+  <arg name="tracking_frame" default="world"/>
+  <arg name="points_world" default="/$(arg uav_name)/mid360/points_world"/>
+  <arg name="rays_checked" default="/$(arg uav_name)/mid360/rays_checked"/>
+  <arg name="tracks" default="/$(arg uav_name)/batch/b0/tracks"/>
+  <arg name="tracker_namespace" default="$(arg uav_name)/batch/b0/lidar_tracker_mid360"/>
+  <arg name="map_revision_evidence"
+       default="/$(arg uav_name)/vofod_mid360/map_revision_evidence"/>
+  <arg name="frame_complete"
+       default="/$(arg tracker_namespace)/frame_complete"/>
+  <arg name="output" default="screen"/>
+
+  <include file="$(find vofod_mid360)/launch/b0.launch">
+    <arg name="uav_name" value="$(arg uav_name)"/>
+    <arg name="world_frame_id" value="$(arg tracking_frame)"/>
+    <arg name="points_world_topic" value="$(arg points_world)"/>
+    <arg name="rays_checked_topic" value="$(arg rays_checked)"/>
+    <arg name="map_revision_evidence_topic"
+         value="$(arg map_revision_evidence)"/>
+    <arg name="output" value="$(arg output)"/>
+  </include>
+
+  <include file="$(find lidar_tracker_mid360)/launch/lidar_tracker.launch">
+    <arg name="uav_name" value="$(arg uav_name)"/>
+    <arg name="tracker_namespace" value="$(arg tracker_namespace)"/>
+    <arg name="world_frame_id" value="$(arg tracking_frame)"/>
+    <arg name="detections_topic" value="/$(arg uav_name)/vofod_mid360/detections"/>
+    <arg name="points_world_topic" value="$(arg points_world)"/>
+    <arg name="background_filter_enabled" value="true"/>
+    <arg name="background_points_topic"
+         value="/$(arg uav_name)/vofod_mid360/background_points"/>
+    <arg name="tracks_topic" value="$(arg tracks)"/>
+    <arg name="frame_complete_topic" value="$(arg frame_complete)"/>
+    <arg name="output" value="$(arg output)"/>
+  </include>
+</launch>

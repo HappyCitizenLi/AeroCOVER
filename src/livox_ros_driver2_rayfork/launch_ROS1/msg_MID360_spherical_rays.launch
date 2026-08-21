@@ -1,0 +1,33 @@
+<launch>
+  <!-- The checked-ray preprocessor consumes /livox/lidar as PointCloud2. -->
+  <arg name="xfer_format" default="0"/>
+  <arg name="multi_topic" default="0"/>
+  <arg name="publish_freq" default="10.0"/>
+  <arg name="msg_frame_id" default="uav1/mid360"/>
+  <arg name="user_config_path"
+       default="$(find livox_ros_driver2)/config/MID360_spherical_config.json"/>
+  <arg name="ray_bundle_topic" default="/uav1/mid360/rays_raw"/>
+  <arg name="scan_identity_topic" default="/uav1/mid360/scan_identity"/>
+  <arg name="diagnostics_topic"
+       default="/uav1/mid360/hw_spherical_diagnostics"/>
+
+  <param name="xfer_format" value="$(arg xfer_format)"/>
+  <param name="multi_topic" value="$(arg multi_topic)"/>
+  <param name="data_src" value="0"/>
+  <param name="publish_freq" type="double" value="$(arg publish_freq)"/>
+  <param name="output_data_type" value="0"/>
+  <param name="user_config_path" value="$(arg user_config_path)"/>
+  <param name="frame_id" value="$(arg msg_frame_id)"/>
+  <param name="enable_lidar_bag" value="false"/>
+  <param name="enable_imu_bag" value="false"/>
+  <node name="livox_lidar_publisher2" pkg="livox_ros_driver2"
+        type="livox_ros_driver2_node" required="true" output="screen">
+    <param name="publish_ray_bundle" value="true"/>
+    <param name="ray_bundle_topic" value="$(arg ray_bundle_topic)"/>
+    <param name="scan_identity_topic" value="$(arg scan_identity_topic)"/>
+    <param name="spherical_diagnostics_topic" value="$(arg diagnostics_topic)"/>
+    <param name="ray_min_range_m" value="0.1"/>
+    <param name="ray_max_range_m" value="70.0"/>
+    <param name="ray_continuity_max_angle_rad" value="0.08726646259971647"/>
+  </node>
+</launch>

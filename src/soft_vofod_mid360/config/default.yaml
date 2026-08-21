@@ -1,0 +1,90 @@
+# One global, scenario-independent SOFT-VoFOD A3 configuration. Values are
+# engineering defaults pending CAL01/CAL02/CAL03 calibration; they are not
+# claimed as measured Mid-360 probabilities.
+world_frame_id: world
+micro_batch_dt_s: 0.01
+
+input:
+  points_world_topic: /uav1/mid360/points_world
+  rays_checked_topic: /uav1/mid360/rays_checked
+  sync_queue_size: 8
+  expected_rays_per_bundle: 0
+  geometry_consistency_tolerance_m: 0.01
+
+map:
+  center: {x: 10.0, y: 0.0, z: 5.0}
+  dimensions: {x: 40.0, y: 30.0, z: 16.0}
+  voxel_size_m: 0.5
+  evidence_scale: 5.0
+  confidence_threshold: 0.6
+  free_probability_threshold: 0.7
+  background_probability_threshold: 0.7
+  background_promotion_groups: 3
+  background_promotion_duration_s: 1.0
+  valid_free_weight: 1.0
+  no_return_free_weight: 0.5
+  background_weight: 1.0
+  endpoint_guard_m: 0.5
+  target_guard_m: 0.2
+  max_no_return_free_range_m: 20.0
+
+event:
+  free_probability_threshold: 0.7
+  background_exclusion_m: 0.75
+  background_search_m: 2.0
+  distance_scale_m: 1.0
+
+birth:
+  buffer_duration_s: 2.0
+  max_buffer_events: 256
+  event_group_dt_s: 0.05
+  min_groups: 3
+  min_duration_s: 0.1
+  pair_dt_min_s: 0.02
+  pair_dt_max_s: 2.0
+  max_speed_mps: 15.0
+  max_residual_m: 0.8
+  min_total_anomaly_score: 1.5
+  suppression_radius_m: 1.0
+
+tracker:
+  acceleration_sigma_mps2: 3.0
+  measurement_variance_m2: 0.1
+  shape_sigma_m: 0.35
+  initial_velocity_variance_m2ps2: 9.0
+  association_gate_d2: 11.345
+  anomaly_cost_weight: 0.1
+  target_radius_m: 0.75
+  map_support_sigma: 2.0
+  map_support_uncertainty_cap_m: 1.5
+  birth_existence: 0.6
+  confirm_threshold: 0.8
+  delete_threshold: 0.1
+  clutter_density: 0.001
+  hard_timeout_s: 30.0
+  quarantine_duration_s: 2.0
+
+opportunity:
+  return_probability: 0.5
+  detection_probability_cap: 0.95
+  max_ray_range_m: 60.0
+  occlusion_margin_m: 0.15
+  sigma_point_scale: 1.0
+
+# A3 defaults. Evaluation overlays change only these switches and the A1
+# minimum birth groups; all physical/calibration parameters stay identical.
+ablation:
+  opportunity_aware_existence: true
+  target_feedback: true
+  hungarian_association: true
+
+safety:
+  max_time_jump_s: 1.0
+
+# Map-only startup on real sensor data.  The benchmark source keeps targets
+# absent for longer than this interval; no truth or scenario event is used.
+initialization:
+  warmup_duration_s: 8.0
+
+output:
+  map_every_n_scans: 5

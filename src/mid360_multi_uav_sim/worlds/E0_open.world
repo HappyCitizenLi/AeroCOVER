@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="E0_open">
+    <gravity>0 0 -9.80665</gravity>
+    <physics name="ode_1khz" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <scene>
+      <ambient>0.35 0.35 0.35 1</ambient>
+      <background>0.65 0.78 0.92 1</background>
+      <shadows>false</shadows>
+    </scene>
+
+    <light name="sun" type="directional">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>-0.4 0.2 -0.9</direction>
+    </light>
+
+    <!-- Package-exported model URI; no machine-specific path is embedded. -->
+    <include>
+      <uri>model://mid360_open_ground</uri>
+      <name>open_ground</name>
+    </include>
+  </world>
+</sdf>

@@ -1,0 +1,53 @@
+sync_queue_size: 10
+expected_rays_per_bundle: 10
+require_expected_ray_count: true
+
+# Every synthetic probe lies at a voxel centre in this compact test map.
+operation_area:
+  center: {x: 3.0, y: 0.0, z: 0.0}
+  size: {x: 14.0, y: 14.0, z: 4.0}
+
+voxel_map:
+  voxel_size: 0.5
+  scores:
+    init: -740.0
+    point: 0.0
+    unknown: -740.0
+    ray: -1000.0
+  thresholds:
+    apriori_map: 0.0
+    sure_obstacles: -0.1
+    new_obstacles: -300.0
+    frontiers: -750.0
+
+clustering:
+  tolerance: 1.5
+  min_points: 2
+  max_size: 3.0
+  max_distance: 12.0
+  background_distance: 1.5
+  max_explore_distance: 3.0
+
+background_sufficient_points_ratio: 0.15
+
+background_warmup:
+  enabled: false
+  duration_sec: 0.0
+
+input:
+  geometry_consistency_tolerance_m: 0.01
+
+separated_background:
+  enabled: true
+  removal_period: 0.1
+  max_background_distance: 0.8
+  minimum_sure_points: 24
+
+output:
+  position_sigma: 0.1
+  base_detection_probability: 0.5
+  visualization_every_n_scans: 1000
+  publish_free_voxels: false
+
+profiling:
+  warn_total_ms: 100.0

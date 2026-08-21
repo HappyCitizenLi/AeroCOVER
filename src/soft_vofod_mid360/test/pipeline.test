@@ -1,0 +1,24 @@
+<launch>
+  <node pkg="soft_vofod_mid360" type="soft_vofod_node"
+        name="soft_vofod" output="screen">
+    <rosparam file="$(find soft_vofod_mid360)/config/default.yaml"/>
+    <param name="input/points_world_topic" value="/test/points_world"/>
+    <param name="input/rays_checked_topic" value="/test/rays_checked"/>
+    <param name="input/expected_rays_per_bundle" value="1"/>
+    <param name="map/center/x" value="5.0"/>
+    <param name="map/center/y" value="0.0"/>
+    <param name="map/center/z" value="0.0"/>
+    <param name="map/dimensions/x" value="12.0"/>
+    <param name="map/dimensions/y" value="6.0"/>
+    <param name="map/dimensions/z" value="6.0"/>
+    <param name="map/evidence_scale" value="1.0"/>
+    <param name="map/confidence_threshold" value="0.5"/>
+    <param name="birth/min_duration_s" value="0.1"/>
+    <param name="birth/min_total_anomaly_score" value="1.5"/>
+    <param name="safety/max_time_jump_s" value="2.0"/>
+    <param name="initialization/warmup_duration_s" value="0.0"/>
+  </node>
+
+  <test test-name="soft_vofod_pipeline" pkg="soft_vofod_mid360"
+        type="pipeline_test.py" time-limit="30"/>
+</launch>

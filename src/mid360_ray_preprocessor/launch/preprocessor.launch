@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="config" default="$(find mid360_ray_preprocessor)/config/default.yaml"/>
+  <arg name="input_scan_identity_topic" default="/uav1/mid360/scan_identity"/>
+  <arg name="ray_time_geometry_mode" default="snapshot"/>
+  <arg name="output_frame" default="world"/>
+  <arg name="source_mode" default="sim_exact"/>
+  <arg name="source_mode_topic" default=""/>
+  <arg name="source_mode_lease_timeout_sec" default="3.0"/>
+  <arg name="tf_source_cadence_observation_enabled" default="false"/>
+  <arg name="tf_source_cadence_topic" default="/tf"/>
+  <arg name="tf_source_cadence_parent_frame" default=""/>
+  <arg name="tf_source_cadence_child_frame" default=""/>
+
+  <node pkg="mid360_ray_preprocessor"
+        type="mid360_ray_preprocessor_node"
+        name="mid360_ray_preprocessor"
+        output="screen">
+    <rosparam command="load" file="$(arg config)"/>
+    <param name="input_scan_identity_topic" value="$(arg input_scan_identity_topic)"/>
+    <param name="ray_time_geometry_mode" value="$(arg ray_time_geometry_mode)"/>
+    <param name="output_frame" value="$(arg output_frame)"/>
+    <param name="source_mode" value="$(arg source_mode)"/>
+    <param name="source_mode_topic" value="$(arg source_mode_topic)"/>
+    <param name="source_mode_lease_timeout_sec"
+           value="$(arg source_mode_lease_timeout_sec)"/>
+    <param name="tf_source_cadence_observation_enabled"
+           value="$(arg tf_source_cadence_observation_enabled)"/>
+    <param name="tf_source_cadence_topic"
+           value="$(arg tf_source_cadence_topic)"/>
+    <param name="tf_source_cadence_parent_frame"
+           value="$(arg tf_source_cadence_parent_frame)"/>
+    <param name="tf_source_cadence_child_frame"
+           value="$(arg tf_source_cadence_child_frame)"/>
+  </node>
+</launch>

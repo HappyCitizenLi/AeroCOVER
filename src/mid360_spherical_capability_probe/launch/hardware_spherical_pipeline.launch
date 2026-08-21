@@ -1,0 +1,29 @@
+<launch>
+  <arg name="capability_output"
+       default="/tmp/mid360_spherical_capability.json"/>
+  <arg name="trial_id" default="hardware_restart_01"/>
+  <arg name="output_frame" default="world"/>
+  <!-- Keep the compatibility cloud aligned with the preprocessor subscriber. -->
+  <arg name="xfer_format" default="0"/>
+  <arg name="driver_config"
+       default="$(find livox_ros_driver2)/config/MID360_spherical_config.json"/>
+
+  <include file="$(find livox_ros_driver2)/launch_ROS1/msg_MID360_spherical_rays.launch">
+    <arg name="user_config_path" value="$(arg driver_config)"/>
+    <arg name="xfer_format" value="$(arg xfer_format)"/>
+  </include>
+
+  <include file="$(find mid360_spherical_capability_probe)/launch/probe.launch">
+    <arg name="trial_id" value="$(arg trial_id)"/>
+    <arg name="output_path" value="$(arg capability_output)"/>
+  </include>
+
+  <include file="$(find mid360_ray_preprocessor)/launch/preprocessor.launch">
+    <arg name="config"
+         value="$(find mid360_ray_preprocessor)/config/hardware_spherical.yaml"/>
+    <arg name="output_frame" value="$(arg output_frame)"/>
+    <arg name="source_mode" value="calibrated_fallback"/>
+    <arg name="source_mode_topic"
+         value="/uav1/mid360/ray_source_mode"/>
+  </include>
+</launch>

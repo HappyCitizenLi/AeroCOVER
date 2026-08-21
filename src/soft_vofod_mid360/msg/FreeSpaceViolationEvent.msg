@@ -1,0 +1,9 @@
+std_msgs/Header header
+uint32 scan_id
+uint32 original_index
+geometry_msgs/Point position
+geometry_msgs/Vector3 ray_direction
+float32 free_confidence
+float32 background_distance
+float32 anomaly_score
+

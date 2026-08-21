@@ -1,0 +1,28 @@
+<launch>
+  <include file="$(find lidar_tracker_mid360)/launch/lidar_tracker.launch">
+    <arg name="uav_name" value="test_uav"/>
+    <arg name="tracker_namespace" value="baseline_test"/>
+    <arg name="world_frame_id" value="world"/>
+    <arg name="detections_topic" value="/baseline_test/detections_fixture"/>
+    <arg name="points_world_topic" value="/baseline_test/points_world_fixture"/>
+    <arg name="background_filter_enabled" value="false"/>
+    <arg name="background_points_topic" value="/baseline_test/must_remain_unsubscribed"/>
+    <arg name="output" value="screen"/>
+  </include>
+
+  <include file="$(find lidar_tracker_mid360)/launch/lidar_tracker.launch">
+    <arg name="uav_name" value="test_uav"/>
+    <arg name="tracker_namespace" value="background_empty_test"/>
+    <arg name="world_frame_id" value="world"/>
+    <arg name="detections_topic" value="/background_empty_test/detections_fixture"/>
+    <arg name="points_world_topic" value="/background_empty_test/points_fixture"/>
+    <arg name="background_filter_enabled" value="true"/>
+    <arg name="background_points_topic" value="/background_empty_test/empty_background_fixture"/>
+    <arg name="output" value="screen"/>
+  </include>
+
+  <test test-name="synthetic_tracker_contract"
+        pkg="lidar_tracker_mid360"
+        type="synthetic_tracker_test.py"
+        time-limit="45"/>
+</launch>

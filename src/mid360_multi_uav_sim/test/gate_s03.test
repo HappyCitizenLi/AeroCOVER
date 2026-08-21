@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find mid360_multi_uav_sim)/launch/gate_s03.launch">
+    <arg name="gui" value="false"/>
+    <arg name="verbose" value="false"/>
+    <arg name="run_preprocessor" value="true"/>
+    <arg name="run_scenario_manager" value="true"/>
+  </include>
+
+  <test test-name="gate_s03_contract"
+        pkg="mid360_multi_uav_sim"
+        type="gate_s03_test.py"
+        time-limit="180">
+    <param name="timeout_wall_sec" value="165.0"/>
+    <param name="post_complete_timeout_wall_sec" value="12.0"/>
+    <param name="expected_ray_count" value="20000"/>
+    <param name="minimum_translation_m" value="3.5"/>
+    <param name="wall_plane_x" value="24.75"/>
+    <param name="wall_plane_tolerance_m" value="0.02"/>
+    <param name="wall_endpoint_spread_tolerance_m" value="0.02"/>
+    <param name="minimum_wall_hit_offset_span_sec" value="0.025"/>
+    <param name="minimum_wall_hit_late_offset_sec" value="0.06"/>
+    <param name="maximum_wall_endpoint_slope_mps" value="0.12"/>
+    <param name="minimum_wall_hit_count" value="25"/>
+  </test>
+</launch>

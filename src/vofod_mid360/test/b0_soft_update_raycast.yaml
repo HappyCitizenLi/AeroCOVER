@@ -1,0 +1,17 @@
+raycast:
+  # Deliberately distinct, visibly non-zero weights make the two accepted ray
+  # classes auditable without changing the production B0 contract.
+  free_update_weight_valid_return: 0.10
+  free_update_weight_no_return: 0.05
+  valid_return_safety_margin: 1.0
+  max_distance: 6.0
+  reliable_no_return_distance: 6.0
+  direction_norm_tolerance: 0.0001
+
+body_mask:
+  enabled: true
+  default_allow: true
+  blocked_pattern_indices: [999]
+
+dynamic_aware_free_weighting: false
+delayed_map_commit: false

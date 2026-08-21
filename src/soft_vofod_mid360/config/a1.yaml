@@ -1,0 +1,10 @@
+# A1: background decomposition with the minimum two-group tentative birth.
+# Physical/calibration values come from default.yaml unchanged.
+birth:
+  min_groups: 2
+
+ablation:
+  opportunity_aware_existence: false
+  target_feedback: false
+  hungarian_association: false
+

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="world_file"/>
+  <arg name="scenario_file"/>
+  <arg name="observer_model_file"
+       default="$(find mid360_multi_uav_sim)/models/observer_uav_dynamic/model.sdf"/>
+  <arg name="target_model_file"
+       default="$(find mid360_multi_uav_sim)/models/simplified_target_uav/model.sdf"/>
+  <arg name="ray_time_geometry_mode" default="snapshot"/>
+  <arg name="gui" default="false"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_file)"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="true"/>
+  </include>
+
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_benchmark_observer"
+        output="screen"
+        args="-sdf -file $(arg observer_model_file) -model uav1 -robot_namespace /uav1 -x 0 -y 0 -z 2"/>
+  <node pkg="tf2_ros" type="static_transform_publisher"
+        name="benchmark_fcu_to_mid360"
+        args="0 0 0.25 0 0 0 1 uav1/fcu uav1/mid360_link"/>
+
+  <include file="$(find mid360_ray_preprocessor)/launch/preprocessor.launch">
+    <arg name="ray_time_geometry_mode" value="$(arg ray_time_geometry_mode)"/>
+    <arg name="output_frame" value="world"/>
+    <arg name="tf_source_cadence_observation_enabled" value="true"/>
+    <arg name="tf_source_cadence_topic" value="/tf"/>
+    <arg name="tf_source_cadence_parent_frame" value="world"/>
+    <arg name="tf_source_cadence_child_frame" value="uav1/fcu"/>
+  </include>
+
+  <node pkg="mid360_multi_uav_sim" type="benchmark_scenario.py"
+        name="benchmark_scenario" output="screen" required="true">
+    <param name="scenario_file" value="$(arg scenario_file)"/>
+    <param name="target_model_file" value="$(arg target_model_file)"/>
+  </node>
+</launch>
+

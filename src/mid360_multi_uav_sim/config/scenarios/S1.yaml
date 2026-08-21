@@ -1,0 +1,117 @@
+# S1: three already-established targets fly in a conventional horizontal
+# line, smoothly change to a collision-free vertical stack, remain stacked
+# while translating, and restore the original line.  In the scored stack the
+# adjacent target surfaces are closer than B0's 1.25 m Euclidean-component
+# tolerance, so transitive connectivity can present one component to the
+# component-based detector.
+schema_version: 1
+scenario: S1_three_target_vertical_formation
+world_frame: world
+seed: 1001
+repeat_count: 1
+repeat_mode: restart
+start_delay: 6.0
+duration: 30.0
+final_hold: 3.0
+
+runtime:
+  set_model_state_service: /gazebo/set_model_state
+  world_properties_service: /gazebo/get_world_properties
+  event_topic: /mid360_multi_uav_sim/scenario_events
+  publish_rate: 50.0
+  service_timeout_wall: 30.0
+  clock_timeout_wall: 30.0
+  max_clock_stall_wall: 20.0
+  max_consecutive_service_failures: 3
+  require_use_sim_time: true
+
+randomization:
+  position_offset_uniform: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+
+# These values are frozen by s1_assets_test.py and recomputed from the target
+# collision model.  Snapshot mode intentionally removes observer-deskew as a
+# confounder; this fixture stresses component merging, not rolling-scan
+# compensation of moving targets.
+formation_contract:
+  geometry_mode: snapshot
+  moving_target_count: 3
+  line_center_spacing_m: 3.0
+  target_horizontal_collision_radius_m: 0.6649747468305832
+  line_min_horizontal_clearance_m: 1.6700505063388336
+  stack_vertical_center_spacing_m: 1.0
+  target_vertical_collision_half_extent_m: 0.09
+  stack_min_vertical_clearance_m: 0.82
+  euclidean_cluster_tolerance_m: 1.25
+  b0_max_component_size_m: 3.0
+  scored_phase: vertical_stack_flight
+
+targets:
+  uav1:
+    model_name: uav1
+    command_model: false
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav1/odom
+    child_frame_id: uav1/fcu
+    initial_pose: {x: 0.0, y: 0.0, z: 2.0, yaw: 0.0}
+  uav2:
+    model_name: uav2
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav2/odom
+    child_frame_id: uav2/base_link
+    initial_pose: {x: 6.0, y: -3.0, z: 3.25, yaw: 0.0}
+  uav3:
+    model_name: uav3
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav3/odom
+    child_frame_id: uav3/base_link
+    initial_pose: {x: 6.0, y: 0.0, z: 3.25, yaw: 0.0}
+  uav4:
+    model_name: uav4
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav4/odom
+    child_frame_id: uav4/base_link
+    initial_pose: {x: 6.0, y: 3.0, z: 3.25, yaw: 0.0}
+
+phases:
+  - id: horizontal_line_flight
+    duration: 6.0
+    interpolation: smoothstep
+    targets:
+      uav2: {x: 7.5, y: -3.0, z: 3.25, yaw: 0.0}
+      uav3: {x: 7.5, y: 0.0, z: 3.25, yaw: 0.0}
+      uav4: {x: 7.5, y: 3.0, z: 3.25, yaw: 0.0}
+
+  - id: form_vertical_stack
+    event: stack_transition_start
+    duration: 6.0
+    interpolation: smoothstep
+    targets:
+      uav2: {x: 9.0, y: 0.0, z: 2.25, yaw: 0.0}
+      uav3: {x: 9.0, y: 0.0, z: 3.25, yaw: 0.0}
+      uav4: {x: 9.0, y: 0.0, z: 4.25, yaw: 0.0}
+
+  - id: vertical_stack_flight
+    event: vertical_stack_start
+    duration: 8.0
+    interpolation: smoothstep
+    targets:
+      uav2: {x: 11.0, y: 0.0, z: 2.25, yaw: 0.0}
+      uav3: {x: 11.0, y: 0.0, z: 3.25, yaw: 0.0}
+      uav4: {x: 11.0, y: 0.0, z: 4.25, yaw: 0.0}
+
+  - id: restore_horizontal_line
+    event: restore_line_start
+    duration: 6.0
+    interpolation: smoothstep
+    targets:
+      uav2: {x: 12.5, y: -3.0, z: 3.25, yaw: 0.0}
+      uav3: {x: 12.5, y: 0.0, z: 3.25, yaw: 0.0}
+      uav4: {x: 12.5, y: 3.0, z: 3.25, yaw: 0.0}
+
+  - id: restored_line_flight
+    event: restored_line_start
+    duration: 4.0
+    interpolation: smoothstep
+    targets:
+      uav2: {x: 13.5, y: -3.0, z: 3.25, yaw: 0.0}
+      uav3: {x: 13.5, y: 0.0, z: 3.25, yaw: 0.0}
+      uav4: {x: 13.5, y: 3.0, z: 3.25, yaw: 0.0}

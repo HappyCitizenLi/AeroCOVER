@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Load the three files exactly as b0.launch does: into one private-style
+       namespace, in production order, with no node or simulator required. -->
+  <rosparam command="load" ns="/vofod_mid360_production_config"
+            file="$(find vofod_mid360)/config/b0_mid360_canonical.yaml"/>
+  <rosparam command="load" ns="/vofod_mid360_production_config"
+            file="$(find vofod_mid360)/config/raycast_mid360.yaml"/>
+  <rosparam command="load" ns="/vofod_mid360_production_config"
+            file="$(find vofod_mid360)/config/sensors/mid360.yaml"/>
+
+  <test test-name="vofod_mid360_production_config_contract"
+        pkg="vofod_mid360" type="vofod_mid360_production_config_test"
+        time-limit="20"/>
+</launch>

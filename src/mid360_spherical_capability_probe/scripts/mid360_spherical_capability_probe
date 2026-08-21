@@ -1,0 +1,410 @@
+#!/usr/bin/env python3
+"""Live fail-closed probe for Mid-360 zero-depth spherical directions."""
+
+import json
+from pathlib import Path
+import threading
+import time
+
+from diagnostic_msgs.msg import DiagnosticArray
+from mid360_ray_msgs.msg import Ray, RayBundle
+import rospy
+from std_msgs.msg import String
+from std_srvs.srv import Trigger, TriggerResponse
+
+from mid360_spherical_capability_probe.probe_core import (
+    CapabilityEvaluator,
+    DiagnosticRayFramePairer,
+    ProbeThresholds,
+    RestartEpochGate,
+    TrialAccumulator,
+    driver_diagnostics_runtime_safe,
+    diagnostic_ray_frame_metadata_matches,
+    runtime_promotion_failure_reason,
+)
+
+
+class ProbeNode:
+    def __init__(self):
+        self._lock = threading.RLock()
+        self._thresholds = ProbeThresholds(
+            minimum_packet_count=rospy.get_param("~minimum_packet_count", 10),
+            minimum_sample_count=rospy.get_param("~minimum_sample_count", 1000),
+            minimum_zero_depth_count=rospy.get_param(
+                "~minimum_zero_depth_count", 1
+            ),
+            minimum_nontrivial_angle_ratio=rospy.get_param(
+                "~minimum_nontrivial_angle_ratio", 0.9
+            ),
+            minimum_temporal_continuity_ratio=rospy.get_param(
+                "~minimum_temporal_continuity_ratio", 0.8
+            ),
+            maximum_direction_norm_error=rospy.get_param(
+                "~maximum_direction_norm_error", 1.0e-4
+            ),
+            maximum_neighbor_angle_rad=rospy.get_param(
+                "~maximum_neighbor_angle_rad", 0.08726646259971647
+            ),
+            maximum_neighbor_time_gap_ns=rospy.get_param(
+                "~maximum_neighbor_time_gap_ns", 1000000
+            ),
+            minimum_zero_valid_neighbor_pairs=rospy.get_param(
+                "~minimum_zero_valid_neighbor_pairs", 1
+            ),
+            minimum_zero_depth_direction_span_rad=rospy.get_param(
+                "~minimum_zero_depth_direction_span_rad", 0.001
+            ),
+            required_restart_trials=rospy.get_param(
+                "~required_restart_trials", 2
+            ),
+        )
+        self._thresholds.validate()
+        self._base_trial_id = rospy.get_param(
+            "~trial_id", "hardware_restart_01"
+        )
+        self._output_path = Path(
+            rospy.get_param(
+                "~output_path", "/tmp/mid360_spherical_capability.json"
+            )
+        )
+        self._diagnostics_timeout_sec = float(rospy.get_param(
+            "~diagnostics_timeout_sec", 2.0
+        ))
+        self._ray_timeout_sec = float(rospy.get_param(
+            "~ray_timeout_sec", 2.0
+        ))
+        if self._diagnostics_timeout_sec <= 0.0 or self._ray_timeout_sec <= 0.0:
+            raise ValueError("watchdog timeouts must be positive")
+        self._evaluator = CapabilityEvaluator(self._thresholds)
+        self._runtime_revoked = False
+        self._runtime_revocation_reason = ""
+        self._exact_ever_published = False
+        self._latest_driver_safe = False
+        self._latest_driver_values = {}
+        self._last_diagnostics_monotonic = None
+        self._last_ray_monotonic = None
+        self._last_paired_frame_monotonic = None
+        self._runtime_alignment_baseline = None
+        self._authenticated_serial_number = None
+        self._authenticated_firmware = None
+        self._authenticated_restart_marker = None
+        self._restart_gate = RestartEpochGate()
+        self._qualification_complete = False
+        self._frame_cache_capacity = int(rospy.get_param(
+            "~frame_cache_capacity", 32
+        ))
+        if self._frame_cache_capacity <= 0:
+            raise ValueError("frame cache capacity must be positive")
+        self._frame_pairer = DiagnosticRayFramePairer(
+            self._frame_cache_capacity
+        )
+        self._current = TrialAccumulator(
+            self._trial_id(len(self._evaluator.trials)), self._thresholds
+        )
+        ray_topic = rospy.get_param("~ray_bundle_topic", "/uav1/mid360/rays_raw")
+        diagnostics_topic = rospy.get_param(
+            "~driver_diagnostics_topic",
+            "/uav1/mid360/hw_spherical_diagnostics",
+        )
+        mode_topic = rospy.get_param(
+            "~source_mode_topic", "/uav1/mid360/ray_source_mode"
+        )
+        self._mode_publisher = rospy.Publisher(
+            mode_topic, String, queue_size=1, latch=True
+        )
+        self._active_mode = "calibrated_fallback"
+        self._publish_mode(self._active_mode)
+        self._ray_subscriber = rospy.Subscriber(
+            ray_topic, RayBundle, self._ray_callback, queue_size=4
+        )
+        self._diagnostics_subscriber = rospy.Subscriber(
+            diagnostics_topic,
+            DiagnosticArray,
+            self._diagnostics_callback,
+            queue_size=4,
+        )
+        self._finish_service = rospy.Service(
+            "~finish_trial", Trigger, self._finish_trial
+        )
+        self._write_service = rospy.Service(
+            "~write_report", Trigger, self._write_report_service
+        )
+        watchdog_period = max(
+            0.1,
+            min(self._diagnostics_timeout_sec, self._ray_timeout_sec) / 4.0,
+        )
+        self._watchdog_timer = rospy.Timer(
+            rospy.Duration(watchdog_period), self._watchdog_callback,
+            reset=True,
+        )
+        rospy.on_shutdown(self._shutdown)
+        self._write_report()
+
+    def _trial_id(self, index):
+        if index == 0:
+            return self._base_trial_id
+        return "%s_restart_%02d" % (self._base_trial_id, index + 1)
+
+    def _diagnostics_callback(self, message):
+        with self._lock:
+            for status in message.status:
+                if status.name.endswith("/spherical_raw_capability"):
+                    values = {item.key: item.value for item in status.values}
+                    self._last_diagnostics_monotonic = time.monotonic()
+                    stamp_ns = message.header.stamp.to_nsec()
+                    try:
+                        declared_stamp_ns = int(values.get("frame_stamp_ns", -1))
+                    except (TypeError, ValueError):
+                        declared_stamp_ns = -1
+                    values["diagnostic_header_stamp_matches_frame_stamp"] = (
+                        "true" if stamp_ns > 0 and stamp_ns == declared_stamp_ns
+                        else "false"
+                    )
+                    marker = values.get("device_restart_marker", "UNAVAILABLE")
+                    epoch_action = self._restart_gate.observe(marker)
+                    if epoch_action in (
+                            RestartEpochGate.START, RestartEpochGate.RESET):
+                        # A boot changed before an unfinished trial ended, or
+                        # the required new boot arrived. In either case, drop
+                        # every older sample and counter baseline.
+                        self._current = TrialAccumulator(
+                            self._trial_id(len(self._evaluator.trials)),
+                            self._thresholds,
+                        )
+                        self._frame_pairer.clear_pending()
+
+                    if stamp_ns > 0:
+                        paired = self._frame_pairer.add_diagnostics(
+                            stamp_ns, marker, values
+                        )
+                        self._observe_paired_frame(paired)
+
+
+    def _ray_callback(self, bundle):
+        with self._lock:
+            self._last_ray_monotonic = time.monotonic()
+            stamp_ns = bundle.header.stamp.to_nsec()
+            if stamp_ns <= 0:
+                return
+            paired = self._frame_pairer.add_ray_bundle(stamp_ns, bundle)
+            self._observe_paired_frame(paired)
+
+    def _observe_paired_frame(self, paired):
+        if paired is None:
+            return
+        stamp_ns = paired["stamp_ns"]
+        marker = paired["marker"]
+        values = paired["diagnostics"]
+        bundle = paired["ray_bundle"]
+        if (
+            self._restart_gate.waiting_for_new_boot
+            or self._restart_gate.active_marker is None
+            or marker != self._restart_gate.active_marker
+        ):
+            return
+        values["diagnostic_ray_frame_metadata_matches"] = (
+            "true" if diagnostic_ray_frame_metadata_matches(values, bundle)
+            else "false"
+        )
+        if values["diagnostic_ray_frame_metadata_matches"] != "true":
+            if self._exact_ever_published:
+                self._revoke_runtime("diagnostic_ray_frame_metadata_mismatch")
+            return
+        self._last_paired_frame_monotonic = time.monotonic()
+        self._latest_driver_values = values
+        if self._exact_ever_published:
+            self._latest_driver_safe = driver_diagnostics_runtime_safe(
+                values,
+                self._runtime_alignment_baseline,
+                self._authenticated_serial_number,
+                self._authenticated_firmware,
+                self._authenticated_restart_marker,
+            )
+            if not self._latest_driver_safe:
+                self._revoke_runtime("runtime_driver_capability_revoked")
+                return
+        if self._qualification_complete:
+            return
+        self._current.update_driver_diagnostics(values)
+        for ray in bundle.rays:
+            self._current.observe_sample(
+                ray.return_status,
+                (ray.dir_x, ray.dir_y, ray.dir_z),
+                stamp_ns + ray.offset_time_ns,
+            )
+
+    def _finish_trial(self, _request):
+        with self._lock:
+            if self._qualification_complete:
+                return TriggerResponse(
+                    False, "qualification is complete for this probe process"
+                )
+            if self._restart_gate.waiting_for_new_boot:
+                return TriggerResponse(
+                    False,
+                    "waiting for a different device powerup counter",
+                )
+            trial = self._current.finish()
+            if trial["sample_count"] == 0:
+                return TriggerResponse(False, "no RayBundle samples observed")
+            try:
+                self._evaluator.add_trial(trial)
+            except ValueError as exc:
+                return TriggerResponse(False, str(exc))
+            candidate_report = self._evaluator.report()
+            if candidate_report["ray_source_mode"] == "hw_spherical_exact":
+                self._qualification_complete = True
+                try:
+                    candidate_alignment_baseline = int(
+                        self._latest_driver_values.get(
+                            "frame_alignment_mismatch_count", -1
+                        )
+                    )
+                except (TypeError, ValueError):
+                    candidate_alignment_baseline = -1
+                failure_reason = runtime_promotion_failure_reason(
+                    self._latest_driver_values,
+                    time.monotonic(),
+                    self._last_diagnostics_monotonic,
+                    self._last_ray_monotonic,
+                    self._last_paired_frame_monotonic,
+                    self._diagnostics_timeout_sec,
+                    self._ray_timeout_sec,
+                    candidate_alignment_baseline,
+                    candidate_report["serial_number"],
+                    candidate_report["firmware"],
+                    trial["device_restart_marker"],
+                )
+                if failure_reason is None and not self._runtime_revoked:
+                    self._runtime_alignment_baseline = (
+                        candidate_alignment_baseline
+                    )
+                    self._authenticated_serial_number = candidate_report[
+                        "serial_number"
+                    ]
+                    self._authenticated_firmware = candidate_report["firmware"]
+                    self._authenticated_restart_marker = trial[
+                        "device_restart_marker"
+                    ]
+                    self._latest_driver_safe = True
+                    self._exact_ever_published = True
+                    self._active_mode = "hw_spherical_exact"
+                else:
+                    self._runtime_revoked = True
+                    self._runtime_revocation_reason = (
+                        failure_reason or "runtime_driver_capability_revoked"
+                    )
+                    self._latest_driver_safe = False
+                    self._active_mode = "calibrated_fallback"
+            else:
+                self._restart_gate.finish(trial["device_restart_marker"])
+                self._current = TrialAccumulator(
+                    self._trial_id(len(self._evaluator.trials)),
+                    self._thresholds,
+                )
+            report = self._write_report()
+            self._active_mode = report["ray_source_mode"]
+            self._publish_mode(self._active_mode)
+            return TriggerResponse(
+                True,
+                "trial stored; mode=%s exact_supported=%s"
+                % (
+                    report["ray_source_mode"],
+                    str(report["exact_no_return_direction_supported"]).lower(),
+                ),
+            )
+
+    def _revoke_runtime(self, reason):
+        if not self._exact_ever_published or self._runtime_revoked:
+            return
+        self._runtime_revoked = True
+        self._runtime_revocation_reason = reason
+        self._latest_driver_safe = False
+        self._active_mode = "calibrated_fallback"
+        self._publish_mode(self._active_mode)
+        self._write_report()
+
+    def _watchdog_callback(self, _event):
+        with self._lock:
+            if not self._exact_ever_published or self._runtime_revoked:
+                self._publish_mode(self._active_mode)
+                return
+            now = time.monotonic()
+            failure_reason = runtime_promotion_failure_reason(
+                self._latest_driver_values,
+                now,
+                self._last_diagnostics_monotonic,
+                self._last_ray_monotonic,
+                self._last_paired_frame_monotonic,
+                self._diagnostics_timeout_sec,
+                self._ray_timeout_sec,
+                self._runtime_alignment_baseline,
+                self._authenticated_serial_number,
+                self._authenticated_firmware,
+                self._authenticated_restart_marker,
+            )
+            if failure_reason is not None:
+                self._revoke_runtime(failure_reason)
+            self._publish_mode(self._active_mode)
+
+    def _publish_mode(self, mode):
+        self._mode_publisher.publish(String(data=mode))
+
+    def _shutdown(self):
+        with self._lock:
+            if self._exact_ever_published and not self._runtime_revoked:
+                self._runtime_revoked = True
+                self._runtime_revocation_reason = "capability_probe_shutdown"
+            self._active_mode = "calibrated_fallback"
+            try:
+                self._publish_mode(self._active_mode)
+                self._write_report()
+            except (OSError, rospy.ROSException):
+                pass
+
+    def _write_report_service(self, _request):
+        try:
+            report = self._write_report()
+        except OSError as exc:
+            return TriggerResponse(False, str(exc))
+        return TriggerResponse(
+            True,
+            "wrote %s mode=%s" % (self._output_path, report["ray_source_mode"]),
+        )
+
+    def _write_report(self):
+        with self._lock:
+            report = self._evaluator.report()
+            if self._runtime_revoked:
+                report = dict(report)
+                report["runtime_revoked"] = True
+                report["exact_no_return_direction_supported"] = False
+                report["ray_source_mode"] = "calibrated_fallback"
+                report["failure_reasons"] = list(report["failure_reasons"])
+                revocation_reason = (
+                    self._runtime_revocation_reason
+                    or "runtime_driver_capability_revoked"
+                )
+                if revocation_reason not in report["failure_reasons"]:
+                    report["failure_reasons"].append(
+                        revocation_reason
+                    )
+            else:
+                report["runtime_revoked"] = False
+            self._output_path.parent.mkdir(parents=True, exist_ok=True)
+            self._output_path.write_text(
+                json.dumps(report, indent=2, sort_keys=True, allow_nan=False)
+                + "\n",
+                encoding="utf-8",
+            )
+            return report
+
+
+def main():
+    rospy.init_node("mid360_spherical_capability_probe")
+    ProbeNode()
+    rospy.spin()
+
+
+if __name__ == "__main__":
+    main()

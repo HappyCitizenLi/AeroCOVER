@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="observer_uav_dynamic">
+    <!-- Kept separate from observer_uav: schema-v1 fixtures retain their
+         original static model and TF authority unchanged. -->
+    <static>false</static>
+    <self_collide>false</self_collide>
+    <allow_auto_disable>false</allow_auto_disable>
+
+    <link name="base_link">
+      <gravity>false</gravity>
+      <velocity_decay>
+        <linear>0</linear>
+        <angular>0</angular>
+      </velocity_decay>
+      <inertial>
+        <mass>1.5</mass>
+        <inertia>
+          <ixx>0.035</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.035</iyy>
+          <iyz>0</iyz>
+          <izz>0.060</izz>
+        </inertia>
+      </inertial>
+      <collision name="body_collision">
+        <geometry><box><size>0.48 0.36 0.16</size></box></geometry>
+      </collision>
+      <visual name="body_visual">
+        <geometry><box><size>0.48 0.36 0.16</size></box></geometry>
+        <material>
+          <ambient>0.08 0.18 0.55 1</ambient>
+          <diffuse>0.10 0.25 0.80 1</diffuse>
+        </material>
+      </visual>
+      <visual name="x_axis_marker">
+        <pose>0.31 0 0 0 0 0</pose>
+        <geometry><box><size>0.16 0.05 0.05</size></box></geometry>
+        <material>
+          <ambient>0.85 0.15 0.10 1</ambient>
+          <diffuse>0.95 0.18 0.10 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <link name="mid360_link">
+      <pose>0 0 0.25 0 0 0</pose>
+      <gravity>false</gravity>
+      <self_collide>false</self_collide>
+      <inertial>
+        <mass>0.265</mass>
+        <inertia>
+          <ixx>0.0008</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0008</iyy>
+          <iyz>0</iyz>
+          <izz>0.0008</izz>
+        </inertia>
+      </inertial>
+      <visual name="mid360_visual">
+        <geometry><cylinder><radius>0.035</radius><length>0.075</length></cylinder></geometry>
+        <material>
+          <ambient>0.06 0.06 0.06 1</ambient>
+          <diffuse>0.10 0.10 0.10 1</diffuse>
+        </material>
+      </visual>
+
+      <sensor name="mid360_ray_sensor" type="ray">
+        <pose>0 0 0 0 0 0</pose>
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>
+        <visualize>false</visualize>
+        <plugin name="uav1_mid360_plugin"
+                filename="liblivox_laser_simulation.so">
+          <ray>
+            <scan>
+              <horizontal>
+                <samples>100</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.141592653589793</min_angle>
+                <max_angle>3.141592653589793</max_angle>
+              </horizontal>
+              <vertical>
+                <samples>50</samples>
+                <resolution>1</resolution>
+                <min_angle>-3.141592653589793</min_angle>
+                <max_angle>3.141592653589793</max_angle>
+              </vertical>
+            </scan>
+            <range>
+              <min>0.1</min>
+              <max>40.0</max>
+              <resolution>0.01</resolution>
+            </range>
+            <noise><type>gaussian</type><mean>0.0</mean><stddev>0.0</stddev></noise>
+          </ray>
+
+          <robotNamespace>/uav1</robotNamespace>
+          <ros_topic>mid360/points_raw</ros_topic>
+          <publish_ray_bundle>true</publish_ray_bundle>
+          <ray_bundle_topic>mid360/rays_raw</ray_bundle_topic>
+          <ray_diagnostics_topic>mid360/ray_source_diagnostics</ray_diagnostics_topic>
+          <parentFrameName>uav1/fcu</parentFrameName>
+          <frameName>uav1/mid360_link</frameName>
+          <ray_bundle_frame>uav1/mid360_link</ray_bundle_frame>
+
+          <visualize>false</visualize>
+          <samples>20000</samples>
+          <downsample>1</downsample>
+          <csv_file_name>mid360-real-centr.csv</csv_file_name>
+          <publish_pointcloud_type>2</publish_pointcloud_type>
+          <use_csv_time>true</use_csv_time>
+          <ray_point_rate>200000</ray_point_rate>
+
+          <!-- The strict plugin mode permits per-ray geometry only for this
+               explicitly static-scene S03 background. -->
+          <ray_time_geometry_mode>per_ray_pose</ray_time_geometry_mode>
+          <per_ray_pose_static_scene_opt_in>true</per_ray_pose_static_scene_opt_in>
+        </plugin>
+      </sensor>
+    </link>
+
+    <joint name="mid360_fixed_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>mid360_link</child>
+    </joint>
+  </model>
+</sdf>

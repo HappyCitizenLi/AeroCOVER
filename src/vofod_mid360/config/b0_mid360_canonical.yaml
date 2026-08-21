@@ -1,0 +1,73 @@
+# Frozen VoFOD-Mid360 B0 detector configuration.
+sync_queue_size: 8
+expected_rays_per_bundle: 20000
+require_expected_ray_count: true
+
+operation_area:
+  center:
+    x: 10.0
+    y: 0.0
+    z: 5.0
+  size:
+    x: 40.0
+    y: 30.0
+    z: 16.0
+
+voxel_map:
+  voxel_size: 0.5
+  scores:
+    init: -740.0
+    point: 0.0
+    unknown: -740.0
+    ray: -1000.0
+  thresholds:
+    apriori_map: 0.0
+    # Upstream VoFOD threshold for a confirmed/sure background voxel.
+    sure_obstacles: -0.1
+    new_obstacles: -300.0
+    frontiers: -750.0
+
+clustering:
+  # On the 0.5 m lattice, 1.25 m reconnects a local (2,1,1)-cell sparse
+  # surface gap (sqrt(6) * 0.5 m = 1.225 m), while excluding the former
+  # three-cell axial shortcut at 1.5 m. This is one global Mid-360 topology
+  # calibration rather than a scene-conditioned branch.
+  tolerance: 1.25
+  min_points: 2
+  max_size: 3.0
+  max_distance: 50.0
+  # Upstream close-to-background radius (ground_points_max_distance).
+  background_distance: 1.5
+  max_explore_distance: 3.0
+
+# Original VoFOD does not classify floating targets until both enough
+# background voxels and at least one sure connected background component exist.
+# The Ouster-era ratio is not retained because Mid-360 has a sparse,
+# non-repeating coverage pattern. The 0.01 setting remains paired with the
+# independent 24-sure-voxel connected-background gate and is global.
+background_sufficient_points_ratio: 0.01
+
+# Canonical evaluation supplies target-free source data during this interval.
+# The node sees only sensor data and promotes every observed component until
+# both the time and existing VoFOD map-maturity gates are satisfied.
+background_warmup:
+  enabled: true
+  duration_sec: 10.0
+
+input:
+  geometry_consistency_tolerance_m: 0.01
+
+separated_background:
+  enabled: true
+  removal_period: 0.1
+  max_background_distance: 0.8
+  minimum_sure_points: 24
+
+output:
+  position_sigma: 0.1
+  base_detection_probability: 0.5
+  visualization_every_n_scans: 5
+  publish_free_voxels: true
+
+profiling:
+  warn_total_ms: 100.0

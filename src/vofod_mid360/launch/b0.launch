@@ -1,0 +1,30 @@
+<launch>
+  <arg name="uav_name" default="uav1"/>
+  <arg name="world_frame_id" default="world"/>
+  <arg name="points_world_topic" default="/$(arg uav_name)/mid360/points_world"/>
+  <arg name="rays_checked_topic" default="/$(arg uav_name)/mid360/rays_checked"/>
+  <arg name="map_revision_evidence_topic"
+       default="/$(arg uav_name)/vofod_mid360/map_revision_evidence"/>
+  <arg name="respawn" default="false"/>
+  <arg name="output" default="screen"/>
+
+  <arg name="b0_config" default="$(find vofod_mid360)/config/b0_mid360_canonical.yaml"/>
+  <arg name="raycast_config" default="$(find vofod_mid360)/config/raycast_mid360.yaml"/>
+  <arg name="sensor_config" default="$(find vofod_mid360)/config/sensors/mid360.yaml"/>
+
+  <group ns="$(arg uav_name)">
+    <node pkg="nodelet" type="nodelet" name="vofod_mid360"
+          args="standalone vofod_mid360/VoFOD" output="$(arg output)"
+          respawn="$(arg respawn)">
+      <rosparam file="$(arg b0_config)"/>
+      <rosparam file="$(arg raycast_config)"/>
+      <rosparam file="$(arg sensor_config)"/>
+      <param name="world_frame_id" value="$(arg world_frame_id)"/>
+
+      <remap from="~points_world" to="$(arg points_world_topic)"/>
+      <remap from="~rays_checked" to="$(arg rays_checked_topic)"/>
+      <remap from="~map_revision_evidence"
+             to="$(arg map_revision_evidence_topic)"/>
+    </node>
+  </group>
+</launch>

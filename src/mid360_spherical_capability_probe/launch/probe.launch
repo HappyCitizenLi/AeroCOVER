@@ -1,0 +1,14 @@
+<launch>
+  <arg name="trial_id" default="hardware_restart_01"/>
+  <arg name="output_path" default="/tmp/mid360_spherical_capability.json"/>
+  <node pkg="mid360_spherical_capability_probe"
+        type="mid360_spherical_capability_probe"
+        name="mid360_spherical_capability_probe"
+        required="true"
+        output="screen">
+    <rosparam command="load"
+              file="$(find mid360_spherical_capability_probe)/config/default.yaml"/>
+    <param name="trial_id" value="$(arg trial_id)"/>
+    <param name="output_path" value="$(arg output_path)"/>
+  </node>
+</launch>

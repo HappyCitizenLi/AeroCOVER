@@ -1,0 +1,72 @@
+# general parameters
+min_onboard_detection_count: 2
+buffer_length: 10
+transform_lookup_timeout: 0.5 # seconds
+message_throttle_period: 1.0 # seconds
+
+# Bounded event-time join used by the per-frame completion contract.  The same
+# capacity bounds each lossless subscriber-to-worker FIFO; overflow shuts the
+# tracker down visibly instead of replacing an older message with the latest.
+# Inputs with duplicate or regressive stamps are rejected before processing.
+frame_completion:
+  max_pending_frames: 128
+
+# Canonical B0 rejects the occupied background published by VoFOD-Mid360.
+background_filter:
+  enabled: true
+
+# if there is no current track, publish a dummy message to reset the Rviz marker
+no_track:
+  publish_empty: false
+  empty_state: [0.0, 0.0, -20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  empty_covariance_value: 0.0
+
+# used just for visualization
+prediction:
+  horizon: 2.0 # seconds
+  sampling_period: 0.5 # seconds
+
+# parameters of input pointcloud filtering
+input_filter:
+  # leaf size of the VoxelGrid filter applied to the input pointcloud. Set to zero to disable.
+  downsample_leaf_size: 0.5 # meters
+
+# parameters of the system model, used for the LKF
+lkf:
+  # Diagonal process-noise variance rates; mrs_lib scales Q by dt.
+  Q:
+    position: 0.01
+    velocity: 0.8
+    acceleration: 0.05
+  # Initial state variances.
+  P:
+    # radius = multiplier * sqrt(cbrt(det(position covariance))).
+    radius:
+      multiplier: 1.5
+      # Mid-360 target half-extent is 0.52 m.  The former 2.5 m Ouster-era
+      # floor dominated the measured covariance (normal raw radii are below
+      # 0.12 m) and made two new/existing hypotheses suppress one another out
+      # to 5 m.  Keep a conservative surface/prediction allowance without that
+      # five-metre floor-induced exclusion region.
+      min: 0.75 # metres
+      # if the radius of P gets larger than this value,
+      # the track will be deleted
+      max: 5.0 # metres
+    # these values will be used for initialization of P0
+    init:
+      position: 0.3
+      velocity: 1.0
+      acceleration: 0.05
+  # Fixed position measurement variance (m^2).
+  R:
+    coeff: 0.1
+
+# parameters for the cluster-to-track association algorithm
+association:
+  clustering_tolerance: 1.0 # metres
+  # used to filter out invalid clusters
+  cluster:
+    min_points: 1
+    max_points: 262144
+    max_size: 1.0 # metres
+    min_background_dist: 1.0 # metres

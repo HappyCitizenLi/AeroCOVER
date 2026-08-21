@@ -1,0 +1,294 @@
+# S02: ten already-established target UAVs execute two simultaneous
+# counter-flow exchanges and form three different five-pair heavy partial-
+# occlusion schedules.  Every hold keeps a 1.8 degree azimuth offset between
+# the near/far centres: both silhouettes retain visible support while their
+# returns remain close enough to enter one 1.25 m semantic component.  The
+# exchanges use vertically separated flight levels, so no collision is needed.
+#
+# The targets are still deterministic Gazebo pose-authority fixtures rather
+# than closed-loop flight-controller models.  "Dynamics" below therefore
+# means a C3, multirotor-feasible reference trajectory with certified
+# speed/acceleration/jerk, tilt/thrust proxies and continuous avoidance—not a
+# claim about motor-level tracking error.
+schema_version: 7
+scenario_profile: s02
+semantic_contract_id: mid360-multi-uav-s02-crossing-partial-occlusion-v3
+scenario_contract_id: ten-uav-c3-dynamics-and-avoidance-v2
+scenario: S02_ten_uav_minimum_snap_crossing_partial_occlusion
+world_frame: world
+seed: 2027
+repeat_count: 1
+repeat_mode: restart
+start_delay: 8.0
+duration: 63.0
+final_hold: 4.0
+
+runtime:
+  set_model_state_service: /gazebo/set_model_state
+  world_properties_service: /gazebo/get_world_properties
+  event_topic: /mid360_multi_uav_sim/scenario_events
+  publish_rate: 50.0
+  service_timeout_wall: 30.0
+  clock_timeout_wall: 30.0
+  max_clock_stall_wall: 20.0
+  max_consecutive_service_failures: 3
+  require_use_sim_time: true
+
+randomization:
+  position_offset_uniform: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
+
+crossing_contract:
+  geometry_mode: snapshot
+  moving_target_count: 10
+  trajectory_model: seventh_order_minimum_snap
+  continuity_order: 3
+  near_radius_m: 7.5
+  far_radius_m: 9.65
+  line_of_sight_slope: 0.12
+  altitude_deconfliction_m: 1.5
+  occlusion_center_offset_deg: 1.8
+  occlusion_hold_count: 3
+  exchange_count: 2
+
+  # Certified extrema over every polynomial segment.
+  max_speed_mps: 2.0
+  max_acceleration_mps2: 0.75
+  max_jerk_mps3: 1.30
+  max_yaw_rate_radps: 0.0
+  max_tilt_deg: 5.0
+  specific_thrust_min_g: 0.92
+  specific_thrust_max_g: 1.08
+
+  # The conservative radius encloses the complete target collision model.
+  # Continuous pairwise minima are solved on each common path parameter, not
+  # accepted from waypoint-only checks.
+  conservative_collision_radius_m: 0.6710375652095777
+  minimum_center_separation_m: 2.1818545
+  minimum_conservative_clearance_m: 0.8397793
+  # Counter-flow paths are straight minimum-snap chords, so their closest
+  # approach to the observer is inside a segment rather than at a waypoint.
+  minimum_observer_center_distance_m: 6.09
+  minimum_ground_clearance_m: 1.56
+  maximum_sensor_range_m: 10.01
+  sensor_elevation_min_deg: -5.66
+  sensor_elevation_max_deg: 18.81
+
+  # At every hold, a near/far pair has 1.8 degrees azimuth separation.  Their
+  # projected conservative envelopes overlap without full containment, and
+  # their surface gap remains below the shared VoFOD component tolerance.
+  semantic_cluster_tolerance_m: 1.25
+  maximum_hold_pair_surface_gap_m: 0.852
+  occlusion_stages:
+    - phase: occlusion_hold_a
+      pairs:
+        - {near: uav2, far: uav7}
+        - {near: uav3, far: uav8}
+        - {near: uav4, far: uav9}
+        - {near: uav5, far: uav10}
+        - {near: uav6, far: uav11}
+    - phase: occlusion_hold_b
+      pairs:
+        - {near: uav2, far: uav9}
+        - {near: uav3, far: uav10}
+        - {near: uav4, far: uav11}
+        - {near: uav5, far: uav7}
+        - {near: uav6, far: uav8}
+    - phase: occlusion_hold_c
+      pairs:
+        - {near: uav2, far: uav11}
+        - {near: uav3, far: uav7}
+        - {near: uav4, far: uav8}
+        - {near: uav5, far: uav9}
+        - {near: uav6, far: uav10}
+
+targets:
+  uav1:
+    model_name: uav1
+    command_model: false
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav1/odom
+    child_frame_id: uav1/fcu
+    initial_pose: {x: 0.0, y: 0.0, z: 2.0, yaw: 0.0}
+  uav2:
+    model_name: uav2
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav2/odom
+    child_frame_id: uav2/base_link
+    initial_pose: {x: 7.132923872, y: -2.317627458, z: 3.150, yaw: 0.0}
+  uav3:
+    model_name: uav3
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav3/odom
+    child_frame_id: uav3/base_link
+    initial_pose: {x: 4.408389392, y: 6.067627458, z: 3.150, yaw: 0.0}
+  uav4:
+    model_name: uav4
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav4/odom
+    child_frame_id: uav4/base_link
+    initial_pose: {x: -4.408389392, y: 6.067627458, z: 3.150, yaw: 0.0}
+  uav5:
+    model_name: uav5
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav5/odom
+    child_frame_id: uav5/base_link
+    initial_pose: {x: -7.132923872, y: -2.317627458, z: 3.150, yaw: 0.0}
+  uav6:
+    model_name: uav6
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav6/odom
+    child_frame_id: uav6/base_link
+    initial_pose: {x: 0.0, y: -7.500000000, z: 3.150, yaw: 0.0}
+  uav7:
+    model_name: uav7
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav7/odom
+    child_frame_id: uav7/base_link
+    initial_pose: {x: 9.177695382, y: 2.982013996, z: 3.408, yaw: 0.0}
+  uav8:
+    model_name: uav8
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav8/odom
+    child_frame_id: uav8/base_link
+    initial_pose: {x: 0.0, y: 9.650000000, z: 3.408, yaw: 0.0}
+  uav9:
+    model_name: uav9
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav9/odom
+    child_frame_id: uav9/base_link
+    initial_pose: {x: -9.177695382, y: 2.982013996, z: 3.408, yaw: 0.0}
+  uav10:
+    model_name: uav10
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav10/odom
+    child_frame_id: uav10/base_link
+    initial_pose: {x: -5.672127685, y: -7.807013996, z: 3.408, yaw: 0.0}
+  uav11:
+    model_name: uav11
+    command_model: true
+    truth_topic: /mid360_multi_uav_sim/ground_truth/uav11/odom
+    child_frame_id: uav11/base_link
+    initial_pose: {x: 5.672127685, y: -7.807013996, z: 3.408, yaw: 0.0}
+
+phases:
+  - id: converge_to_occlusion_a
+    event: convergence_start
+    duration: 6.0
+    interpolation: minimum_snap
+    targets:
+      uav2:  {x: 7.500000000, y: 0.000000000, z: 3.150, yaw: 0.0}
+      uav3:  {x: 2.317627458, y: 7.132923872, z: 3.150, yaw: 0.0}
+      uav4:  {x: -6.067627458, y: 4.408389392, z: 3.150, yaw: 0.0}
+      uav5:  {x: -6.067627458, y: -4.408389392, z: 3.150, yaw: 0.0}
+      uav6:  {x: 2.317627458, y: -7.132923872, z: 3.150, yaw: 0.0}
+      uav7:  {x: 9.645238308, y: 0.303113825, z: 3.408, yaw: 0.0}
+      uav8:  {x: 2.692264173, y: 9.266834067, z: 3.408, yaw: 0.0}
+      uav9:  {x: -7.981327542, y: 5.424104596, z: 3.408, yaw: 0.0}
+      uav10: {x: -7.624995869, y: -5.914553068, z: 3.408, yaw: 0.0}
+      uav11: {x: 3.268820930, y: -9.079499420, z: 3.408, yaw: 0.0}
+
+  - id: occlusion_hold_a
+    event: occlusion_a_start
+    duration: 3.0
+    interpolation: hold
+
+  - id: outer_climb
+    event: occlusion_a_end
+    duration: 4.0
+    interpolation: minimum_snap
+    targets:
+      uav7:  {x: 9.645238308, y: 0.303113825, z: 4.908, yaw: 0.0}
+      uav8:  {x: 2.692264173, y: 9.266834067, z: 4.908, yaw: 0.0}
+      uav9:  {x: -7.981327542, y: 5.424104596, z: 4.908, yaw: 0.0}
+      uav10: {x: -7.624995869, y: -5.914553068, z: 4.908, yaw: 0.0}
+      uav11: {x: 3.268820930, y: -9.079499420, z: 4.908, yaw: 0.0}
+
+  - id: counterflow_exchange_a
+    event: exchange_a_start
+    duration: 13.0
+    interpolation: minimum_snap
+    targets:
+      uav2:  {x: 2.317627458, y: 7.132923872, z: 3.150, yaw: 0.0}
+      uav3:  {x: -6.067627458, y: 4.408389392, z: 3.150, yaw: 0.0}
+      uav4:  {x: -6.067627458, y: -4.408389392, z: 3.150, yaw: 0.0}
+      uav5:  {x: 2.317627458, y: -7.132923872, z: 3.150, yaw: 0.0}
+      uav6:  {x: 7.500000000, y: 0.000000000, z: 3.150, yaw: 0.0}
+      uav7:  {x: 3.268820930, y: -9.079499420, z: 4.908, yaw: 0.0}
+      uav8:  {x: 9.645238308, y: 0.303113825, z: 4.908, yaw: 0.0}
+      uav9:  {x: 2.692264173, y: 9.266834067, z: 4.908, yaw: 0.0}
+      uav10: {x: -7.981327542, y: 5.424104596, z: 4.908, yaw: 0.0}
+      uav11: {x: -7.624995869, y: -5.914553068, z: 4.908, yaw: 0.0}
+
+  - id: outer_descend
+    event: exchange_a_end
+    duration: 4.0
+    interpolation: minimum_snap
+    targets:
+      uav7:  {x: 3.268820930, y: -9.079499420, z: 3.408, yaw: 0.0}
+      uav8:  {x: 9.645238308, y: 0.303113825, z: 3.408, yaw: 0.0}
+      uav9:  {x: 2.692264173, y: 9.266834067, z: 3.408, yaw: 0.0}
+      uav10: {x: -7.981327542, y: 5.424104596, z: 3.408, yaw: 0.0}
+      uav11: {x: -7.624995869, y: -5.914553068, z: 3.408, yaw: 0.0}
+
+  - id: occlusion_hold_b
+    event: occlusion_b_start
+    duration: 3.0
+    interpolation: hold
+
+  - id: inner_descend
+    event: occlusion_b_end
+    duration: 4.0
+    interpolation: minimum_snap
+    targets:
+      uav2: {x: 2.317627458, y: 7.132923872, z: 1.650, yaw: 0.0}
+      uav3: {x: -6.067627458, y: 4.408389392, z: 1.650, yaw: 0.0}
+      uav4: {x: -6.067627458, y: -4.408389392, z: 1.650, yaw: 0.0}
+      uav5: {x: 2.317627458, y: -7.132923872, z: 1.650, yaw: 0.0}
+      uav6: {x: 7.500000000, y: 0.000000000, z: 1.650, yaw: 0.0}
+
+  - id: counterflow_exchange_b
+    event: exchange_b_start
+    duration: 13.0
+    interpolation: minimum_snap
+    targets:
+      uav2:  {x: -6.067627458, y: 4.408389392, z: 1.650, yaw: 0.0}
+      uav3:  {x: -6.067627458, y: -4.408389392, z: 1.650, yaw: 0.0}
+      uav4:  {x: 2.317627458, y: -7.132923872, z: 1.650, yaw: 0.0}
+      uav5:  {x: 7.500000000, y: 0.000000000, z: 1.650, yaw: 0.0}
+      uav6:  {x: 2.317627458, y: 7.132923872, z: 1.650, yaw: 0.0}
+      uav7:  {x: -7.624995869, y: -5.914553068, z: 3.408, yaw: 0.0}
+      uav8:  {x: 3.268820930, y: -9.079499420, z: 3.408, yaw: 0.0}
+      uav9:  {x: 9.645238308, y: 0.303113825, z: 3.408, yaw: 0.0}
+      uav10: {x: 2.692264173, y: 9.266834067, z: 3.408, yaw: 0.0}
+      uav11: {x: -7.981327542, y: 5.424104596, z: 3.408, yaw: 0.0}
+
+  - id: inner_rise
+    event: exchange_b_end
+    duration: 4.0
+    interpolation: minimum_snap
+    targets:
+      uav2: {x: -6.067627458, y: 4.408389392, z: 3.150, yaw: 0.0}
+      uav3: {x: -6.067627458, y: -4.408389392, z: 3.150, yaw: 0.0}
+      uav4: {x: 2.317627458, y: -7.132923872, z: 3.150, yaw: 0.0}
+      uav5: {x: 7.500000000, y: 0.000000000, z: 3.150, yaw: 0.0}
+      uav6: {x: 2.317627458, y: 7.132923872, z: 3.150, yaw: 0.0}
+
+  - id: occlusion_hold_c
+    event: occlusion_c_start
+    duration: 3.0
+    interpolation: hold
+
+  - id: fan_out
+    event: occlusion_c_end
+    duration: 6.0
+    interpolation: minimum_snap
+    targets:
+      uav2:  {x: -4.408389392, y: 6.067627458, z: 3.150, yaw: 0.0}
+      uav3:  {x: -7.132923872, y: -2.317627458, z: 3.150, yaw: 0.0}
+      uav4:  {x: 0.000000000, y: -7.500000000, z: 3.150, yaw: 0.0}
+      uav5:  {x: 7.132923872, y: -2.317627458, z: 3.150, yaw: 0.0}
+      uav6:  {x: 4.408389392, y: 6.067627458, z: 3.150, yaw: 0.0}
+      uav7:  {x: -5.672127685, y: -7.807013996, z: 3.408, yaw: 0.0}
+      uav8:  {x: 5.672127685, y: -7.807013996, z: 3.408, yaw: 0.0}
+      uav9:  {x: 9.177695382, y: 2.982013996, z: 3.408, yaw: 0.0}
+      uav10: {x: 0.000000000, y: 9.650000000, z: 3.408, yaw: 0.0}
+      uav11: {x: -9.177695382, y: 2.982013996, z: 3.408, yaw: 0.0}

@@ -1,0 +1,10 @@
+N0:
+  label: ideal
+  range_stddev_m: 0.0
+N1:
+  label: nominal_sim_noise
+  range_stddev_m: 0.02
+N2:
+  label: stress
+  range_stddev_m: 0.08
+

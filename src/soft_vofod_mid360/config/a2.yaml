@@ -1,0 +1,10 @@
+# A2: trajectory-before-confirmation birth, without opportunity-aware
+# existence, quarantine feedback, or GNN.
+birth:
+  min_groups: 3
+
+ablation:
+  opportunity_aware_existence: false
+  target_feedback: false
+  hungarian_association: false
+

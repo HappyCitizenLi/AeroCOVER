@@ -1,0 +1,42 @@
+<launch>
+  <arg name="uav_name" default="uav1"/>
+  <arg name="tracker_namespace" default="$(arg uav_name)/lidar_tracker_mid360"/>
+  <arg name="world_frame_id" default="world"/>
+  <arg name="detections_topic" default="/$(arg uav_name)/vofod_mid360/detections"/>
+  <arg name="points_world_topic" default="/$(arg uav_name)/mid360/points_world"/>
+  <arg name="background_filter_enabled" default="true"/>
+  <arg name="background_points_topic" default="/$(arg uav_name)/vofod_mid360/background_points"/>
+  <arg name="tracks_topic" default="/$(arg tracker_namespace)/tracks"/>
+  <arg name="filtered_points_topic" default="/$(arg tracker_namespace)/filtered_points"/>
+  <arg name="debug_tracks_topic" default="/$(arg tracker_namespace)/debug_tracks"/>
+  <arg name="prediction_topic" default="/$(arg tracker_namespace)/prediction"/>
+  <arg name="selected_track_topic" default="/$(arg tracker_namespace)/selected_track"/>
+  <arg name="selected_points_topic" default="/$(arg tracker_namespace)/selected_points"/>
+  <arg name="innovation_topic" default="/$(arg tracker_namespace)/innovation"/>
+  <arg name="profiling_topic" default="/$(arg tracker_namespace)/profiling_info"/>
+  <arg name="frame_complete_topic" default="/$(arg tracker_namespace)/frame_complete"/>
+  <arg name="output" default="screen"/>
+
+  <group ns="$(arg tracker_namespace)">
+    <node pkg="nodelet" type="nodelet" name="tracker"
+          args="standalone lidar_tracker_mid360/LidarTracker" output="$(arg output)">
+      <rosparam file="$(find lidar_tracker_mid360)/config/tracking.yaml"/>
+      <param name="static_frame_id" value="$(arg world_frame_id)"/>
+      <param name="background_filter/enabled" value="$(arg background_filter_enabled)"/>
+
+      <remap from="~detections_in" to="$(arg detections_topic)"/>
+      <remap from="~points_in" to="$(arg points_world_topic)"/>
+      <remap from="~bg_points_in" to="$(arg background_points_topic)"/>
+      <remap from="~clicked_point" to="/lidar_tracker_mid360/disabled_clicked_point"/>
+      <remap from="~tracks" to="$(arg tracks_topic)"/>
+      <remap from="~filtered_points" to="$(arg filtered_points_topic)"/>
+      <remap from="~dbg_tracks" to="$(arg debug_tracks_topic)"/>
+      <remap from="~tracked_drone_prediction" to="$(arg prediction_topic)"/>
+      <remap from="~tracked_drone" to="$(arg selected_track_topic)"/>
+      <remap from="~tracked_drone_points" to="$(arg selected_points_topic)"/>
+      <remap from="~tracked_drone_innovation" to="$(arg innovation_topic)"/>
+      <remap from="~profiling_info" to="$(arg profiling_topic)"/>
+      <remap from="~frame_complete" to="$(arg frame_complete_topic)"/>
+    </node>
+  </group>
+</launch>

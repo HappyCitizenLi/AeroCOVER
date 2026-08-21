@@ -1,0 +1,27 @@
+schema_version: 1
+scenario_id: S07_observer_motion_deskew_stress
+world: E1_sparse
+seed: 1007
+start_delay_s: 4.0
+duration_s: 30.0
+score_start_s: 10.5
+score_end_s: 29.5
+purpose: observer translation/yaw/roll/pitch with a simultaneously moving target
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+    - {t: 10.0, x: 0.0, y: 0.0, z: 2.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+    - {t: 18.0, x: 4.0, y: 2.0, z: 2.5, roll: 0.2, pitch: -0.15, yaw: 1.2}
+    - {t: 26.0, x: -2.0, y: 0.0, z: 2.0, roll: -0.2, pitch: 0.15, yaw: -1.0}
+    - {t: 30.0, x: 0.0, y: 0.0, z: 2.0, roll: 0.0, pitch: 0.0, yaw: 0.0}
+targets:
+  - id: uav2
+    spawn_time_s: 10.5
+    waypoints:
+      - {t: 0.0, x: 10.0, y: -3.0, z: 3.0}
+      - {t: 10.5, x: 10.0, y: -3.0, z: 3.0}
+      - {t: 20.0, x: 15.0, y: 3.0, z: 4.0, yaw: 0.8}
+      - {t: 30.0, x: 8.0, y: 1.0, z: 2.5, yaw: -0.5}
+events:
+  - {t: 18.0, id: first_motion_leg_end}
+  - {t: 26.0, id: second_motion_leg_end}

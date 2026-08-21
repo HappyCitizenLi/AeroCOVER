@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mid360_multi_uav_sim</name>
+  <version>0.1.0</version>
+  <description>Deterministic lightweight Gazebo scenes for a Mid-360 observer and simplified UAV targets.</description>
+
+  <maintainer email="uav@todo.todo">uav</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>gazebo_msgs</exec_depend>
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>livox_laser_simulation</exec_depend>
+  <exec_depend>mid360_ray_msgs</exec_depend>
+  <exec_depend>mid360_ray_preprocessor</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>rosgraph</test_depend>
+  <test_depend>rosnode</test_depend>
+  <test_depend>python3-nose</test_depend>
+  <test_depend>python3-numpy</test_depend>
+  <test_depend>python3-rospkg</test_depend>
+  <test_depend>rostest</test_depend>
+  <test_depend>tf2_msgs</test_depend>
+
+  <export>
+    <gazebo_ros gazebo_model_path="${prefix}/models"/>
+  </export>
+</package>
