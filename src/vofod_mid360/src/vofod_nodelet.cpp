@@ -344,6 +344,7 @@ namespace vofod
       baseline_state_ = StrictBaselineState{};
       last_separated_background_stamp_ = ros::Time(0);
       warmup_start_stamp_ = ros::Time(0);
+      background_warmup_complete_stamp_ = ros::Time(0);
       last_bundle_stamp_ = ros::Time(0);
       background_warmup_complete_ = !background_warmup_enabled_;
     }
@@ -645,6 +646,8 @@ namespace vofod
       diagnostics.update_before_classification = true;
       if (warmup_start_stamp_.isZero())
         warmup_start_stamp_ = rays->header.stamp;
+      diagnostics.first_input_ack = true;
+      diagnostics.background_warmup_start_stamp = warmup_start_stamp_;
       const double warmup_elapsed_sec = std::max(
           0.0, (rays->header.stamp - warmup_start_stamp_).toSec());
       const bool warmup_active =
@@ -727,9 +730,14 @@ namespace vofod
           warmup_elapsed_sec >= background_warmup_duration_sec_ &&
           baseline_state_.background_points_sufficient &&
           baseline_state_.sure_background_sufficient)
+      {
         background_warmup_complete_ = true;
+        background_warmup_complete_stamp_ = rays->header.stamp;
+      }
       diagnostics.background_warmup_complete =
           background_warmup_complete_;
+      diagnostics.background_warmup_complete_stamp =
+          background_warmup_complete_stamp_;
       diagnostics.historical_occupied_voxels =
           baseline_state_.occupied_background_voxels;
       diagnostics.background_required_voxels =
@@ -1156,6 +1164,7 @@ namespace vofod
     double background_warmup_duration_sec_ = 10.0;
     double geometry_consistency_tolerance_m_ = 0.01;
     ros::Time warmup_start_stamp_;
+    ros::Time background_warmup_complete_stamp_;
     ros::Time last_bundle_stamp_;
     double separated_background_period_s_ = 0.1;
     ros::Time last_separated_background_stamp_;

@@ -118,3 +118,18 @@
   旧 run 应为 `INVALID_WARMUP`，在 Phase 1 修复前不进入算法结论。
 - 基线 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功；
   `catkin_test_results build` 为 339 tests、0 errors/failures/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 1 replay 有效性
+
+- runner 播放前通过 ROS master system state 等待 detector/algorithm 的 `points_world` 和
+  `rays_checked` subscriptions，不再用固定 sleep 代替输入就绪合同。
+- B0 `MapUpdateDiagnostics` 新增 first-input ack、warm-up start/complete stamps；SOFT diagnostics
+  新增 first-input ack 与 map-bootstrap start。
+- source manifest 新增 `first_scored_input_stamp`；run manifest 新增 `input_timing` 和 `status`。
+  ack 晚于首个 scored input、B0 complete 不早于 target spawn 或首个 scored frame 仍 active 时
+  非零退出；invalid manifest 不进入 aggregate。
+- 旧 S06/B0 run 可恢复地保存到 ignored `artifacts/v1_frozen/`；新 run 从 4.228 s 开始、
+  14.228 s 完成 warm-up，早于 14.657 s spawn，status `ok`。
+- 新旧 S06/B0 HOTA/IDF1/TP/FP/FN 完全相同（0.7423686/0.7106017/124/15/86）；28-run summary、
+  aggregate 和 ablation deltas 已重新生成。
+- 定向 build 9/9 成功且无 warning；evaluation/B0/SOFT tests 分别 9/57/40，零失败。

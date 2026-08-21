@@ -560,6 +560,13 @@ private:
     status.values.push_back(diagnosticValue("scan_pair_ok", ok ? "true" : "false"));
     if (diagnostics)
     {
+      status.values.push_back(diagnosticValue("first_input_ack", "true"));
+      status.values.push_back(diagnosticValue(
+          "map_bootstrap_start_stamp", number(first_stamp_.toSec())));
+      status.values.push_back(diagnosticValue(
+          "map_bootstrap_complete",
+          (header.stamp - first_stamp_).toSec() >= warmup_duration_s_
+              ? "true" : "false"));
       status.values.push_back(diagnosticValue(
           "input_rays", number(diagnostics->input_rays)));
       status.values.push_back(diagnosticValue(

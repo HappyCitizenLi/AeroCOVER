@@ -118,6 +118,11 @@ def aggregate_results(output_root):
             relative = os.path.relpath(directory, runs_root).split(os.sep)
             if len(relative) != 4 or not relative[3].startswith("seed_"):
                 continue
+            manifest_path = os.path.join(directory, "run_manifest.json")
+            if os.path.exists(manifest_path):
+                with open(manifest_path, encoding="utf-8") as stream:
+                    if json.load(stream).get("status", "ok") != "ok":
+                        continue
             algorithm, scene, noise, seed_name = relative
             with open(os.path.join(directory, "metrics.json"), encoding="utf-8") as stream:
                 metrics = json.load(stream)
@@ -257,6 +262,53 @@ def wait_for_topic(topic, timeout=30.0, process=None):
             return
         time.sleep(0.25)
     raise RuntimeError("startup timeout waiting for {}".format(topic))
+
+
+def subscriptions_ready(system_state, required):
+    subscribers = {topic: set(nodes) for topic, nodes in system_state[1]}
+    return all(node in subscribers.get(topic, set())
+               for topic, node in required.items())
+
+
+def wait_for_subscriptions(required, timeout=30.0, process=None):
+    deadline = time.time() + timeout
+    master_api = rosgraph.Master("/soft_vofod_benchmark")
+    while time.time() < deadline:
+        if process is not None and process.poll() is not None:
+            raise RuntimeError("launch exited before input subscribers were ready")
+        if subscriptions_ready(master_api.getSystemState(), required):
+            return
+        time.sleep(0.1)
+    raise RuntimeError("startup timeout waiting for input subscribers: {}".format(
+        ", ".join(sorted(required))))
+
+
+class RunContractError(RuntimeError):
+    def __init__(self, status, message):
+        super().__init__(message)
+        self.status = status
+
+
+def validate_run_timing(algorithm, evidence, source_manifest):
+    first_scored = source_manifest["first_scored_input_stamp"]
+    first_ack = evidence.get("first_input_ack_stamp")
+    if first_ack is None or first_ack > first_scored:
+        raise RunContractError(
+            "INVALID_INPUT_HANDSHAKE",
+            "first input ack {} is later than first scored input {}".format(
+                first_ack, first_scored))
+    if algorithm != "B0":
+        return
+    complete = evidence.get("background_warmup_complete_stamp")
+    spawn = source_manifest["first_target_spawn_stamp"]
+    if complete is None or complete >= spawn:
+        raise RunContractError(
+            "INVALID_WARMUP",
+            "B0 warm-up completion {} must precede target spawn {}".format(
+                complete, spawn))
+    if evidence.get("first_scored_warmup_active") is not False:
+        raise RunContractError(
+            "INVALID_WARMUP", "B0 warm-up is active on the first scored frame")
 
 
 @contextlib.contextmanager
@@ -453,7 +505,8 @@ class BenchmarkRunner:
         if manifest.get("source_implementation_sha256") != implementation:
             manifest["source_implementation_sha256"] = implementation
             changed = True
-        if "target_free_input_duration_s" not in manifest:
+        if "target_free_input_duration_s" not in manifest or \
+                "first_scored_input_stamp" not in manifest:
             timing = self.source_timing_contract(os.path.join(
                 os.path.dirname(manifest_path), "source.bag"))
             manifest.update(timing)
@@ -466,12 +519,16 @@ class BenchmarkRunner:
         first_input = None
         first_spawn = None
         scoring_start = None
+        input_stamps = []
         with rosbag.Bag(bag_path) as bag:
             for topic, message, _ in bag.read_messages(topics=[
                     "/uav1/mid360/rays_checked",
                     "/mid360_multi_uav_sim/scenario_events"]):
-                if topic.endswith("rays_checked") and first_input is None:
-                    first_input = message.header.stamp.to_sec()
+                if topic.endswith("rays_checked"):
+                    stamp = message.header.stamp.to_sec()
+                    input_stamps.append(stamp)
+                    if first_input is None:
+                        first_input = stamp
                 elif topic.endswith("scenario_events"):
                     event = json.loads(message.data)
                     if event.get("event") == "target_spawned":
@@ -481,6 +538,10 @@ class BenchmarkRunner:
                         scoring_start = event["sim_time"]
         if first_input is None or first_spawn is None or scoring_start is None:
             raise RuntimeError("source bag is missing input/spawn/scoring timing evidence")
+        first_scored = next(
+            (stamp for stamp in input_stamps if stamp >= scoring_start), None)
+        if first_scored is None:
+            raise RuntimeError("source bag has no input at or after scoring start")
         target_free = first_spawn - first_input
         if first_spawn != scoring_start or target_free <= self.required_warmup_s:
             raise RuntimeError(
@@ -491,8 +552,49 @@ class BenchmarkRunner:
             "first_checked_ray_stamp": first_input,
             "first_target_spawn_stamp": first_spawn,
             "scoring_start_stamp": scoring_start,
+            "first_scored_input_stamp": first_scored,
             "target_free_input_duration_s": target_free,
             "required_target_free_duration_s": self.required_warmup_s,
+        }
+
+    @staticmethod
+    def run_timing_evidence(algorithm, bag_path, source_manifest):
+        first_ack = None
+        bootstrap_start = None
+        warmup_complete = None
+        first_scored_warmup_active = None
+        scoring_stamp = source_manifest["first_scored_input_stamp"]
+        topic = "/uav1/vofod_mid360/map_update_diagnostics" \
+            if algorithm == "B0" else "/soft_vofod/diagnostics"
+        with rosbag.Bag(bag_path) as bag:
+            for _, message, _ in bag.read_messages(topics=[topic]):
+                stamp = message.header.stamp.to_sec()
+                if algorithm == "B0":
+                    if first_ack is None and getattr(message, "first_input_ack", True):
+                        first_ack = stamp
+                        start = getattr(message, "background_warmup_start_stamp", None)
+                        bootstrap_start = start.to_sec() if start else \
+                            stamp - float(message.background_warmup_elapsed_sec)
+                    explicit_complete = getattr(
+                        message, "background_warmup_complete_stamp", None)
+                    if explicit_complete and explicit_complete.to_sec() > 0.0:
+                        warmup_complete = explicit_complete.to_sec()
+                    elif warmup_complete is None and message.background_warmup_complete:
+                        warmup_complete = stamp
+                    if first_scored_warmup_active is None and stamp >= scoring_stamp:
+                        first_scored_warmup_active = bool(
+                            message.background_warmup_active)
+                else:
+                    values = {item.key: item.value for status in message.status
+                              for item in status.values}
+                    if values.get("first_input_ack") == "true" and first_ack is None:
+                        first_ack = stamp
+                        bootstrap_start = float(values["map_bootstrap_start_stamp"])
+        return {
+            "first_input_ack_stamp": first_ack,
+            "bootstrap_start_stamp": bootstrap_start,
+            "background_warmup_complete_stamp": warmup_complete,
+            "first_scored_warmup_active": first_scored_warmup_active,
         }
 
     def record_source(self, scene, noise, seed):
@@ -620,10 +722,21 @@ class BenchmarkRunner:
             if manifest.get("source_bag_sha256") != source_manifest["source_bag_sha256"]:
                 raise RuntimeError("run manifest references a different source bag")
             manifest.setdefault("replay_rate", 1.0)
+            manifest["git_commit"] = self.git_commit
             manifest["algorithm_config_sha256"] = combined_sha256(
                 self.algorithm_config_paths(algorithm))
             manifest["algorithm_implementation_sha256"] = combined_sha256(
                 self.algorithm_implementation_paths(algorithm))
+            evidence = self.run_timing_evidence(
+                algorithm, bag_path, source_manifest)
+            manifest["input_timing"] = evidence
+            try:
+                validate_run_timing(algorithm, evidence, source_manifest)
+                manifest["status"] = "ok"
+            except RunContractError as exception:
+                manifest["status"] = exception.status
+                write_json(manifest_path, manifest)
+                raise
             write_json(manifest_path, manifest)
             return bag_path, manifest
         os.makedirs(run_dir, exist_ok=True)
@@ -648,6 +761,12 @@ class BenchmarkRunner:
                 track_topic = "/uav1/batch/b0/tracks" if algorithm == "B0" \
                     else "/soft_vofod/tracks"
                 wait_for_topic(track_topic, 30.0, algorithm_process)
+                input_node = "/uav1/vofod_mid360" if algorithm == "B0" \
+                    else "/soft_vofod"
+                wait_for_subscriptions({
+                    "/uav1/mid360/points_world": input_node,
+                    "/uav1/mid360/rays_checked": input_node,
+                }, 30.0, algorithm_process)
                 output_topics = ([
                     "/uav1/batch/b0/tracks",
                     "/uav1/vofod_mid360/background_points",
@@ -699,6 +818,16 @@ class BenchmarkRunner:
             "git_commit": self.git_commit, "started_utc": started,
             "finished_utc": utc_now(), "replay_rate": self.arguments.replay_rate,
         }
+        evidence = self.run_timing_evidence(
+            algorithm, bag_path, source_manifest)
+        manifest["input_timing"] = evidence
+        try:
+            validate_run_timing(algorithm, evidence, source_manifest)
+            manifest["status"] = "ok"
+        except RunContractError as exception:
+            manifest["status"] = exception.status
+            write_json(manifest_path, manifest)
+            raise
         write_json(manifest_path, manifest)
         return bag_path, manifest
 
@@ -724,6 +853,7 @@ class BenchmarkRunner:
             for noise in self.arguments.noise:
                 for seed in self.arguments.seeds:
                     source_bag = source_manifest = None
+                    current_algorithm = None
                     try:
                         print("[benchmark] {} {} seed {}: source".format(
                             scene, noise, seed), flush=True)
@@ -739,6 +869,7 @@ class BenchmarkRunner:
                                 os.path.join(source_dir, "source_manifest.json"),
                                 source_manifest)
                         for algorithm in self.arguments.algorithms:
+                            current_algorithm = algorithm
                             print("[benchmark] {} {} seed {}: {}".format(
                                 scene, noise, seed, algorithm), flush=True)
                             run_bag = None
@@ -756,7 +887,8 @@ class BenchmarkRunner:
                     except Exception as exception:
                         self.summary.append({
                             "scene": scene, "noise": noise, "seed": seed,
-                            "algorithm": None, "status": "failed",
+                            "algorithm": current_algorithm,
+                            "status": getattr(exception, "status", "failed"),
                             "error": str(exception)})
                         write_json(os.path.join(self.arguments.output,
                                                 "benchmark_summary.json"), self.summary)

@@ -36,6 +36,8 @@
   `docs/ROLLING_SCAN_LIMITATION.md`。
 - S01–S07 的 N0/seed1001 开发矩阵已完成，但 N1/N2、多 seed、CAL split 和 2–5 min
   NEG01–NEG03 尚未执行，不能作统计显著性或真实 Mid360 声明。
+- Phase V2-1 已修复 S06/B0 replay 首帧握手并增加 run-level warm-up gate；重放后的质量指标与
+  旧表相同。旧无效 run 保存在 ignored `artifacts/v1_frozen/`，不进入 aggregate。
 - S07/A3 实测 p95 约 1.00 s、processing load ratio 2.93，必须用 0.1× 离线回放才能保证完整
   帧覆盖；当前 moving-observer 条件不实时。
 - S07 的 proposed event FP/min 约 5.38 万，说明 observer-motion/per-ray 近似下背景一致性失败，

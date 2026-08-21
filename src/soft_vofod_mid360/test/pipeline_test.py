@@ -6,6 +6,7 @@ import unittest
 
 import rospy
 import rostest
+from diagnostic_msgs.msg import DiagnosticArray
 from mid360_ray_msgs.msg import CheckedRay, CheckedRayBundle, Ray
 from sensor_msgs.msg import PointCloud2, PointField
 from sensor_msgs import point_cloud2
@@ -29,6 +30,7 @@ class PipelineTest(unittest.TestCase):
         self._lock = threading.Lock()
         self._events = {}
         self._tracks = {}
+        self._diagnostics = {}
         self._points_pub = rospy.Publisher(
             "/test/points_world", PointCloud2, queue_size=2
         )
@@ -41,6 +43,9 @@ class PipelineTest(unittest.TestCase):
         self._track_sub = rospy.Subscriber(
             "/soft_vofod/tracks", SoftTracks, self._on_tracks
         )
+        self._diagnostics_sub = rospy.Subscriber(
+            "/soft_vofod/diagnostics", DiagnosticArray, self._on_diagnostics
+        )
 
     def _on_events(self, message):
         with self._lock:
@@ -49,6 +54,10 @@ class PipelineTest(unittest.TestCase):
     def _on_tracks(self, message):
         with self._lock:
             self._tracks[message.header.seq] = message
+
+    def _on_diagnostics(self, message):
+        with self._lock:
+            self._diagnostics[message.header.stamp.to_nsec()] = message
 
     def _wait_for_connections(self):
         deadline = time.time() + 10.0
@@ -69,6 +78,16 @@ class PipelineTest(unittest.TestCase):
                     return self._events[scan_id], self._tracks[scan_id]
             rospy.sleep(0.02)
         self.fail("timed out waiting for scan {} output".format(scan_id))
+
+    def _wait_for_diagnostics(self, stamp):
+        deadline = time.time() + 5.0
+        while time.time() < deadline and not rospy.is_shutdown():
+            with self._lock:
+                message = self._diagnostics.get(stamp.to_nsec())
+            if message is not None:
+                return message
+            rospy.sleep(0.02)
+        self.fail("timed out waiting for diagnostics at {}".format(stamp))
 
     def _publish(self, scan_id, stamp, valid_return, retain_endpoint=True):
         header = Header(seq=scan_id, stamp=stamp, frame_id="world")
@@ -110,6 +129,11 @@ class PipelineTest(unittest.TestCase):
         events, tracks = self._wait_for_scan(0)
         self.assertEqual(len(events.events), 0)
         self.assertEqual(len(tracks.tracks), 0)
+        diagnostic = self._wait_for_diagnostics(start)
+        values = {item.key: item.value for item in diagnostic.status[0].values}
+        self.assertEqual(values["first_input_ack"], "true")
+        self.assertAlmostEqual(float(values["map_bootstrap_start_stamp"]),
+                               start.to_sec(), places=6)
 
         for scan_id in range(1, 5):
             self._publish(

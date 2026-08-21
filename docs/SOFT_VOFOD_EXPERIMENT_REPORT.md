@@ -17,8 +17,9 @@
 | A3 | 0.362 | 0.272 | 222 | 188.9 |
 
 需要先修正问题表述：A1/A2 并非在每个场景都差于 B0。S06 中 A1/A2 的 HOTA 都是 0.834，
-高于 B0 的 0.742；但 S06/B0 后验审计发现了 replay warm-up 违约，因而这个优势暂时不能作为
-干净的算法结论。其余场景和总体结果确实是 B0 更好。
+高于 B0 的 0.742。旧 S06/B0 曾有 replay warm-up 违约；Phase V2-1 修复输入握手后重放，
+B0 的 HOTA/IDF1/TP/FP/FN 与旧表完全相同，因此该单 seed 的 S06 比较现在有效。其余场景和
+总体结果仍是 B0 更好。
 
 根因按影响排序为：
 
@@ -48,10 +49,10 @@ S07/A3 的定位 RMSE 仍为 0.243 m、recall 为 0.926，但产生 15,434 个 f
 只有 0.0113。它不是“目标位置估计坏了”，而是“在一个目标周围和运动背景上维护了大量错误
 identity”。
 
-最后，现有 28 runs 都通过了 source truth、track frame 和 timing frame 的 95% coverage 门禁，
-但这不等于所有 warm-up 都公平。S06/B0 在 replay 中从 5.427 s 才开始内部 warm-up，目标在
-14.657 s 出生，B0 到 15.428 s 才完成 warm-up；约 0.771 s 的有目标输入仍被强制当作背景。
-因此当前矩阵应标记为**开发诊断矩阵**，修复 replay 首帧握手并重放 S06/B0 后才能冻结最终表。
+现有 28 runs 都通过 source truth、track frame 和 timing frame 的 95% coverage 门禁。新增
+run-level gate 后，S06/B0 从 source 首帧 4.228 s 开始 warm-up，14.228 s 完成，严格早于
+14.657 s target spawn，首个 scored frame 的 `warmup_active=false`。矩阵仍只是 N0/单 seed
+开发矩阵，但不再有已知 warm-up 无效 run。
 
 ## 2. 审计方法与结论强度
 
@@ -261,7 +262,7 @@ A2 0.347 m、A3 0.338 m，差距远小于 detection/association 指标，说明�
 | S03 | 目标 crossing 时大量同目标 surface endpoints 和近邻 tracks 争抢 anchor；A3 有 421 FP、99 IDSW，B0 为 0 FP、4 IDSW。 |
 | S04 | A3 recall 0.934，但有 566 FP、87 IDSW；B0 为 3 FP、0 IDSW。CV + instantaneous GNN 没有保持四目标转向/交叉 identity。 |
 | S05 | 遮挡后 violation birth/reacquisition 仍碎裂；A3 completeness 0.348，target contamination 0.0308，B0 contamination 为 0。 |
-| S06 | A1/A2 在当前表中优于 B0；A3 在相同 1,070 events 下新增 16 FP、4 IDSW，说明退化来自 A3 bundled tracking/feedback，而不是 event front-end。但 B0 warm-up 违约，必须重放后再比较。 |
+| S06 | 修复握手后的 B0 指标与旧表完全相同，A1/A2 在该单 seed 中确实优于 B0；A3 在相同 1,070 events 下新增 16 FP、4 IDSW，说明退化来自 A3 bundled tracking/feedback，而不是 event front-end。 |
 | S07 | observer motion 激发大面积 false violations；A3 用 feedback 和 opportunity 把事件风暴变成 track/support/CPU 风暴。 |
 
 ### 5.4 Map 与 event 证据
@@ -483,7 +484,7 @@ SOFT-VoFOD 自身的 8 s。严格 `>` 不是使用 truth 帮算法分类；它�
 runner 目前据此执行 `target_free_input_duration_s > 10.0` 门禁，并要求 spawn 与 scoring start
 完全相同。这个 source-level 检查是必要的，但后验审计证明它还不充分。
 
-### 8.3 S06/B0 暴露了 replay-level 缺口
+### 8.3 S06/B0 暴露并关闭了 replay-level 缺口
 
 | 场景 | B0 warm-up 起始诊断 | B0 完成帧 | target spawn − 完成帧 | 判定 |
 |---|---:|---:|---:|---|
@@ -501,20 +502,29 @@ topic 被 advertise，然后固定 sleep 1 s；它没有验证 detector 的两�
 也没有等待首个 input acknowledgment。因而 source 开头约 1.2 s 输入在该 replay 中没有进入 B0
 warm-up。
 
-这不会触发现有 scored-frame coverage 门禁，因为丢失发生在 scoring 之前；但会污染 warm-up
-公平性。S06 的目标在 14.657–15.428 s 间被 B0 startup mask 当成 background，可能压低其后续
-结果。当前报告保留原数字用于诊断，但不把 S06 A1/A2 > B0 作为有效优越性声明。
+旧缺口不会触发 scored-frame coverage，因为丢失发生在 scoring 前。Phase V2-1 已增加 input
+subscriber readiness、first-input ack、explicit warm-up stamps 和 run-level gate，并只重放
+S06/B0：
 
-### 8.4 正确的门禁应同时检查 source 和 run
+| 版本 | first ack/start | warm-up complete | spawn − complete | status |
+|---|---:|---:|---:|---|
+| 旧 run | 5.427 | 15.428 | −0.771 s | INVALID_WARMUP |
+| Phase V2-1 | 4.228 | 14.228 | +0.429 s | ok |
 
-最低限度需要：
+新旧 B0 的 HOTA 0.7423686、IDF1 0.7106017、TP/FP/FN 124/15/86 完全相同；runtime p95
+从 50.65 ms 变为 51.71 ms，属于单次运行抖动。summary/aggregate/paired deltas 已重新生成，仍为
+28 个有效 runs。
+
+### 8.4 当前门禁同时检查 source 和 run
+
+已实现：
 
 1. replay 前验证算法节点已经订阅 `points_world` 和 `rays_checked`，而不只是 output topic 存在；
 2. run 后从 B0 diagnostics 读取第一次 `background_warmup_complete=true` 的时间；
 3. 强制 `warmup_complete_stamp < first_target_spawn_stamp`，并要求首个 scored frame 的
    `background_warmup_active=false`；
 4. 门禁失败则整个 run 非零退出，不写入最终 aggregate；
-5. 修复后至少重放 S06/B0，并重新生成 summary/aggregate/ablation deltas。
+5. S06/B0 已重放，并重新生成 summary/aggregate/ablation deltas。
 
 把 source margin 从约 0.5 s 增到 2 s 可以降低连接抖动风险，但不能替代 run-level 硬门禁。
 
@@ -522,9 +532,7 @@ warm-up。
 
 ### P0：先修实验有效性
 
-- 增加 replay input-subscriber/first-frame handshake 和 B0 warm-up completion gate；
-- 重放 S06/B0，重新评估当前矩阵；
-- 在完成前将结果标为 development diagnostics，不生成“最终优于/劣于”的统计声明。
+- **已完成：** replay input handshake、B0 warm-up completion gate、S06/B0 重放和聚合更新。
 
 ### P1：先切断 S07 的确定性放大器
 

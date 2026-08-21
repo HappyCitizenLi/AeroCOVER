@@ -47,6 +47,31 @@ class RunnerTest(unittest.TestCase):
         with self.assertRaises(Exception):
             RUNNER.comma_list("A4", RUNNER.ALGORITHMS)
 
+    def test_input_readiness_and_run_level_warmup_gate(self):
+        state = ([], [
+            ("/points", ["/soft_vofod"]),
+            ("/rays", ["/soft_vofod"]),
+        ], [])
+        required = {"/points": "/soft_vofod", "/rays": "/soft_vofod"}
+        self.assertTrue(RUNNER.subscriptions_ready(state, required))
+        self.assertFalse(RUNNER.subscriptions_ready(
+            ([], [("/points", ["/soft_vofod"])], []), required))
+
+        source = {
+            "first_scored_input_stamp": 14.7,
+            "first_target_spawn_stamp": 14.65,
+        }
+        evidence = {
+            "first_input_ack_stamp": 4.2,
+            "background_warmup_complete_stamp": 14.2,
+            "first_scored_warmup_active": False,
+        }
+        RUNNER.validate_run_timing("B0", evidence, source)
+        evidence["background_warmup_complete_stamp"] = 15.4
+        with self.assertRaises(RUNNER.RunContractError) as raised:
+            RUNNER.validate_run_timing("B0", evidence, source)
+        self.assertEqual(raised.exception.status, "INVALID_WARMUP")
+
     def test_aggregate_results_writes_group_and_paired_delta(self):
         def metrics(hota):
             return {

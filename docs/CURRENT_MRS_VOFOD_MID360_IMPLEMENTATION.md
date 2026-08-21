@@ -118,6 +118,11 @@ map score 初值/unknown `-740`、point `0`、free target `-1000`；sure/new/fro
 且 historical occupied ratio 和 24-sure connected component 两门均达到后才发布
 `background_warmup_complete=true`。场景/runner 必须在该门之后引入 target 和计分。
 
+Phase V2-1 已把该约束从 source-level 提升为 run-level：runner 在播放前等待 B0 detector 的
+`points_world/rays_checked` subscriptions，B0 diagnostics 发布 first-input/start/complete stamps，
+并强制 complete stamp 早于 target spawn、首个 scored frame 不处于 warm-up。S06/B0 修复后
+从 4.228 s 开始、14.228 s 完成，早于 14.657 s spawn。
+
 算法不知道 target 是否存在，不订阅 truth；如果 source 在 warm-up 期间已有目标，污染背景是
 输入协议违规，也是需要公开的限制。
 

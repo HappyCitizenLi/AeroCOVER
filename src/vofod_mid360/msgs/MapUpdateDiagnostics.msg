@@ -37,6 +37,9 @@ float32 reliable_no_return_distance
 uint32 cluster_count
 uint32 detection_count
 uint32 warmup_background_clusters
+bool first_input_ack
+time background_warmup_start_stamp
+time background_warmup_complete_stamp
 bool background_warmup_active
 bool background_warmup_complete
 float32 background_warmup_elapsed_sec
