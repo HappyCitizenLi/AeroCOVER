@@ -20,6 +20,7 @@ namespace
 
 constexpr double kProbabilityEpsilon = 1.0e-9;
 constexpr double kTwoPi = 6.28318530717958647692;
+constexpr double kRayDirectionBinChord = 0.05;
 
 double clampProbability(const double value)
 {
@@ -1565,7 +1566,7 @@ OpportunityResult SoftVofodCore::opportunityForTest(
     const Track& track, const std::vector<RaySample>& rays,
     const std::vector<Track>& tracks, const bool matched) const
 {
-  return opportunity(track, rays, tracks, matched);
+  return opportunity(track, rays, tracks, matched, indexRays(rays));
 }
 
 void SoftVofodCore::addQuarantine(
@@ -1721,9 +1722,135 @@ bool SoftVofodCore::pointInsideSupport(
       });
 }
 
+SoftVofodCore::RayAngularIndex SoftVofodCore::indexRays(
+    const std::vector<RaySample>& rays) const
+{
+  RayAngularIndex index;
+  index.bin_chord = kRayDirectionBinChord;
+  index.bins_per_axis = static_cast<size_t>(
+      std::ceil(2.0 / index.bin_chord)) + 1U;
+  if (rays.empty())
+    return index;
+  index.reference_origin_m = rays.front().origin_m;
+  index.reference_time_s = rays.front().time_s;
+  index.eligible_rays.reserve(rays.size());
+
+  const auto direction_cell = [&index](const Vec3& direction)
+  {
+    size_t coordinate[3] = {0U, 0U, 0U};
+    for (int axis = 0; axis < 3; ++axis)
+    {
+      const double value = std::max(-1.0, std::min(1.0, direction[axis]));
+      coordinate[axis] = std::min(
+          index.bins_per_axis - 1U,
+          static_cast<size_t>(std::floor((value + 1.0) / index.bin_chord)));
+    }
+    return coordinate[0] + index.bins_per_axis *
+        (coordinate[1] + index.bins_per_axis * coordinate[2]);
+  };
+
+  for (size_t ray_index = 0U; ray_index < rays.size(); ++ray_index)
+  {
+    const RaySample& ray = rays[ray_index];
+    const bool usable_segment =
+        (ray.status == ReturnStatus::valid_return &&
+         finitePositive(ray.range_m)) || ray.status == ReturnStatus::no_return;
+    const double direction_norm = ray.direction_unit.norm();
+    if (!usable_segment || !std::isfinite(direction_norm) ||
+        std::abs(direction_norm - 1.0) >= 1.0e-4)
+      continue;
+    index.eligible_rays.push_back(ray_index);
+    index.by_direction_cell[direction_cell(ray.direction_unit)].push_back(
+        ray_index);
+    index.max_origin_offset_m = std::max(
+        index.max_origin_offset_m,
+        (ray.origin_m - index.reference_origin_m).norm());
+    index.max_time_offset_s = std::max(
+        index.max_time_offset_s,
+        std::abs(ray.time_s - index.reference_time_s));
+  }
+  return index;
+}
+
+std::vector<size_t> SoftVofodCore::nearbyOpportunityRays(
+    const Track& track, const std::vector<Vec3>& sigma_points,
+    const std::vector<RaySample>& rays, const RayAngularIndex& index) const
+{
+  if (index.eligible_rays.empty())
+    return {};
+  const Vec3 reference_center = track.x.head<3>() + track.x.tail<3>() *
+      (index.reference_time_s - track.last_prediction_time_s);
+  const Vec3 reference_relative =
+      reference_center - index.reference_origin_m;
+  const double center_distance = reference_relative.norm();
+  double sigma_offset = 0.0;
+  for (const Vec3& sigma_point : sigma_points)
+    sigma_offset = std::max(
+        sigma_offset, (sigma_point - track.x.head<3>()).norm());
+  const double envelope_radius = config_.tracker.target_radius_m +
+      sigma_offset + track.x.tail<3>().norm() * index.max_time_offset_s +
+      index.max_origin_offset_m;
+  if (!finitePositive(center_distance) || center_distance <= envelope_radius)
+    return index.eligible_rays;
+
+  const double half_angle = std::asin(
+      std::min(1.0, envelope_radius / center_distance));
+  const double chord_radius = 2.0 * std::sin(0.5 * half_angle);
+  const Vec3 center_direction = reference_relative / center_distance;
+  const auto lower_bin = [&index](const double value)
+  {
+    return static_cast<size_t>(std::max(
+        0.0, std::floor((std::max(-1.0, value) + 1.0) /
+                        index.bin_chord)));
+  };
+  const auto upper_bin = [&index](const double value)
+  {
+    return std::min(
+        index.bins_per_axis - 1U,
+        static_cast<size_t>(std::floor(
+            (std::min(1.0, value) + 1.0) / index.bin_chord)));
+  };
+  size_t lower[3] = {0U, 0U, 0U};
+  size_t upper[3] = {0U, 0U, 0U};
+  size_t cell_count = 1U;
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    lower[axis] = lower_bin(center_direction[axis] - chord_radius);
+    upper[axis] = upper_bin(center_direction[axis] + chord_radius);
+    cell_count *= upper[axis] - lower[axis] + 1U;
+  }
+  if (cell_count >= index.eligible_rays.size())
+    return index.eligible_rays;
+
+  std::vector<size_t> candidates;
+  for (size_t z = lower[2]; z <= upper[2]; ++z)
+  {
+    for (size_t y = lower[1]; y <= upper[1]; ++y)
+    {
+      for (size_t x = lower[0]; x <= upper[0]; ++x)
+      {
+        const size_t key = x + index.bins_per_axis *
+            (y + index.bins_per_axis * z);
+        const auto found = index.by_direction_cell.find(key);
+        if (found == index.by_direction_cell.end())
+          continue;
+        for (const size_t ray_index : found->second)
+        {
+          if ((rays[ray_index].direction_unit - center_direction).norm() <=
+              chord_radius + 1.0e-12)
+            candidates.push_back(ray_index);
+        }
+      }
+    }
+  }
+  std::sort(candidates.begin(), candidates.end());
+  return candidates;
+}
+
 OpportunityResult SoftVofodCore::opportunity(
     const Track& track, const std::vector<RaySample>& rays,
-    const std::vector<Track>& all_tracks, const bool matched) const
+    const std::vector<Track>& all_tracks, const bool matched,
+    const RayAngularIndex& index, size_t* const candidate_count) const
 {
   OpportunityResult output;
   output.track_id = track.id;
@@ -1749,10 +1876,15 @@ OpportunityResult SoftVofodCore::opportunity(
   while (sigma_points.size() < 7U)
     sigma_points.push_back(track.x.head<3>());
 
+  const std::vector<size_t> candidate_rays = nearbyOpportunityRays(
+      track, sigma_points, rays, index);
+  if (candidate_count)
+    *candidate_count = candidate_rays.size();
   std::vector<double> effective_opportunities;
-  effective_opportunities.reserve(rays.size());
-  for (const RaySample& ray : rays)
+  effective_opportunities.reserve(candidate_rays.size());
+  for (const size_t ray_index : candidate_rays)
   {
+    const RaySample& ray = rays[ray_index];
     double segment_length = 0.0;
     if (ray.status == ReturnStatus::valid_return && finitePositive(ray.range_m))
       segment_length = ray.range_m;
@@ -2054,6 +2186,7 @@ void SoftVofodCore::processBatch(
     }
   }
 
+  const RayAngularIndex angular_index = indexRays(rays);
   for (size_t track_index = 0U; track_index < tracks_.size(); ++track_index)
   {
     if (tracks_[track_index].state == TrackState::deleting)
@@ -2064,8 +2197,13 @@ void SoftVofodCore::processBatch(
     OpportunityResult opportunity_result;
     if (config_.ablation.opportunity_aware_existence)
     {
+      size_t candidate_count = 0U;
       opportunity_result = opportunity(
-          tracks_[track_index], rays, tracks_, has_match);
+          tracks_[track_index], rays, tracks_, has_match, angular_index,
+          &candidate_count);
+      result->diagnostics.opportunity_full_scan_rays +=
+          angular_index.eligible_rays.size();
+      result->diagnostics.opportunity_candidate_rays += candidate_count;
     }
     else
     {

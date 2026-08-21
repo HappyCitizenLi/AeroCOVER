@@ -58,6 +58,7 @@ class RunnerTest(unittest.TestCase):
             ([], [("/points", ["/soft_vofod"])], []), required))
 
         source = {
+            "first_checked_ray_stamp": 4.2,
             "first_scored_input_stamp": 14.7,
             "first_target_spawn_stamp": 14.65,
         }
@@ -71,6 +72,13 @@ class RunnerTest(unittest.TestCase):
         with self.assertRaises(RUNNER.RunContractError) as raised:
             RUNNER.validate_run_timing("B0", evidence, source)
         self.assertEqual(raised.exception.status, "INVALID_WARMUP")
+        evidence.update({
+            "first_input_ack_stamp": 4.3,
+            "background_warmup_complete_stamp": 14.2,
+        })
+        with self.assertRaises(RUNNER.RunContractError) as raised:
+            RUNNER.validate_run_timing("B0", evidence, source)
+        self.assertEqual(raised.exception.status, "INVALID_INPUT_HANDSHAKE")
 
     def test_aggregate_results_writes_group_and_paired_delta(self):
         def metrics(hota):

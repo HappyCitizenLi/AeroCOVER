@@ -281,3 +281,23 @@
   protection 与根因实验，不能判作最终质量达标。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 368 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 10 opportunity optimization
+
+- 每个 10 ms micro-batch 只建立一次稀疏 unit-direction grid；每条 track 用包含 physical
+  radius、全部 sigma offsets、batch 内 target motion 与 observer origin motion 的保守角锥查询
+  nearby rays。候选内仍逐 ray 执行原 7 sigma-point intersection、真实 return 遮挡、confirmed
+  front-track 遮挡和 log-domain `P_D`，没有降频或用近似 opportunity 替换。
+- 新增 `opportunity_full_scan_rays`/`opportunity_candidate_rays` 诊断和离轴 ray 回归测试；测试
+  验证剔除 100 条不相关 ray 后 `P_D` 与只含真实相交 ray 的结果完全一致。
+- 严格对照暴露 source bag 在同一 record timestamp 下最多突发 12 对 cloud/rays；SOFT 的旧
+  ExactTime queue=8 会丢开头输入。队列按实测 burst 加处理余量固定为 32，runner 给 rosbag
+  advertise 1 s 连接时间，并要求 `first_input_ack` 不得晚于 source 首帧。4.627/4.427 s 起始的
+  run 现判为 `INVALID_INPUT_HANDSHAKE`，有效对照两边均从 4.228 s 开始。
+- S06/1.0× brute-force 与 indexed 的 HOTA/TP/FP/FN、events 和 map metrics 完全一致；
+  opportunity candidate rays 142,195,501→204,104（0.144%），tracking mean
+  24.3→5.88 ms，runtime p95 66.8→49.5 ms。两侧 coverage 均为 100%。
+- 局部 `soft_vofod_mid360` build 无 warning，70 tests 零失败；evaluation runner 9 tests
+  零失败。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 370 tests、0 error/failure/skipped。

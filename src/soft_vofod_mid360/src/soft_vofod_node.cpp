@@ -105,7 +105,7 @@ public:
     private_nh_.param(
         "input/rays_checked_topic", rays_topic_,
         std::string("/uav1/mid360/rays_checked"));
-    private_nh_.param("input/sync_queue_size", sync_queue_size_, 8);
+    private_nh_.param("input/sync_queue_size", sync_queue_size_, 32);
     private_nh_.param(
         "input/geometry_consistency_tolerance_m",
         geometry_consistency_tolerance_m_, 0.01);
@@ -664,6 +664,12 @@ private:
       status.values.push_back(diagnosticValue(
           "track_explained_maintenance_packets",
           number(diagnostics->track_explained_maintenance_packets)));
+      status.values.push_back(diagnosticValue(
+          "opportunity_full_scan_rays",
+          number(diagnostics->opportunity_full_scan_rays)));
+      status.values.push_back(diagnosticValue(
+          "opportunity_candidate_rays",
+          number(diagnostics->opportunity_candidate_rays)));
       status.values.push_back(diagnosticValue("matches", number(diagnostics->matches)));
       status.values.push_back(diagnosticValue(
           "free_voxel_updates", number(diagnostics->free_voxel_updates)));
@@ -804,7 +810,7 @@ private:
   std::string world_frame_id_;
   std::string points_topic_;
   std::string rays_topic_;
-  int sync_queue_size_ = 8;
+  int sync_queue_size_ = 32;
   double geometry_consistency_tolerance_m_ = 0.01;
   int expected_rays_ = 0;
   double max_time_jump_s_ = 1.0;

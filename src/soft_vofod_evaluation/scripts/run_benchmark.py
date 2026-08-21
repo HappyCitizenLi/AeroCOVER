@@ -291,12 +291,18 @@ class RunContractError(RuntimeError):
 
 def validate_run_timing(algorithm, evidence, source_manifest):
     first_scored = source_manifest["first_scored_input_stamp"]
+    first_source = source_manifest.get("first_checked_ray_stamp")
     first_ack = evidence.get("first_input_ack_stamp")
     if first_ack is None or first_ack > first_scored:
         raise RunContractError(
             "INVALID_INPUT_HANDSHAKE",
             "first input ack {} is later than first scored input {}".format(
                 first_ack, first_scored))
+    if first_source is not None and first_ack > first_source + 1.0e-6:
+        raise RunContractError(
+            "INVALID_INPUT_HANDSHAKE",
+            "first input ack {} missed source input {}".format(
+                first_ack, first_source))
     if algorithm != "B0":
         return
     complete = evidence.get("background_warmup_complete_stamp")
@@ -786,7 +792,7 @@ class BenchmarkRunner:
                 processes.append(recorder)
                 time.sleep(1.0)
                 player = start([
-                    "rosbag", "play", "--clock", "--rate",
+                    "rosbag", "play", "--clock", "--delay=1.0", "--rate",
                     str(self.arguments.replay_rate), source_bag, "--topics",
                     "/tf", "/tf_static", "/uav1/mid360/points_world",
                     "/uav1/mid360/rays_checked",

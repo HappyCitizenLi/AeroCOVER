@@ -275,6 +275,8 @@ struct ProcessDiagnostics
   size_t maintenance_packets = 0;
   size_t unresolved_maintenance_packets = 0;
   size_t track_explained_maintenance_packets = 0;
+  size_t opportunity_full_scan_rays = 0;
+  size_t opportunity_candidate_rays = 0;
   size_t unresolved_candidate_returns = 0;
 };
 
@@ -473,6 +475,18 @@ private:
     std::unordered_map<size_t, std::vector<size_t>> by_voxel;
   };
 
+  struct RayAngularIndex
+  {
+    double bin_chord = 0.05;
+    size_t bins_per_axis = 0U;
+    Vec3 reference_origin_m = Vec3::Zero();
+    double reference_time_s = 0.0;
+    double max_origin_offset_m = 0.0;
+    double max_time_offset_s = 0.0;
+    std::vector<size_t> eligible_rays;
+    std::unordered_map<size_t, std::vector<size_t>> by_direction_cell;
+  };
+
   struct BirthCandidate
   {
     Vec6 x = Vec6::Zero();
@@ -502,9 +516,15 @@ private:
       const SupportIndex& supports) const;
   bool pointInsideSupport(
       const Vec3& point_m, const SupportIndex& supports) const;
+  RayAngularIndex indexRays(const std::vector<RaySample>& rays) const;
+  std::vector<size_t> nearbyOpportunityRays(
+      const Track& track, const std::vector<Vec3>& sigma_points,
+      const std::vector<RaySample>& rays,
+      const RayAngularIndex& index) const;
   OpportunityResult opportunity(
       const Track& track, const std::vector<RaySample>& rays,
-      const std::vector<Track>& tracks, bool matched) const;
+      const std::vector<Track>& tracks, bool matched,
+      const RayAngularIndex& index, size_t* candidate_count = nullptr) const;
   void addQuarantine(const Vec3& center_m, double radius_m, double until_s);
   void prune(double time_s);
 

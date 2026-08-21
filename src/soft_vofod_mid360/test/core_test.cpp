@@ -541,6 +541,36 @@ TEST(Opportunity, ConfirmedFrontTrackOccludesBackTrack)
   EXPECT_DOUBLE_EQ(back_opportunity.detection_probability, 0.0);
 }
 
+TEST(Opportunity, AngularIndexKeepsExactNearbyRayAndRejectsOffAxisRays)
+{
+  soft_vofod::Config config = testConfig();
+  config.tracker.target_radius_m = 0.3;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.last_prediction_time_s = 0.0;
+  track.last_existence_time_s = 0.0;
+  core.addTrackForTest(track);
+
+  std::vector<soft_vofod::RaySample> rays = {
+      ray(0.2, soft_vofod::ReturnStatus::no_return)};
+  for (size_t index = 0U; index < 100U; ++index)
+  {
+    soft_vofod::RaySample off_axis = ray(
+        0.2, soft_vofod::ReturnStatus::no_return);
+    off_axis.direction_unit = soft_vofod::Vec3::UnitY();
+    rays.push_back(off_axis);
+  }
+  const double indexed_probability = core.opportunityForTest(
+      track, rays, {track}).detection_probability;
+  const double single_probability = core.opportunityForTest(
+      track, {rays.front()}, {track}).detection_probability;
+  EXPECT_DOUBLE_EQ(indexed_probability, single_probability);
+
+  const soft_vofod::ScanResult result = core.processScan(1U, 0.2, rays);
+  EXPECT_EQ(result.diagnostics.opportunity_full_scan_rays, 101U);
+  EXPECT_EQ(result.diagnostics.opportunity_candidate_rays, 1U);
+}
+
 TEST(Existence, SurvivalDecaysWithoutInventingAnObservationMiss)
 {
   EXPECT_DOUBLE_EQ(

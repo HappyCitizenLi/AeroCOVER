@@ -7,7 +7,7 @@ micro_batch_dt_s: 0.01
 input:
   points_world_topic: /uav1/mid360/points_world
   rays_checked_topic: /uav1/mid360/rays_checked
-  sync_queue_size: 8
+  sync_queue_size: 32
   expected_rays_per_bundle: 0
   geometry_consistency_tolerance_m: 0.01
 
