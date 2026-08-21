@@ -301,3 +301,23 @@
   零失败。
 - 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
   `catkin_test_results build` 汇总 370 tests、0 error/failure/skipped。
+
+## 2026-08-21 — SOFT-VoFOD V2 Phase 11 confirmed-only map protection
+
+- 强 map support 现在只来自 confirmed tracks 与 recently-deleted-confirmed quarantine；半径为
+  physical target radius + capped covariance margin。只有这些 support 能截断 VALID/NO_RETURN
+  free carving、完全跳过 endpoint background promotion 并生成 T component。
+- tentative 只保留 physical-radius weak overlap：不截断 free carving、不 quarantine endpoint。
+  若邻接已知背景仍归 B，但该 voxel 只加普通 background weight（1，而不是 supported weight 5
+  与立即晋升）；否则归 U，由 packet maintenance 与 spatial-persistence competition 决定，静止
+  满 1 s 后仍可晋升背景。
+- 新增 strong/weak support 分离诊断和 3 个回归测试，覆盖 tentative 不截断 NO_RETURN、非背景
+  weak overlap 进入 U 后可被静态持久性吸收、已知背景邻接只用弱权重。局部 build 无 warning，
+  76 tests 零失败。
+- S06/1.0× 首帧均为 4.228 s、coverage 100%。相对 Phase 10，target contamination 同为
+  0.025，但 HOTA 0.155→0.148、FP 4874→5374、static-background recall
+  0.0507→0.0323，p95 49.5→50.4 ms。第一版把所有 tentative overlap 强制归 U 的结果几乎
+  相同，仅少 1 个 B component，说明退化主因是移除 tentative free-carving/endpoint 强保护，
+  而非弱 B 权重分支。该语义修正按规范保留，回归进入 Phase 12 根因闭环，不包装为性能提升。
+- 全工作区 `catkin build` 11/11 成功且无 build warning；串行 tests 11/11 成功，
+  `catkin_test_results build` 汇总 376 tests、0 error/failure/skipped。

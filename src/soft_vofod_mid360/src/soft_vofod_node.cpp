@@ -701,6 +701,9 @@ private:
       status.values.push_back(diagnosticValue(
           "support_count", number(diagnostics->support_count)));
       status.values.push_back(diagnosticValue(
+          "tentative_weak_support_count",
+          number(diagnostics->tentative_weak_support_count)));
+      status.values.push_back(diagnosticValue(
           "map_epochs_committed",
           number(diagnostics->map_epochs_committed)));
       status.values.push_back(diagnosticValue(

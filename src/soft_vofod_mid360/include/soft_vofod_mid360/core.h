@@ -257,6 +257,7 @@ struct ProcessDiagnostics
   size_t map_voxel_count = 0;
   size_t track_count = 0;
   size_t support_count = 0;
+  size_t tentative_weak_support_count = 0;
   size_t map_epochs_committed = 0;
   size_t map_epoch_free_voxels = 0;
   size_t map_epoch_background_voxels = 0;
@@ -345,7 +346,8 @@ public:
       const Vec3& point_m, double time_s, bool track_explained,
       bool allow_background, uint32_t original_index,
       const Vec3& ray_direction, double free_confidence,
-      double background_distance_m, double anomaly_score);
+      double background_distance_m, double anomaly_score,
+      bool weak_track_explained = false);
   void observeBackground(
       const Vec3& point_m, double time_s, uint64_t group_id,
       bool allow_promotion, bool background_supported = false);
@@ -381,6 +383,7 @@ private:
     double last_time_s = 0.0;
     size_t returns = 0;
     size_t track_explained_returns = 0;
+    size_t weak_track_explained_returns = 0;
     bool allow_background = false;
     struct Sample
     {
@@ -510,6 +513,7 @@ private:
   bool birthCellAvailable(const Vec3& position_m, double time_s) const;
   void recordBirthCell(const Vec3& position_m, double time_s);
   std::vector<Support> supports(double time_s) const;
+  std::vector<Support> tentativeSupports(double time_s) const;
   SupportIndex indexSupports(std::vector<Support> supports) const;
   double truncateBeforeSupport(
       const RaySample& ray, double desired_length_m,

@@ -686,6 +686,7 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     size_t unknown_voxels = 0U;
     size_t returns = 0U;
     size_t track_returns = 0U;
+    size_t weak_track_returns = 0U;
     bool background_adjacent = false;
     double background_distance_m = config_.event_background_search_m;
     for (const size_t linear_index : component)
@@ -693,6 +694,7 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
       const EpochReturnVoxel& item = epoch_returns_.at(linear_index);
       returns += item.returns;
       track_returns += item.track_explained_returns;
+      weak_track_returns += item.weak_track_explained_returns;
       if (voxels_[linear_index].state == VoxelState::confident_free)
         ++free_voxels;
       else if (voxels_[linear_index].state == VoxelState::unknown)
@@ -730,17 +732,25 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
     const double q_track = returns > 0U
         ? static_cast<double>(track_returns) / static_cast<double>(returns)
         : 0.0;
+    const double q_weak_track = returns > 0U
+        ? static_cast<double>(weak_track_returns) /
+            static_cast<double>(returns)
+        : 0.0;
     const bool track_explained =
         q_track >= config_.track_explained_ratio;
+    const bool weak_track_explained = !track_explained &&
+        q_weak_track >= config_.track_explained_ratio;
     const bool background_supported = !track_explained &&
         (background_adjacent ||
          background_distance_m < config_.background_attach_distance_m);
-    bool free_violation = !track_explained && !background_supported &&
+    bool free_violation = !track_explained && !weak_track_explained &&
+        !background_supported &&
         q_free >= config_.free_packet_ratio &&
         background_distance_m > config_.background_separate_distance_m;
     bool unknown_component = !track_explained &&
         !background_supported && !free_violation &&
-        (q_unknown > 0.0 || q_free < config_.free_packet_ratio);
+        (weak_track_explained || q_unknown > 0.0 ||
+         q_free < config_.free_packet_ratio);
 
     std::vector<size_t> candidate_voxels;
     if (free_violation || unknown_component)
@@ -806,7 +816,9 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
       observeBackground(
           geometry_.idxToCoord(
               geometry_.indexFromLinear(linear_index)).cast<double>(),
-          commit_time_s, epoch_id_, true, background_supported);
+          commit_time_s, epoch_id_, true,
+          background_supported &&
+              item.weak_track_explained_returns == 0U);
       ++output.background_voxels;
     }
   }
@@ -842,14 +854,15 @@ void BackgroundMap::accumulateReturn(
 {
   accumulateReturn(
       point_m, time_s, track_explained, allow_background, 0U, Vec3::Zero(),
-      0.0, config_.event_background_search_m, 0.0);
+      0.0, config_.event_background_search_m, 0.0, false);
 }
 
 void BackgroundMap::accumulateReturn(
     const Vec3& point_m, const double time_s, const bool track_explained,
     const bool allow_background, const uint32_t original_index,
     const Vec3& ray_direction, const double free_confidence,
-    const double background_distance_m, const double anomaly_score)
+    const double background_distance_m, const double anomaly_score,
+    const bool weak_track_explained)
 {
   if (!point_m.allFinite() || !ray_direction.allFinite() ||
       !std::isfinite(time_s) || !std::isfinite(free_confidence) ||
@@ -868,6 +881,8 @@ void BackgroundMap::accumulateReturn(
   ++item.returns;
   if (track_explained)
     ++item.track_explained_returns;
+  if (weak_track_explained)
+    ++item.weak_track_explained_returns;
   item.allow_background = item.allow_background || allow_background;
   EpochReturnVoxel::Sample sample;
   sample.point_m = point_m;
@@ -1607,21 +1622,18 @@ std::vector<SoftVofodCore::Support> SoftVofodCore::supports(
   output.reserve(tracks_.size() + quarantines_.size());
   for (const Track& track : tracks_)
   {
-    if (track.state == TrackState::deleting)
+    if (track.state != TrackState::confirmed)
       continue;
     Support support;
     support.center_m = track.x.head<3>();
     support.radius_m = config_.tracker.target_radius_m;
-    if (track.state == TrackState::confirmed)
-    {
-      Eigen::SelfAdjointEigenSolver<Mat3> solver(
-          track.covariance.block<3, 3>(0, 0));
-      const double largest_variance = solver.info() == Eigen::Success
-          ? std::max(0.0, solver.eigenvalues().maxCoeff()) : 0.0;
-      support.radius_m += std::min(
-          config_.tracker.map_support_uncertainty_cap_m,
-          config_.tracker.map_support_sigma * std::sqrt(largest_variance));
-    }
+    Eigen::SelfAdjointEigenSolver<Mat3> solver(
+        track.covariance.block<3, 3>(0, 0));
+    const double largest_variance = solver.info() == Eigen::Success
+        ? std::max(0.0, solver.eigenvalues().maxCoeff()) : 0.0;
+    support.radius_m += std::min(
+        config_.tracker.map_support_uncertainty_cap_m,
+        config_.tracker.map_support_sigma * std::sqrt(largest_variance));
     support.until_s = time_s;
     output.push_back(support);
   }
@@ -1629,6 +1641,24 @@ std::vector<SoftVofodCore::Support> SoftVofodCore::supports(
   {
     if (support.until_s >= time_s)
       output.push_back(support);
+  }
+  return output;
+}
+
+std::vector<SoftVofodCore::Support> SoftVofodCore::tentativeSupports(
+    const double time_s) const
+{
+  std::vector<Support> output;
+  output.reserve(tracks_.size());
+  for (const Track& track : tracks_)
+  {
+    if (track.state != TrackState::tentative)
+      continue;
+    Support support;
+    support.center_m = track.x.head<3>();
+    support.radius_m = config_.tracker.target_radius_m;
+    support.until_s = time_s;
+    output.push_back(support);
   }
   return output;
 }
@@ -2249,11 +2279,17 @@ void SoftVofodCore::processBatch(
 
   mergeDuplicateTracks(result);
 
-  const SupportIndex target_supports = indexSupports(
+  const SupportIndex confirmed_supports = indexSupports(
       config_.ablation.target_feedback ? supports(batch_time_s)
                                        : std::vector<Support>());
+  const SupportIndex tentative_supports = indexSupports(
+      config_.ablation.target_feedback ? tentativeSupports(batch_time_s)
+                                       : std::vector<Support>());
   result->diagnostics.support_count = std::max(
-      result->diagnostics.support_count, target_supports.supports.size());
+      result->diagnostics.support_count, confirmed_supports.supports.size());
+  result->diagnostics.tentative_weak_support_count = std::max(
+      result->diagnostics.tentative_weak_support_count,
+      tentative_supports.supports.size());
   const auto tracking_end = std::chrono::steady_clock::now();
 
   std::vector<RaySample> free_rays;
@@ -2280,7 +2316,7 @@ void SoftVofodCore::processBatch(
     if (desired_length <= 0.0)
       continue;
     const double truncated = truncateBeforeSupport(
-        ray, desired_length, target_supports);
+        ray, desired_length, confirmed_supports);
     if (truncated > 0.0)
     {
       free_rays.push_back(ray);
@@ -2296,15 +2332,17 @@ void SoftVofodCore::processBatch(
     const RaySample& ray = rays[ray_index];
     if (ray.status != ReturnStatus::valid_return || !ray.has_point)
       continue;
-    const bool track_protected_endpoint =
-        pointInsideSupport(ray.point_m, target_supports);
-    if (track_protected_endpoint)
+    const bool confirmed_track_endpoint =
+        pointInsideSupport(ray.point_m, confirmed_supports);
+    const bool tentative_track_endpoint = !confirmed_track_endpoint &&
+        pointInsideSupport(ray.point_m, tentative_supports);
+    if (confirmed_track_endpoint)
     {
       background_map_.quarantine(
           ray.point_m, batch_time_s + config_.tracker.quarantine_duration_s);
     }
     background_map_.accumulateReturn(
-        ray.point_m, ray.time_s, track_protected_endpoint,
+        ray.point_m, ray.time_s, confirmed_track_endpoint,
         background_endpoint_updates_enabled, ray.original_index,
         ray.direction_unit,
         old_queries[ray_index].confidence *
@@ -2315,7 +2353,8 @@ void SoftVofodCore::processBatch(
                 old_queries[ray_index].free_probability *
                 std::min(1.0, background_distances[ray_index] /
                     config_.map.event_distance_scale_m)
-            : 0.0);
+            : 0.0,
+        tentative_track_endpoint);
   }
   const auto map_end = std::chrono::steady_clock::now();
   result->diagnostics.classification_ms +=

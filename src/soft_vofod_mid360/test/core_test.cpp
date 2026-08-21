@@ -234,6 +234,61 @@ TEST(BackgroundComponents, TrackExplainedSingletonNeverWritesBackground)
   EXPECT_EQ(map.voxel(target)->candidate_hits, 0U);
 }
 
+TEST(MapProtection, TentativeOverlapIsUnresolvedButCanAssimilateIfStatic)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 point(3.0, 0.0, 0.0);
+  map.advanceEpoch(0.0);
+  size_t promotions = 0U;
+  for (uint32_t epoch = 0U; epoch < 6U; ++epoch)
+  {
+    map.accumulateReturn(
+        point, 0.01 + 0.2 * epoch, false, true, epoch,
+        soft_vofod::Vec3::UnitX(), 0.0, 2.0, 0.0, true);
+    const auto commit = map.advanceEpoch(0.2 * (epoch + 1U));
+    ASSERT_TRUE(commit.has_value());
+    if (epoch == 0U)
+    {
+      EXPECT_EQ(commit->track_explained_components, 0U);
+      EXPECT_EQ(commit->background_components, 0U);
+      EXPECT_EQ(commit->unknown_components, 1U);
+      EXPECT_EQ(commit->unresolved_packets.size(), 1U);
+    }
+    promotions += commit->promoted_unknown_candidates;
+  }
+  EXPECT_EQ(promotions, 1U);
+  EXPECT_EQ(map.query(point).state,
+            soft_vofod::VoxelState::stable_background);
+}
+
+TEST(MapProtection, TentativeOverlapUsesWeakWeightNearKnownBackground)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 stable(2.0, 0.0, 0.0);
+  const soft_vofod::Vec3 adjacent(2.5, 0.0, 0.0);
+  for (uint64_t group = 0U; group < 3U; ++group)
+    map.observeBackground(stable, 0.1 * group, group, true);
+  ASSERT_EQ(map.query(stable).state,
+            soft_vofod::VoxelState::stable_background);
+
+  map.advanceEpoch(0.2);
+  map.accumulateReturn(
+      adjacent, 0.21, false, true, 1U, soft_vofod::Vec3::UnitX(),
+      0.0, 0.5, 0.0, true);
+  const auto commit = map.advanceEpoch(0.4);
+  ASSERT_TRUE(commit.has_value());
+  EXPECT_EQ(commit->background_components, 1U);
+  EXPECT_EQ(commit->unknown_components, 0U);
+  const soft_vofod::BackgroundVoxel* voxel = map.voxel(adjacent);
+  ASSERT_NE(voxel, nullptr);
+  EXPECT_DOUBLE_EQ(voxel->background_evidence,
+                   config.map.background_weight);
+  EXPECT_NE(map.query(adjacent).state,
+            soft_vofod::VoxelState::stable_background);
+}
+
 TEST(ColdStartBackground, PromotesOnlyPersistentWorldStaticComponent)
 {
   soft_vofod::Config config = testConfig();
@@ -803,7 +858,10 @@ TEST(Pipeline, NoReturnAndValidRaysStopBeforeTargetSupport)
   soft_vofod::Config config = testConfig();
   config.map.max_no_return_free_range_m = 5.0;
   soft_vofod::SoftVofodCore core(config);
-  makeHoverTrack(&core, 4.5);
+  soft_vofod::Track confirmed = trackAt(
+      soft_vofod::Vec3(4.5, 0.0, 0.0));
+  confirmed.existence_probability = 0.9;
+  core.addTrackForTest(confirmed);
 
   const soft_vofod::Vec3 behind_target(6.0, 0.0, 0.0);
   EXPECT_EQ(core.backgroundMap().query(behind_target).state,
@@ -815,6 +873,30 @@ TEST(Pipeline, NoReturnAndValidRaysStopBeforeTargetSupport)
   EXPECT_EQ(result.diagnostics.support_count, 1U);
   EXPECT_EQ(core.backgroundMap().query(behind_target).state,
             soft_vofod::VoxelState::unknown);
+}
+
+TEST(MapProtection, TentativeTrackDoesNotStronglyTruncateFreeCarving)
+{
+  soft_vofod::Config config = testConfig();
+  config.map.free_epoch_weight = 5.0;
+  config.map.max_no_return_free_range_m = 5.0;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track tentative = trackAt(
+      soft_vofod::Vec3(4.0, 0.0, 0.0));
+  tentative.state = soft_vofod::TrackState::tentative;
+  tentative.existence_probability = 0.7;
+  core.addTrackForTest(tentative);
+
+  soft_vofod::ScanResult result = core.processScan(
+      0U, 0.0, {ray(0.0, soft_vofod::ReturnStatus::no_return)});
+  EXPECT_EQ(result.diagnostics.support_count, 0U);
+  EXPECT_EQ(result.diagnostics.tentative_weak_support_count, 1U);
+  result = core.processScan(
+      1U, 0.2, {ray(0.2, soft_vofod::ReturnStatus::invalid_range)});
+  const soft_vofod::BackgroundVoxel* voxel =
+      core.backgroundMap().voxel(soft_vofod::Vec3(4.0, 0.0, 0.0));
+  ASSERT_NE(voxel, nullptr);
+  EXPECT_GT(voxel->free_evidence, 0.0);
 }
 
 TEST(Pipeline, ExistenceHysteresisAndHardTimeoutReason)
