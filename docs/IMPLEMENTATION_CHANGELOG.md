@@ -418,3 +418,18 @@
   `>3 s` ghost 为 0；event/support/runtime storm 已消失。全工作区 `catkin build` 11/11 成功且
   无 warning；逐包串行测试完成，`catkin_test_results build` 为 386 tests、0 error/failure/
   skipped。
+
+## 2026-08-22 — SOFT-VoFOD V2 Phase 15 documentation
+
+- 生成提示词要求的九份最终文档：算法、地图同化、event packetization、track existence、
+  cold-start、实验协议、消融、已知限制和最终报告；包 README 从过时的 “final A3” 更新为唯一
+  canonical V2/B4 路径。
+- 最终报告逐条回答根因、修改文件、移除机制、新模块、公式/代码位置、参数来源、S06 warm-up、
+  S07 old/no-event/V2、NEG03/04、S01/S03/S05、map/track/runtime、失败场景和后续建议，并明确
+  回答七项因果问题。
+- 文档审计发现并披露正式 B2 使用 3 birth groups、B3/B4 使用 CAL-frozen 5 groups；因此正式
+  B2→B3 不是纯 opportunity 单因素。opportunity 对 fragmentation 的直接因果证据只引用 Phase 12
+  同为 3 groups 的控制，不把正式多 seed 差值过度归因。
+- Phase 15 未改变可执行代码。最终 `catkin build` 再次为 11/11 packages、无 warning/failure；
+  逐包串行全测后 `catkin_test_results build` 仍为 386 tests、0 error/failure/skipped；九份文档
+  均非空且 `git diff --check` 通过。
