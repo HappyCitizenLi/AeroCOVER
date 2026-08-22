@@ -395,3 +395,26 @@
 - runner 的 roscore 端口现在从 `ROS_MASTER_URI` 解析并显式传给 `roscore -p`，允许同一只读
   source bag 上隔离 ROS masters 并行回放。压力试验表明 B0 并发时会违反首帧门槛，因此正式
   矩阵采用 B0 单独 1.0x、B1–B4 四 master 并行 1.0x；任何子 run 失败则整 source 组合失败。
+- 完成冻结提交 `4cc1fe7` 上的 S01–S08C × N0/N1 × seeds 1001–1005 × B0–B4：500/500
+  run 均为 `status=ok`、1.0x replay、coverage valid；100 个 source 组合在五算法间 SHA-256
+  一致，每个算法的 config/implementation hash 各自唯一。最低 truth coverage 97.37%，track
+  与 timing coverage 均为 100%。可确定性重录的 100 个 source bag 和 500 个 output bag 已因
+  磁盘约束删除，metrics、manifest、时序 CSV、资源记录和组合日志保留。
+- 目标场景宏平均（排除无目标 S08A）中，B4/B0 的 HOTA 为 0.7535/0.7582，FP/run 为
+  39.73/35.77，IDSW/run 为 0.656/1.233，fragmentation/run 为 2.844/1.700；因此不能声明 B4
+  全面超过 B0。B4 在 S03 为 HOTA 0.989、IDSW 0、FP 3.7，在 S07 为 HOTA 0.980、0 FP/IDSW/
+  fragmentation；S04（HOTA 0.894、FP 110、fragmentation 13）和 S05（HOTA 0.254、FN
+  193.7）是主要失败场景。
+- 消融闭环：B1→B2 birth/run 10.21→7.13；B2→B3 将 `>3 s` ghost tracks 从 229 降为 0，
+  fragmentation/run 2.66→1.89，但 TP/run 同时下降 19.14；B3→B4 将 packet/run
+  344.68→15.76、IDSW/run 13.12→0.59。B3→B4 contamination 仅 0.006301→0.006267，差异
+  接近零，故正式矩阵没有证明 map protection 降低 contamination。
+- 地图层相对 B0：B4 static-background recall 0.0627→0.1390，但 false-free
+  0.1744→0.2247（更差），background expansion 0.7532→0.7541（近似不变）。S08A 的 B4
+  无 birth/confirmed track，但 false events 仍为 12.53/min；S08C 的 10/10 run 均形成一个
+  confirmed track，不符合 unknown 静止物应保持 unresolved/candidate 的设计预期，列为明确
+  limitation/failure。
+- B4 全矩阵 runtime p95 均低于 50.66 ms，support peak 最大 7、track peak 最大 7、
+  `>3 s` ghost 为 0；event/support/runtime storm 已消失。全工作区 `catkin build` 11/11 成功且
+  无 warning；逐包串行测试完成，`catkin_test_results build` 为 386 tests、0 error/failure/
+  skipped。
