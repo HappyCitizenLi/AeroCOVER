@@ -5,6 +5,15 @@
 V1 的病态 event/support/runtime 正反馈，但**没有全面超过 B0**；S04、S05、S08C 和地图
 false-free balance 仍需后续研究。
 
+本文是当前实现与结果的唯一总入口；算法、地图、packet、track、实验协议和限制专题文档只作为
+公式与复现细节的附录。最近完成全量构建、测试与结果复核的仓库快照为
+`03cf2021f02795e5c5689b277db1bbb9578ffce5`，正式实验冻结在
+`4cc1fe71c20aae6f2110b925733c679f39dfd98e`，V1 对照冻结点为 `56c61f2`。
+
+正式矩阵包含 10 scenes × 2 noise profiles × 5 seeds × 5 algorithms = 500 runs，全部
+`status=ok`、1.0× replay、coverage valid。聚合 CSV 的另外 30 行是 CAL/历史开发运行，不进入
+正式结论。
+
 ## 1. 修复前根因
 
 源码审计和冻结 artifacts 给出的根因不是“参数略差”，而是粒度与生命周期错误：
@@ -25,6 +34,21 @@ false-free balance 仍需后续研究。
 trajectory 和 GNN 只能在已经污染的 observation pool 上工作；A3 的 opportunity/feedback 又把
 track/support 数量带入更高阶计算。S07 的 observer motion 使背景 violation 最密集，最终触发
 event、track、support 和 CPU 同时爆炸。
+
+冻结 V1 开发矩阵是 N0/seed1001、S01–S07 的 28 runs：
+
+| 方法 | 关键差异 | mean HOTA | mean IDF1 | IDSW 总数 | mean p95 ms |
+|---|---|---:|---:|---:|---:|
+| B0 | component/OBB detector + CA tracker + duplicate merge | 0.676 | 0.619 | 13 | 53.3 |
+| A1 | raw endpoint、2-group birth、greedy | 0.378 | 0.290 | 198 | 32.6 |
+| A2 | A1 + 3-group birth | 0.388 | 0.310 | 191 | 32.7 |
+| A3 | A2 + opportunity、feedback、Hungarian | 0.362 | 0.272 | 222 | 188.9 |
+
+A1/A2/A3 并非只是在同一 detector 后替换 association：B0 在 tracker 前已经把目标表面归并成
+component/OBB center，而 V1 把单 ray endpoint 当 observation；因此比较同时改变了前端粒度、
+动力学、去重和生命周期。A2 的第三个时间组只能过滤一部分偶然 birth，不能修复 target-level
+clustering 和 duplicate track；A3 提高部分场景 recall，却用 ghost、identity churn 和 feedback
+成本抵消了收益。S06 中 A1/A2 曾高于 B0，故准确结论是“总体更差”，不是“每场景都更差”。
 
 ## 2. 修改文件
 
@@ -47,8 +71,9 @@ Phase 1–14 相对 V1 baseline `56c61f2` 修改 37 个 tracked files，按职�
   CURRENT_MRS_VOFOD_MID360_IMPLEMENTATION.md,
   SOFT_VOFOD_EXPERIMENT_REPORT.md,KNOWN_LIMITATIONS.md}`。
 
-Phase 15 新增本文及 8 份专题文档，并更新 `src/soft_vofod_mid360/README.md`。完整变更可用
-`git diff --name-status 56c61f2..HEAD` 审计。
+Phase 15 新增本文及 8 份专题文档，并更新 `src/soft_vofod_mid360/README.md`。从 V1 baseline
+到当前 HEAD 共涉及 47 个 tracked files；完整变更可用 `git diff --name-status 56c61f2..HEAD`
+审计。
 
 ## 3. 从生产路径移除的 V1 机制
 
@@ -81,6 +106,11 @@ singleton packet 没有被删除或禁用；远距离单点 observation 仍合�
 
 为避免无必要抽象，这些能力集中在现有 `BackgroundMap` 和 `SoftVofodCore`，没有复制一套平行
 V2 package 或为 rejected CAL candidates 留永久开关。
+
+在线主链只有一条：同步 `points_world/rays_checked` → ray-level map evidence → 5 Hz deferred map
+epoch → free-space violations → 短时空 packet → 多独立时间组 trajectory birth/packet maintenance →
+scan opportunity 与 survival/existence → confirmed-only map protection。truth 只在 evaluator 中出现，
+不会进入算法节点；B0 仅作为冻结 baseline 独立运行。
 
 ## 5. 公式与代码位置
 
@@ -176,6 +206,23 @@ opportunity；完整 V2 的 deferred map、packet、lifecycle、index 和 confir
 
 ## 10. S01/S03/S05 根因闭环
 
+正式 10-run（N0/N1 × 5 seeds）场景均值如下：
+
+| 场景 | HOTA B0→B4 | FP B0→B4 | FN B0→B4 | IDSW B0→B4 | frag B0→B4 |
+|---|---:|---:|---:|---:|---:|
+| S01 | 0.326→0.437 | 85.3→76.7 | 100.5→130.8 | 5.2→1.3 | 5.5→6.9 |
+| S02 | 0.565→0.579 | 62.3→9.2 | 42.4→63.1 | 1.0→1.0 | 1.0→1.0 |
+| S03 | 0.890→0.989 | 0→3.7 | 17.7→12.6 | 2.2→0 | 2.9→1.8 |
+| S04 | 0.987→0.894 | 12.2→110.0 | 11.1→89.4 | 0→0.8 | 0.1→13.0 |
+| S05 | 0.333→0.254 | 143.7→101.7 | 147.7→193.7 | 2.7→2.8 | 5.5→2.9 |
+| S06 | 0.738→0.679 | 18.4→56.3 | 85.9→89.4 | 0→0 | 0.3→0 |
+| S07 | 0.994→0.980 | 0→0 | 2.2→7.4 | 0→0 | 0→0 |
+| S08B | 0.995→0.981 | 0→0 | 3.6→12.6 | 0→0 | 0→0 |
+| S08C* | 0.995→0.986 | 0→0 | 3.3→9.3 | 0→0 | 0→0 |
+
+`*` S08C 的高 HOTA 不能视为语义成功：B4 在 10/10 run 把 unknown stationary object 确认为
+轨迹，而场景要求其保持 unresolved/candidate。
+
 - **S01：部分闭环。** B4 vs B0 HOTA 0.437 vs 0.326、FP 76.7 vs 85.3、IDSW 1.3 vs 5.2；
   但 FN 130.8 vs 100.5、frag 6.9 vs 5.5。重复 birth/ID 已改善，range-ladder recall 未闭环。
 - **S03：闭环。** B4 vs B0 HOTA 0.989 vs 0.890、IDSW 0 vs 2.2、frag 1.8 vs 2.9；FP
@@ -204,6 +251,9 @@ candidate→stable p95 为 15.67±0.97 s、expansion 0.609±0.013、0 birth/trac
 | 算法 | HOTA | TP | FP | FN | IDSW | fragmentation |
 |---|---:|---:|---:|---:|---:|---:|
 | B0 | 0.7582 | 333.33 | 35.77 | 46.04 | 1.233 | 1.700 |
+| B1 | 0.3791 | 339.70 | 650.82 | 39.68 | 21.911 | 2.844 |
+| B2 | 0.3944 | 338.12 | 601.84 | 41.26 | 21.178 | 2.956 |
+| B3 | 0.4851 | 316.86 | 308.30 | 62.52 | 14.578 | 2.100 |
 | B4 | 0.7535 | 311.79 | 39.73 | 67.59 | 0.656 | 2.844 |
 
 B4 的 identity 更稳定，但 recall/fragmentation 尚未达到 B0。B4 N0/N1 target-scene HOTA 为
@@ -212,6 +262,12 @@ B4 的 identity 更稳定，但 recall/fragmentation 尚未达到 B0。B4 N0/N1 
 B1→B2 birth/run 10.21→7.13；B3/B4 全 100-run `>3 s` ghost 为 0；B4 max stale 最大
 1.762 s。正式 B2→B3 因 groups 3→5 而有 confound，详见消融文档。
 
+模块级解释为：B1→B2 将 birth/run 从 10.21 降到 7.13，说明 trajectory-before-confirmation
+减少了重复 birth；B2→B3 的正式差值同时改变 groups 和 opportunity/survival，不能当纯单因素；
+同为 3 groups 的 Phase 12 控制中，S05 fragmentation 9→3、stale>3 s 78→1。B3→B4 是干净
+模块差，paired mean 为 packets -328.92/run、births -4.10、FP -241.71、IDSW -12.53、HOTA
++0.2416，但 fragmentation +0.67、p95 +3.53 ms。
+
 ## 13. Runtime
 
 100-run mean p95：B0/B1/B2/B3/B4 = 52.07/37.67/38.27/38.31/41.85 ms。B4 最低/最高
@@ -219,6 +275,11 @@ p95 为 34.60/50.65 ms，100/100 低于 100 ms。S07 B4 p95 43.44±3.01 ms；V1 
 1001.64 ms 病态失败已消失。
 
 最终构建与测试：11/11 packages build，无 warning/failure；386 tests，0 errors/failures/skipped。
+
+矩阵完整性检查还确认：100 个 scene/noise/seed source triplets 在五算法间共享相同 source
+SHA-256；最低 truth coverage 0.973684，track/timing coverage 最低均为 1.0；所有正式指标均无
+NaN/Inf。正式结果的实现 hash、配置 hash、Git commit、输入/输出 bag hash 和 replay rate 均写入
+每个 `run_manifest.json`。
 
 ## 14. 失败场景与声明边界
 
@@ -245,6 +306,20 @@ N1”；下一步优先级为：
 6. 最后才进入 MRS/PX4 闭环与安全决策。
 
 在 S04/S05/S08C 未闭环前，不建议直接进入真实多机飞行。
+
+## 16. 证据位置与复现边界
+
+- 正式逐 run 证据：`artifacts/runs/{B0,B1,B2,B3,B4}/<scene>/<noise>/seed_<seed>/`；
+- 聚合结果：`artifacts/metrics/{summary.csv,aggregate.json,ablation_deltas.csv}`；
+- Phase 14 执行日志：`artifacts/phase14_parallel_logs/`；
+- 算法入口：`src/soft_vofod_mid360/src/core.cpp` 与 `src/soft_vofod_mid360/src/soft_vofod_node.cpp`；
+- 唯一生产配置：`src/soft_vofod_mid360/config/soft_vofod_v2_canonical.yaml`；
+- runner/evaluator：`src/soft_vofod_evaluation/scripts/{run_benchmark.py,evaluate_bag.py}`。
+
+为释放磁盘，100 个 source bags 和 500 个 output bags 已删除；metrics、manifest、逐帧 CSV、资源
+统计和日志仍保留。原始 bags 只能按冻结 commit、场景、noise、seed 和 runner 确定性重录。另一个
+复现注意点是 base `algorithm_config_sha256` 不编码 launch overrides，因此必须同时使用 manifest
+中的 algorithm 名和冻结 runner commit，不能仅凭 config hash 区分 B1–B4。
 
 ## 七个问题的最终回答
 
