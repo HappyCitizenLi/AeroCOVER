@@ -210,6 +210,8 @@ private:
         static_cast<uint32_t>(certified_free_min_valid_epochs);
     parameter("map/surface_uncertainty_margin_m",
               &config->map.surface_uncertainty_margin_m);
+    parameter("map/require_certified_free_for_events",
+              &config->map.require_certified_free_for_events);
     parameter("map/background_attach_distance_m",
               &config->map.background_attach_distance_m);
     parameter("map/background_separate_distance_m",
@@ -383,10 +385,14 @@ private:
     parameter("ablation/track_conditioned_packet_split",
               &config->ablation.track_conditioned_packet_split);
     parameter("ablation/cv_ca_imm", &config->ablation.cv_ca_imm);
-    parameter("ablation/survival_reportability",
-              &config->ablation.survival_reportability);
+    parameter("ablation/survival_prediction",
+              &config->ablation.survival_prediction);
+    parameter("ablation/reportability_filtering",
+              &config->ablation.reportability_filtering);
     parameter("ablation/dormant_reacquisition",
               &config->ablation.dormant_reacquisition);
+    parameter("ablation/epistemic_unknown_birth",
+              &config->ablation.epistemic_unknown_birth);
   }
 
   bool convertInput(
@@ -725,9 +731,15 @@ private:
       free_pub_.publish(mapCloud(
           core_->backgroundMap().points(
               soft_vofod::VoxelState::certified_free), source_header));
-      observed_free_pub_.publish(mapCloud(
+      std::vector<soft_vofod::MapPoint> observed_free =
           core_->backgroundMap().points(
-              soft_vofod::VoxelState::observed_free), source_header));
+              soft_vofod::VoxelState::observed_free);
+      const std::vector<soft_vofod::MapPoint> certified_free =
+          core_->backgroundMap().points(
+              soft_vofod::VoxelState::certified_free);
+      observed_free.insert(
+          observed_free.end(), certified_free.begin(), certified_free.end());
+      observed_free_pub_.publish(mapCloud(observed_free, source_header));
       candidate_pub_.publish(mapCloud(
           core_->backgroundMap().points(
               soft_vofod::VoxelState::candidate_background), source_header));
@@ -854,11 +866,20 @@ private:
       status.values.push_back(diagnosticValue(
           "cv_ca_imm", diagnostics->cv_ca_imm ? "true" : "false"));
       status.values.push_back(diagnosticValue(
-          "survival_reportability",
-          diagnostics->survival_reportability ? "true" : "false"));
+          "survival_prediction",
+          diagnostics->survival_prediction ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "reportability_filtering",
+          diagnostics->reportability_filtering ? "true" : "false"));
       status.values.push_back(diagnosticValue(
           "dormant_reacquisition",
           diagnostics->dormant_reacquisition ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "require_certified_free_for_events",
+          diagnostics->require_certified_free_for_events ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "epistemic_unknown_birth",
+          diagnostics->epistemic_unknown_birth ? "true" : "false"));
       status.values.push_back(diagnosticValue(
           "processing_ms", number(diagnostics->processing_ms)));
       status.values.push_back(diagnosticValue(

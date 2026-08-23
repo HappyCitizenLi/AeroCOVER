@@ -1,0 +1,21 @@
+schema_version: 1
+scenario_id: IT11_certified_free_hover_birth
+world: E0_open
+seed: 3011
+start_delay_s: 4.0
+duration_s: 35.0
+score_start_s: 10.5
+score_end_s: 34.5
+purpose: hover target appears only after its location is certified free
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0}
+    - {t: 35.0, x: 0.0, y: 0.0, z: 2.0}
+targets:
+  - id: uav2
+    spawn_time_s: 10.5
+    waypoints:
+      - {t: 0.0, x: 8.0, y: 0.0, z: 2.5}
+      - {t: 35.0, x: 8.0, y: 0.0, z: 2.5}
+events:
+  - {t: 10.5, id: mapped_free_hover_spawn}

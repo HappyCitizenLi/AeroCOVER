@@ -418,44 +418,46 @@ def load_run(path, algorithm, score_start, score_end):
     soft = algorithm != "B0"
     track_topic = "/soft_vofod/tracks" if soft else "/uav1/batch/b0/tracks"
     event_topic = "/soft_vofod/events"
+    maintenance_topic = "/soft_vofod/maintenance_packets"
+    memory_topic = "/soft_vofod/track_memory"
     opportunity_topic = "/soft_vofod/opportunity_debug"
     background_topic = "/soft_vofod/background_voxels" if soft \
         else "/uav1/vofod_mid360/background_points"
     candidate_topic = "/soft_vofod/candidate_background_voxels"
     free_topic = "/soft_vofod/free_voxels" if soft \
         else "/uav1/vofod_mid360/free_voxels"
+    observed_free_topic = "/soft_vofod/observed_free_voxels"
     diagnostics_topic = "/soft_vofod/diagnostics" if soft \
         else "/uav1/vofod_mid360/map_update_diagnostics"
     frames_by_stamp = {}
     all_tracks = []
     events = []
+    maintenance_packets = []
     opportunities = []
     background = []
     candidate_background = []
     free = []
+    observed_free = []
     timing = []
     diagnostics = []
     with rosbag.Bag(path) as bag:
         for topic, message, _ in bag.read_messages(topics=[
-                track_topic, event_topic, opportunity_topic, background_topic,
-                candidate_topic, free_topic, diagnostics_topic]):
+                track_topic, memory_topic, event_topic, maintenance_topic,
+                opportunity_topic, background_topic, candidate_topic,
+                free_topic, observed_free_topic, diagnostics_topic]):
             stamp = message.header.stamp.to_sec() if hasattr(message, "header") else 0.0
             if topic == track_topic and score_start <= stamp <= score_end:
                 predictions = []
                 for track in message.tracks:
-                    confirmed = (track.state == track.CONFIRMED) if soft \
+                    confirmed = (track.state in (
+                        track.CONFIRMED, getattr(track, "OCCLUDED", -1))) if soft \
                         else track.n_detections >= 2
                     if soft:
-                        state = "confirmed" if confirmed else \
-                            "tentative" if track.state == track.TENTATIVE \
+                        state = "active" if track.state == track.CONFIRMED else \
+                            "occluded" if track.state == getattr(track, "OCCLUDED", -1) \
+                            else "dormant" if track.state == getattr(track, "DORMANT", -1) \
+                            else "tentative" if track.state == track.TENTATIVE \
                             else "deleting"
-                        all_tracks.append({
-                            "stamp": stamp,
-                            "id": int(track.track_id),
-                            "state": state,
-                            "existence": float(track.existence_probability),
-                            "stale_s": float(track.time_since_last_measurement),
-                        })
                     if not confirmed:
                         continue
                     predictions.append({
@@ -464,24 +466,62 @@ def load_run(path, algorithm, score_start, score_end):
                         "velocity": (track.velocity.x, track.velocity.y, track.velocity.z),
                     })
                 frames_by_stamp[round(stamp, 9)] = predictions
-            elif soft and topic == event_topic and score_start <= stamp <= score_end:
-                events.append((stamp, [{
+            elif soft and topic == memory_topic and score_start <= stamp <= score_end:
+                for track in message.tracks:
+                    state = "active" if track.state == track.CONFIRMED else \
+                        "occluded" if track.state == getattr(track, "OCCLUDED", -1) \
+                        else "dormant" if track.state == getattr(track, "DORMANT", -1) \
+                        else "tentative" if track.state == track.TENTATIVE \
+                        else "deleting"
+                    all_tracks.append({
+                        "stamp": stamp,
+                        "id": int(track.track_id),
+                        "state": state,
+                        "existence": float(track.existence_probability),
+                        "reportability": float(getattr(
+                            track, "reportability_score", 1.0)),
+                        "reportable": bool(getattr(track, "reportable", True)),
+                        "stale_s": float(track.time_since_last_measurement),
+                        "birth_evidence_type": int(getattr(
+                            track, "birth_evidence_type", 0)),
+                        "last_evidence_type": int(getattr(
+                            track, "last_evidence_type", 0)),
+                        "reactivation_count": int(getattr(
+                            track, "reactivation_count", 0)),
+                        "position": (track.position.x, track.position.y,
+                                     track.position.z),
+                    })
+            elif soft and topic in (event_topic, maintenance_topic) and \
+                    score_start <= stamp <= score_end:
+                packets = [{
                     "position": (item.position.x, item.position.y, item.position.z),
+                    "points": [(point.x, point.y, point.z)
+                               for point in getattr(item, "points", [])],
                     "point_count": int(getattr(item, "point_count", 1)),
-                } for item in message.events]))
+                    "birth_evidence_type": int(getattr(
+                        item, "birth_evidence_type", 0)),
+                } for item in message.events]
+                (events if topic == event_topic else maintenance_packets).append(
+                    (stamp, packets))
             elif soft and topic == opportunity_topic and score_start <= stamp <= score_end:
                 opportunities.append((stamp, [{
                     "track_id": int(track_id), "pd": float(pd),
-                    "effective": float(effective), "matched": bool(matched)}
-                    for track_id, pd, effective, matched in zip(
+                    "effective": float(effective), "matched": bool(matched),
+                    "occlusion": float(occlusion)}
+                    for track_id, pd, effective, matched, occlusion in zip(
                         message.track_ids, message.detection_probabilities,
-                        message.effective_opportunities, message.matched)]))
+                        message.effective_opportunities, message.matched,
+                        getattr(message, "occlusion_probabilities",
+                                [0.0] * len(message.track_ids)))]))
             elif topic == background_topic and score_start <= stamp <= score_end:
                 background.append((stamp, read_cloud_keys(message)))
             elif soft and topic == candidate_topic and score_start <= stamp <= score_end:
                 candidate_background.append((stamp, read_cloud_keys(message)))
             elif topic == free_topic and score_start <= stamp <= score_end:
                 free.append((stamp, read_cloud_keys(message)))
+            elif soft and topic == observed_free_topic and \
+                    score_start <= stamp <= score_end:
+                observed_free.append((stamp, read_cloud_keys(message)))
             elif topic == diagnostics_topic and score_start <= stamp <= score_end:
                 if soft:
                     values = {item.key: item.value for status in message.status
@@ -498,8 +538,9 @@ def load_run(path, algorithm, score_start, score_end):
                 else:
                     timing.append((stamp, float(message.total_ms)))
     frames = sorted(frames_by_stamp.items())
-    return (frames, all_tracks, events, opportunities, background,
-            candidate_background, free, timing, diagnostics)
+    return (frames, all_tracks, events, maintenance_packets, opportunities,
+            background, candidate_background, free, observed_free, timing,
+            diagnostics)
 
 
 def event_metrics(events, truth_frames, duration):
@@ -549,6 +590,176 @@ def event_metrics(events, truth_frames, duration):
         "packet_purity": true_events / float(packet_count) if packet_count else 0.0,
         "false_packet_persistence_mean_s": finite_mean(persistence),
         "false_packet_persistence_max_s": max(persistence, default=0.0),
+    }
+
+
+def packet_continuity_metrics(packets, truth_frames, track_frames):
+    packet_count = multi_truth = target_frames = shortage_frames = 0
+    targets_without_packet = gate_rejections = 0
+    purities = []
+    innovations = []
+    accelerations = []
+    turning_segments = 0
+    previous_velocity = {}
+    previous_time = {}
+    previously_tracked = set()
+    for stamp, targets in truth_frames:
+        visible = [target for target in targets
+                   if target.get("present", True) and
+                   target.get("line_of_sight", True) and
+                   target.get("actual_returns", 0) > 0]
+        frame_packets = nearest(packets, stamp) or []
+        predictions = nearest(track_frames, stamp) or []
+        packet_count += len(frame_packets)
+        if visible:
+            target_frames += 1
+            shortage_frames += len(frame_packets) < len(visible)
+        packet_truth = []
+        for packet in frame_packets:
+            points = packet["points"] or [packet["position"]]
+            memberships = set()
+            labels = []
+            for point in points:
+                distances = [np.linalg.norm(np.asarray(point) -
+                                            np.asarray(target["position"]))
+                             for target in visible]
+                if distances and min(distances) <= MAIN_THRESHOLD_M:
+                    label = int(np.argmin(distances))
+                    memberships.add(label)
+                    labels.append(label)
+                else:
+                    labels.append(-1)
+            packet_truth.append(memberships)
+            multi_truth += len(memberships) >= 2
+            if labels:
+                counts = [labels.count(label) for label in set(labels)
+                          if label >= 0]
+                purities.append(max(counts, default=0) / float(len(labels)))
+        current_tracked = set()
+        for target_index, target in enumerate(visible):
+            has_packet = any(target_index in membership
+                             for membership in packet_truth)
+            targets_without_packet += not has_packet
+            distances = [np.linalg.norm(np.asarray(prediction["position"]) -
+                                        np.asarray(target["position"]))
+                         for prediction in predictions]
+            has_prediction = bool(distances and min(distances) <= MAIN_THRESHOLD_M)
+            if has_prediction:
+                current_tracked.add(target["id"])
+                innovations.append(min(distances))
+            if target["id"] in previously_tracked and has_packet and \
+                    not has_prediction:
+                gate_rejections += 1
+            velocity = np.asarray(target["velocity"])
+            if target["id"] in previous_velocity:
+                dt = stamp - previous_time[target["id"]]
+                if dt > 1.0e-6:
+                    delta_velocity = velocity - previous_velocity[target["id"]]
+                    accelerations.append(float(np.linalg.norm(delta_velocity) / dt))
+                    first_norm = np.linalg.norm(previous_velocity[target["id"]])
+                    second_norm = np.linalg.norm(velocity)
+                    if first_norm > 0.1 and second_norm > 0.1:
+                        cosine = float(np.dot(previous_velocity[target["id"]], velocity) /
+                                       (first_norm * second_norm))
+                        turning_segments += math.acos(max(-1.0, min(1.0, cosine))) > \
+                            math.radians(15.0)
+            previous_velocity[target["id"]] = velocity
+            previous_time[target["id"]] = stamp
+        previously_tracked = current_tracked
+    return {
+        "packet_count": packet_count,
+        "packet_shortage_ratio": shortage_frames / float(target_frames)
+        if target_frames else None,
+        "multi_truth_packet_count": multi_truth,
+        "multi_truth_packet_ratio": multi_truth / float(packet_count)
+        if packet_count else 0.0,
+        "packet_purity": finite_mean(purities),
+        "target_without_packet_count": targets_without_packet,
+        "true_packet_gate_rejection": gate_rejections,
+        "track_unmatched_despite_truth_packet": gate_rejections,
+        "target_acceleration_mps2": distribution(accelerations),
+        "turning_segment_count": turning_segments,
+        "predicted_truth_innovation_m": distribution(innovations),
+    }
+
+
+def epistemic_metrics(scenario_id, tracks, diagnostics, duration):
+    confirmed_unknown_ids = {item["id"] for item in tracks
+                             if item["state"] in ("active", "occluded") and
+                             item["birth_evidence_type"] == 2}
+    confirmed_certified_ids = {item["id"] for item in tracks
+                               if item["state"] in ("active", "occluded") and
+                               item["birth_evidence_type"] == 1}
+    diagnostic_samples = [values for _, values in diagnostics]
+    unresolved_samples = sum(values.get("unknown_candidates", 0.0) > 0.0
+                             for values in diagnostic_samples)
+    candidate_returns = sum(values.get("unresolved_candidate_returns", 0.0)
+                            for values in diagnostic_samples)
+    valid_returns = sum(values.get("valid_returns", 0.0)
+                        for values in diagnostic_samples)
+    stationary = "S08C" in scenario_id or "unknown_stationary" in scenario_id
+    moving = "S08B" in scenario_id or "unknown_moving" in scenario_id
+    hover = "hover" in scenario_id.lower()
+    return {
+        "false_unknown_static_confirmation": len(confirmed_unknown_ids)
+        if stationary else None,
+        "false_target_confirmation_rate":
+            min(1.0, len(confirmed_unknown_ids)) if stationary else None,
+        "unknown_unresolved_duration_s": duration * unresolved_samples /
+        float(len(diagnostic_samples)) if diagnostic_samples else None,
+        "unresolved_fraction": unresolved_samples /
+        float(len(diagnostic_samples)) if diagnostic_samples else None,
+        "background_candidate_fraction": candidate_returns /
+        float(valid_returns) if valid_returns else None,
+        "unknown_moving_birth_recall":
+            float(bool(confirmed_unknown_ids)) if moving else None,
+        "mapped_free_hover_birth_recall":
+            float(bool(confirmed_certified_ids)) if hover else None,
+    }
+
+
+def lifecycle_metrics(tracks, truth_frames, scenario_events):
+    by_id = defaultdict(list)
+    for item in tracks:
+        by_id[item["id"]].append(item)
+    occluded_duration = dormant_duration = 0.0
+    reactivations = []
+    for samples in by_id.values():
+        samples.sort(key=lambda item: item["stamp"])
+        previous_reactivations = 0
+        for first, second in zip(samples, samples[1:]):
+            dt = max(0.0, second["stamp"] - first["stamp"])
+            occluded_duration += dt if first["state"] == "occluded" else 0.0
+            dormant_duration += dt if first["state"] == "dormant" else 0.0
+            if second["reactivation_count"] > previous_reactivations:
+                reactivations.append(second)
+            previous_reactivations = second["reactivation_count"]
+    correct = 0
+    for item in reactivations:
+        targets = nearest(truth_frames, item["stamp"]) or []
+        correct += bool(targets and min(
+            np.linalg.norm(np.asarray(item["position"]) -
+                           np.asarray(target["position"]))
+            for target in targets) <= MAIN_THRESHOLD_M)
+    end_times = [item.get("sim_time") for item in scenario_events
+                 if str(item.get("event", item.get("id", ""))).endswith("_end")]
+    latencies = []
+    for end_time in end_times:
+        if end_time is None:
+            continue
+        later = [item["stamp"] - end_time for item in reactivations
+                 if item["stamp"] >= end_time]
+        if later:
+            latencies.append(min(later))
+    return {
+        "occlusion_detected_duration_s": occluded_duration,
+        "dormant_duration_s": dormant_duration,
+        "reactivation_latency_s": distribution(latencies),
+        "correct_reactivation_rate": correct / float(len(reactivations))
+        if reactivations else None,
+        "wrong_reactivation_rate": (len(reactivations) - correct) /
+        float(len(reactivations)) if reactivations else None,
+        "reactivation_count": len(reactivations),
     }
 
 
@@ -625,14 +836,17 @@ def distribution(values):
 
 
 def track_health_metrics(tracks, duration, no_target=False):
-    confirmed = [item for item in tracks if item["state"] == "confirmed"]
+    confirmed = [item for item in tracks
+                 if item["state"] in ("active", "occluded") and
+                 item.get("reportable", True)]
     tentative_ids = {item["id"] for item in tracks
                      if item["state"] == "tentative"}
     confirmed_ids = {item["id"] for item in confirmed}
     by_stamp = defaultdict(list)
     for item in tracks:
         by_stamp[item["stamp"]].append(item)
-    confirmed_counts = [sum(item["state"] == "confirmed" for item in frame)
+    confirmed_counts = [sum(item["state"] in ("active", "occluded") and
+                            item.get("reportable", True) for item in frame)
                         for frame in by_stamp.values()]
     stale = {str(threshold): sum(item["stale_s"] > threshold
                                  for item in confirmed)
@@ -669,7 +883,8 @@ def diagnostics_metrics(diagnostics):
         for key in sorted(keys)
     }
     runtime_keys = ("processing_ms", "classification_ms", "tracking_ms",
-                    "map_commit_ms")
+                    "map_commit_ms", "packet_split_ms", "imm_ms",
+                    "hungarian_ms", "dormant_reacquisition_ms")
     count_keys = (
         "input_rays", "raw_anomaly_endpoints", "violation_packets",
         "maintenance_packets", "births", "matches", "track_count",
@@ -677,6 +892,14 @@ def diagnostics_metrics(diagnostics):
         "unknown_candidates", "map_epoch_free_voxels",
         "map_epoch_background_voxels", "opportunity_full_scan_rays",
         "opportunity_candidate_rays")
+    count_keys += (
+        "observed_free_voxels", "certified_free_voxels",
+        "certified_free_violation_packets", "unknown_motion_packets",
+        "unknown_motion_rejections", "track_conditioned_split_count",
+        "track_conditioned_split_packets", "split_points_assigned",
+        "split_points_unassigned", "association_gate_rejections",
+        "occluded_transitions", "dormant_entries", "dormant_reactivations",
+        "dormant_expirations", "dormant_reacquisition_rejections")
     return {
         "module_runtime_ms": {key: summaries[key] for key in runtime_keys
                               if key in summaries},
@@ -685,11 +908,13 @@ def diagnostics_metrics(diagnostics):
     }
 
 
-def map_metrics(background, candidate_background, free, truth_frames, world):
+def map_metrics(background, candidate_background, free, observed_free,
+                truth_frames, world):
     path, last_time = target_path_voxels(truth_frames)
     background_union = set().union(*(keys for _, keys in background)) if background else set()
     final_background = background[-1][1] if background else set()
     final_free = free[-1][1] if free else set()
+    final_observed_free = observed_free[-1][1] if observed_free else final_free
     contamination = background_union & path
     trail = 0.0
     for stamp, keys in background:
@@ -708,6 +933,19 @@ def map_metrics(background, candidate_background, free, truth_frames, world):
                             for key, stamp in candidate_first.items()
                             if key in stable_first and stable_first[key] >= stamp]
     observed_static = static & (set(candidate_first) | set(stable_first))
+    observed_free_first = {}
+    for stamp, keys in observed_free:
+        for key in keys:
+            observed_free_first.setdefault(key, stamp)
+    certified_free_first = {}
+    for stamp, keys in free:
+        for key in keys:
+            certified_free_first.setdefault(key, stamp)
+    certification_latency = [certified_free_first[key] - stamp
+                             for key, stamp in observed_free_first.items()
+                             if key in certified_free_first and
+                             certified_free_first[key] >= stamp]
+    false_certified = final_free & static
     return {
         "target_contamination_ratio": len(contamination) / float(len(path))
         if path else None,
@@ -718,6 +956,14 @@ def map_metrics(background, candidate_background, free, truth_frames, world):
         if static else None,
         "false_free_rate": len(final_free & static) / float(len(static))
         if static else None,
+        "certified_free_precision": 1.0 - len(false_certified) /
+        float(len(final_free)) if final_free else None,
+        "certified_free_recall": len(final_free & final_observed_free) /
+        float(len(final_observed_free)) if final_observed_free else None,
+        "observed_to_certified_latency_s": distribution(
+            certification_latency),
+        "false_certified_free": len(false_certified),
+        "final_observed_free_voxels": len(final_observed_free),
         "final_background_voxels": len(final_background),
         "final_free_voxels": len(final_free),
         "candidate_to_stable_latency_s": distribution(assimilation_latency),
@@ -737,9 +983,9 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
     no_target = not scenario.get("targets")
     (truth_frames, observers, scenario_events, score_start, score_end,
      input_frame_stamps) = load_source(source_bag, allow_empty_truth=no_target)
-    (track_frames, all_tracks, events, opportunities, background,
-     candidate_background, free, timing, diagnostics) = load_run(
-         run_bag, algorithm, score_start, score_end)
+    (track_frames, all_tracks, events, maintenance_packets, opportunities,
+     background, candidate_background, free, observed_free, timing,
+     diagnostics) = load_run(run_bag, algorithm, score_start, score_end)
     frames = []
     for stamp, truth in truth_frames:
         predictions = nearest(track_frames, stamp) or []
@@ -757,7 +1003,7 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
     resource = parse_resource_metrics(resource_file)
     cpu_time_s = resource.get("user_cpu_s", 0.0) + resource.get("system_cpu_s", 0.0)
     metrics = {
-        "schema_version": 1,
+        "schema_version": 2,
         "evaluator_sha256": file_sha256(__file__),
         "algorithm": algorithm,
         "scenario": scenario["scenario_id"],
@@ -766,6 +1012,15 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
         "track_set": threshold_metrics[str(MAIN_THRESHOLD_M)],
         "track_set_sensitivity": threshold_metrics,
         "event": event_metrics(events, truth_frames, duration) if algorithm != "B0" else {},
+        "packet_continuity": packet_continuity_metrics(
+            maintenance_packets, truth_frames, track_frames)
+        if algorithm != "B0" else {},
+        "epistemic": epistemic_metrics(
+            scenario["scenario_id"], all_tracks, diagnostics, duration)
+        if algorithm != "B0" else {},
+        "lifecycle": lifecycle_metrics(
+            all_tracks, truth_frames, scenario_events)
+        if algorithm != "B0" else {},
         "opportunity": opportunity_metrics(
             opportunities,
             [stamp for stamp, values in diagnostics
@@ -773,7 +1028,8 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
             if algorithm != "B0" else None),
         "sensor_return_probability": return_probability_metrics(frames),
         "map": map_metrics(
-            background, candidate_background, free, truth_frames,
+            background, candidate_background, free, observed_free,
+            truth_frames,
             scenario["world"]),
         "track_health": track_health_metrics(
             all_tracks, duration, no_target=no_target),
@@ -823,14 +1079,17 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
         writer.writerows(timing)
     with open(os.path.join(output_dir, "track_timeseries.csv"), "w", newline="",
               encoding="utf-8") as stream:
-        columns = ("stamp", "id", "state", "existence", "stale_s")
+        columns = ("stamp", "id", "state", "existence", "reportability",
+                   "reportable", "stale_s", "birth_evidence_type",
+                   "last_evidence_type", "reactivation_count", "position")
         writer = csv.DictWriter(stream, fieldnames=columns)
         writer.writeheader()
         writer.writerows(all_tracks)
     with open(os.path.join(output_dir, "opportunity_timeseries.csv"), "w",
               newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(
-            stream, fieldnames=("stamp", "track_id", "pd", "effective", "matched"))
+            stream, fieldnames=("stamp", "track_id", "pd", "effective",
+                                "matched", "occlusion"))
         writer.writeheader()
         for stamp, items in opportunities:
             for item in items:
@@ -856,7 +1115,10 @@ def main():
     parser.add_argument("--run", required=True)
     parser.add_argument("--algorithm", required=True,
                         choices=("B0", "B1", "B2", "B3", "B4",
-                                 "A1", "A2", "A3"))
+                                 "A1", "A2", "A3", "V3-A", "V3-B",
+                                 "V3-C", "C0", "C1", "C2", "C3",
+                                 "S04-base", "S04-split", "S04-IMM",
+                                 "S04-split-IMM"))
     parser.add_argument("--scenario", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--resource")

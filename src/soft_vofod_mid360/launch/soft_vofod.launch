@@ -6,7 +6,7 @@
   <arg name="points_world" default="/$(arg uav_name)/mid360/points_world"/>
   <arg name="rays_checked" default="/$(arg uav_name)/mid360/rays_checked"/>
   <arg name="config"
-       default="$(find soft_vofod_mid360)/config/soft_vofod_v2_canonical.yaml"/>
+       default="$(find soft_vofod_mid360)/config/soft_vofod_v3_canonical.yaml"/>
   <arg name="config_overlay"
        default="$(find soft_vofod_mid360)/config/no_overlay.yaml"/>
   <arg name="birth_min_groups" default="5"/>
@@ -14,6 +14,13 @@
   <arg name="target_feedback" default="true"/>
   <arg name="hungarian_association" default="true"/>
   <arg name="survival_lambda_per_s" default="0.1"/>
+  <arg name="track_conditioned_packet_split" default="true"/>
+  <arg name="cv_ca_imm" default="true"/>
+  <arg name="survival_prediction" default="true"/>
+  <arg name="reportability_filtering" default="true"/>
+  <arg name="dormant_reacquisition" default="true"/>
+  <arg name="certified_free_detection" default="true"/>
+  <arg name="epistemic_unknown_birth" default="true"/>
   <arg name="output" default="screen"/>
 
   <node pkg="soft_vofod_mid360" type="soft_vofod_node"
@@ -31,5 +38,18 @@
            value="$(arg hungarian_association)"/>
     <param name="tracker/survival_lambda_per_s"
            value="$(arg survival_lambda_per_s)"/>
+    <param name="ablation/track_conditioned_packet_split"
+           value="$(arg track_conditioned_packet_split)"/>
+    <param name="ablation/cv_ca_imm" value="$(arg cv_ca_imm)"/>
+    <param name="ablation/survival_prediction"
+           value="$(arg survival_prediction)"/>
+    <param name="ablation/reportability_filtering"
+           value="$(arg reportability_filtering)"/>
+    <param name="ablation/dormant_reacquisition"
+           value="$(arg dormant_reacquisition)"/>
+    <param name="map/require_certified_free_for_events"
+           value="$(arg certified_free_detection)"/>
+    <param name="ablation/epistemic_unknown_birth"
+           value="$(arg epistemic_unknown_birth)"/>
   </node>
 </launch>

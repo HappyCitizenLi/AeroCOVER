@@ -3,6 +3,7 @@
 import importlib.util
 import os
 import tempfile
+import types
 import unittest
 
 import yaml
@@ -135,6 +136,57 @@ class RunnerTest(unittest.TestCase):
             with open(os.path.join(directory, "metrics", "ablation_deltas.csv"),
                       encoding="utf-8") as stream:
                 self.assertIn("0.299999", stream.read())
+
+    def test_algorithm_commands_pin_legacy_and_v3_ablation_contracts(self):
+        def launch_values(command):
+            return dict(argument.split(":=", 1) for argument in command
+                        if ":=" in argument)
+
+        with tempfile.TemporaryDirectory() as directory:
+            config_dir = os.path.join(directory, "config")
+            os.makedirs(config_dir)
+            canonical = {
+                "birth": {"min_groups": 5},
+                "tracker": {"survival_lambda_per_s": 0.1},
+            }
+            for name in ("soft_vofod_v2_canonical.yaml",
+                         "soft_vofod_v3_canonical.yaml", "no_overlay.yaml"):
+                with open(os.path.join(config_dir, name), "w",
+                          encoding="utf-8") as stream:
+                    yaml.safe_dump(canonical if name != "no_overlay.yaml"
+                                   else {}, stream)
+            runner = object.__new__(RUNNER.BenchmarkRunner)
+            runner.soft_root = directory
+            runner.arguments = types.SimpleNamespace(
+                soft_config_overlay=os.path.join(config_dir,
+                                                 "no_overlay.yaml"))
+
+            for algorithm in ("A1", "A2", "A3", "B1", "B2", "B3", "B4"):
+                values = launch_values(runner.algorithm_command(
+                    algorithm, os.path.join(directory, "resource.txt")))
+                self.assertEqual(values["track_conditioned_packet_split"], "false")
+                self.assertEqual(values["cv_ca_imm"], "false")
+                self.assertEqual(values["reportability_filtering"], "false")
+                self.assertEqual(values["dormant_reacquisition"], "false")
+                self.assertEqual(values["certified_free_detection"], "false")
+                self.assertEqual(values["epistemic_unknown_birth"], "false")
+
+            expected = {
+                "V3-A": ("false", "false", "false"),
+                "V3-B": ("true", "true", "false"),
+                "V3-C": ("true", "true", "true"),
+                "S04-base": ("false", "false", "false"),
+                "S04-split": ("true", "false", "false"),
+                "S04-IMM": ("false", "true", "false"),
+                "S04-split-IMM": ("true", "true", "false"),
+            }
+            for algorithm, wanted in expected.items():
+                values = launch_values(runner.algorithm_command(
+                    algorithm, os.path.join(directory, "resource.txt")))
+                actual = (values["track_conditioned_packet_split"],
+                          values["cv_ca_imm"],
+                          values["dormant_reacquisition"])
+                self.assertEqual(actual, wanted)
 
 
 if __name__ == "__main__":

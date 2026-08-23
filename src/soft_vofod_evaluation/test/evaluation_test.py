@@ -76,7 +76,7 @@ class EvaluationTest(unittest.TestCase):
         path, _ = METRICS.target_path_voxels(truth)
         contaminated = next(iter(path))
         result = METRICS.map_metrics(
-            [(2.0, {contaminated})], [], [], truth, "E0_open")
+            [(2.0, {contaminated})], [], [], [], truth, "E0_open")
         self.assertGreater(result["target_contamination_ratio"], 0.0)
         self.assertLess(result["free_space_retention"], 1.0)
 
@@ -94,9 +94,9 @@ class EvaluationTest(unittest.TestCase):
 
         tracks = [
             {"stamp": 1.0, "id": 1, "state": "tentative",
-             "existence": 0.6, "stale_s": 0.0},
-            {"stamp": 2.0, "id": 1, "state": "confirmed",
-             "existence": 0.8, "stale_s": 1.2},
+             "existence": 0.6, "stale_s": 0.0, "reportable": True},
+            {"stamp": 2.0, "id": 1, "state": "active",
+             "existence": 0.8, "stale_s": 1.2, "reportable": True},
         ]
         health = METRICS.track_health_metrics(tracks, 60.0, no_target=True)
         self.assertEqual(health["false_confirmed_tracks_per_min"], 1.0)
@@ -109,6 +109,39 @@ class EvaluationTest(unittest.TestCase):
         self.assertEqual(
             diagnostics["module_runtime_ms"]["processing_ms"]["p50"], 15.0)
         self.assertEqual(diagnostics["complexity"]["track_count"]["max"], 3.0)
+
+    def test_v3_packet_epistemic_and_lifecycle_metrics(self):
+        truth = [(0.0, [{"id": "a", "position": (1.0, 0.0, 0.0),
+                         "velocity": (0.0, 0.0, 0.0), "present": True,
+                         "line_of_sight": True, "actual_returns": 2}])]
+        packets = [(0.0, [{"position": (1.0, 0.0, 0.0),
+                           "points": [(1.0, 0.0, 0.0)], "point_count": 1}])]
+        continuity = METRICS.packet_continuity_metrics(
+            packets, truth, [(0.0, [target(1, 1.0)])])
+        self.assertEqual(continuity["packet_count"], 1)
+        self.assertEqual(continuity["packet_shortage_ratio"], 0.0)
+        self.assertEqual(continuity["packet_purity"], 1.0)
+
+        tracks = [{"stamp": 0.0, "id": 1, "state": "active",
+                   "birth_evidence_type": 2, "reportable": True,
+                   "reactivation_count": 0, "position": (1.0, 0.0, 0.0)}]
+        epistemic = METRICS.epistemic_metrics(
+            "S08C_unknown_stationary", tracks,
+            [(0.0, {"unknown_candidates": 1.0,
+                    "unresolved_candidate_returns": 2.0,
+                    "valid_returns": 4.0})], 10.0)
+        self.assertEqual(epistemic["false_unknown_static_confirmation"], 1)
+        self.assertEqual(epistemic["background_candidate_fraction"], 0.5)
+
+        memory = [
+            {"stamp": 0.0, "id": 1, "state": "dormant",
+             "reactivation_count": 0, "position": (1.0, 0.0, 0.0)},
+            {"stamp": 0.1, "id": 1, "state": "active",
+             "reactivation_count": 1, "position": (1.0, 0.0, 0.0)},
+        ]
+        lifecycle = METRICS.lifecycle_metrics(memory, truth, [])
+        self.assertEqual(lifecycle["reactivation_count"], 1)
+        self.assertEqual(lifecycle["correct_reactivation_rate"], 1.0)
 
     def test_resource_parser(self):
         with tempfile.NamedTemporaryFile("w", delete=False) as stream:

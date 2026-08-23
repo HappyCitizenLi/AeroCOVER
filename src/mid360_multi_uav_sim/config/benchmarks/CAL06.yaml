@@ -1,0 +1,20 @@
+schema_version: 1
+scenario_id: CAL06_certified_free_static
+world: E1_sparse
+seed: 2006
+start_delay_s: 4.0
+duration_s: 45.0
+score_start_s: 10.5
+score_end_s: 44.5
+purpose: select independent-epoch count and persistence for certified free
+ray_time_geometry_mode: per_ray_pose
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0, yaw: -0.6}
+    - {t: 15.0, x: 0.0, y: 0.0, z: 2.0, yaw: 0.0}
+    - {t: 30.0, x: 0.0, y: 0.0, z: 2.0, yaw: 0.6}
+    - {t: 45.0, x: 0.0, y: 0.0, z: 2.0, yaw: -0.6}
+targets: []
+events:
+  - {t: 15.0, id: view_1_end}
+  - {t: 30.0, id: view_2_end}

@@ -78,6 +78,7 @@ struct MapConfig
   double certified_free_min_duration_s = 0.4;
   uint32_t certified_free_min_valid_epochs = 1;
   double surface_uncertainty_margin_m = 0.75;
+  bool require_certified_free_for_events = true;
   double background_attach_distance_m = 0.8;
   double background_separate_distance_m = 1.0;
   double free_packet_ratio = 0.5;
@@ -183,8 +184,10 @@ struct AblationConfig
   bool hungarian_association = true;
   bool track_conditioned_packet_split = true;
   bool cv_ca_imm = true;
-  bool survival_reportability = true;
+  bool survival_prediction = true;
+  bool reportability_filtering = true;
   bool dormant_reacquisition = true;
+  bool epistemic_unknown_birth = true;
 };
 
 struct Config
@@ -327,8 +330,11 @@ struct ProcessDiagnostics
   bool hungarian_association = true;
   bool track_conditioned_packet_split = true;
   bool cv_ca_imm = true;
-  bool survival_reportability = true;
+  bool survival_prediction = true;
+  bool reportability_filtering = true;
   bool dormant_reacquisition = true;
+  bool require_certified_free_for_events = true;
+  bool epistemic_unknown_birth = true;
   double processing_ms = 0.0;
   double classification_ms = 0.0;
   double tracking_ms = 0.0;

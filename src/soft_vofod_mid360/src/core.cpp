@@ -829,7 +829,9 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
       returns += item.returns;
       track_returns += item.track_explained_returns;
       weak_track_returns += item.weak_track_explained_returns;
-      if (voxels_[linear_index].state == VoxelState::certified_free)
+      if (voxels_[linear_index].state == VoxelState::certified_free ||
+          (!config_.require_certified_free_for_events &&
+           voxels_[linear_index].state == VoxelState::observed_free))
         ++free_voxels;
       else if (voxels_[linear_index].state == VoxelState::unknown)
         ++unknown_voxels;
@@ -2648,7 +2650,8 @@ void SoftVofodCore::processBatch(
     result->diagnostics.events += epoch_commit->violation_packets.size();
     violation_measurements = epoch_commit->violation_packets.size();
     birth_eligible_measurements = violation_measurements +
-        epoch_commit->unresolved_packets.size();
+        (config_.ablation.epistemic_unknown_birth
+             ? epoch_commit->unresolved_packets.size() : 0U);
     maintenance_packets.reserve(
         violation_measurements + epoch_commit->unresolved_packets.size() +
         epoch_commit->track_explained_packets.size());
@@ -2720,7 +2723,9 @@ void SoftVofodCore::processBatch(
     if (unresolved_candidate)
       ++result->diagnostics.unresolved_candidate_returns;
     const bool event = query.inside &&
-        query.state == VoxelState::certified_free &&
+        (query.state == VoxelState::certified_free ||
+         (!config_.map.require_certified_free_for_events &&
+          query.state == VoxelState::observed_free)) &&
         query.free_probability >= config_.map.event_free_probability_threshold &&
         background_distances[ray_index] >=
             config_.map.event_background_exclusion_m;
@@ -3145,10 +3150,16 @@ ScanResult SoftVofodCore::processScan(
   result.diagnostics.track_conditioned_packet_split =
       config_.ablation.track_conditioned_packet_split;
   result.diagnostics.cv_ca_imm = config_.ablation.cv_ca_imm;
-  result.diagnostics.survival_reportability =
-      config_.ablation.survival_reportability;
+  result.diagnostics.survival_prediction =
+      config_.ablation.survival_prediction;
+  result.diagnostics.reportability_filtering =
+      config_.ablation.reportability_filtering;
   result.diagnostics.dormant_reacquisition =
       config_.ablation.dormant_reacquisition;
+  result.diagnostics.require_certified_free_for_events =
+      config_.map.require_certified_free_for_events;
+  result.diagnostics.epistemic_unknown_birth =
+      config_.ablation.epistemic_unknown_birth;
 
   // DELETING is observable for the scan that made the decision. Retire it at
   // the next scan boundary; its quarantine support remains independently.
@@ -3206,7 +3217,7 @@ ScanResult SoftVofodCore::processScan(
         { return item.track_id == track.id; });
     const double existence_dt = std::max(
         0.0, existence_time_s - track.last_existence_time_s);
-    if (config_.ablation.survival_reportability)
+    if (config_.ablation.survival_prediction)
     {
       track.existence_probability = survivalExistence(
           track.existence_probability,
@@ -3215,7 +3226,7 @@ ScanResult SoftVofodCore::processScan(
     track.last_existence_time_s = existence_time_s;
     const bool has_match =
         evidence != result.opportunities.end() && evidence->matched;
-    if (!has_match && config_.ablation.survival_reportability &&
+    if (!has_match && config_.ablation.reportability_filtering &&
         track.state == TrackState::confirmed_active &&
         evidence != result.opportunities.end() &&
         evidence->occlusion_probability >=
@@ -3238,6 +3249,7 @@ ScanResult SoftVofodCore::processScan(
     }
     else if (track.state != TrackState::occluded &&
              track.state != TrackState::dormant &&
+             config_.ablation.opportunity_aware_existence &&
              evidence != result.opportunities.end() &&
              result.diagnostics.map_epochs_committed > 0U)
     {
@@ -3313,7 +3325,7 @@ ScanResult SoftVofodCore::processScan(
     else if (track.state == TrackState::dormant ||
              track.state == TrackState::deleting)
       state_factor = 0.0;
-    if (config_.ablation.survival_reportability)
+    if (config_.ablation.reportability_filtering)
     {
       track.reportability_score = clampProbability(
           track.existence_probability * state_factor *
@@ -3321,12 +3333,17 @@ ScanResult SoftVofodCore::processScan(
               config_.tracker.reportability_time_constant_s) *
           std::exp(-position_sigma_m /
               config_.tracker.reportability_uncertainty_scale_m));
+      track.reportable = track.state != TrackState::dormant &&
+          track.state != TrackState::deleting &&
+          track.reportability_score >= config_.tracker.reportability_threshold;
     }
     else
-      track.reportability_score = track.existence_probability * state_factor;
-    track.reportable = track.state != TrackState::dormant &&
-        track.state != TrackState::deleting &&
-        track.reportability_score >= config_.tracker.reportability_threshold;
+    {
+      // The ablation is the V2 output contract: every live track is visible.
+      track.reportability_score = track.existence_probability;
+      track.reportable = track.state != TrackState::dormant &&
+          track.state != TrackState::deleting;
+    }
     if (track.state == TrackState::deleting &&
         config_.ablation.target_feedback && was_confirmed)
     {

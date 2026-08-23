@@ -874,6 +874,28 @@ TEST(Existence, UpdatesOncePerScanAcrossMicroBatches)
   EXPECT_NEAR(result.tracks.front().existence_probability, expected, 1.0e-12);
 }
 
+TEST(TrackManagement, DisabledReportabilityPreservesV2LiveTrackOutput)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.opportunity_aware_existence = false;
+  config.ablation.survival_prediction = false;
+  config.ablation.reportability_filtering = false;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.15;
+  core.addTrackForTest(track);
+
+  const soft_vofod::RaySample invalid = ray(
+      0.01, soft_vofod::ReturnStatus::invalid_range);
+  const soft_vofod::ScanResult result = core.processScan(
+      1U, invalid.time_s, {invalid});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state,
+            soft_vofod::TrackState::confirmed_active);
+  EXPECT_TRUE(result.tracks.front().reportable);
+  EXPECT_DOUBLE_EQ(result.tracks.front().reportability_score, 0.15);
+}
+
 TEST(TrackManagement, MergesOnlyNearHistoryConsistentDuplicates)
 {
   soft_vofod::Config config = testConfig();

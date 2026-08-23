@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record immutable Gazebo sources, replay B0/A1/A2/A3, and evaluate."""
+"""Record immutable Gazebo sources, replay fixed variants, and evaluate."""
 
 import argparse
 import contextlib
@@ -25,11 +25,15 @@ from roslib.packages import find_node
 import yaml
 
 
-ALGORITHMS = ("B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3")
+ALGORITHMS = (
+    "B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3",
+    "V3-A", "V3-B", "V3-C", "C0", "C1", "C2", "C3",
+    "S04-base", "S04-split", "S04-IMM", "S04-split-IMM")
 DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
 SCENES = DEFAULT_SCENES + (
     "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04",
-    "CAL01", "CAL02", "CAL03", "CAL04", "CAL05")
+    "NEG05", "NEG06", "CAL01", "CAL02", "CAL03", "CAL04", "CAL05",
+    "CAL06", "CAL07", "CAL08", "CAL09", "IT11")
 WORLD_FILES = {
     "E0_open": "E0_open.world",
     "E1_sparse": "E1_sparse.world",
@@ -81,9 +85,22 @@ SUMMARY_METRICS = {
     "event_false_per_min": ("event", "false_events_per_min"),
     "packet_singleton_ratio": ("event", "packet_singleton_ratio"),
     "packet_purity": ("event", "packet_purity"),
+    "packet_shortage_ratio": ("packet_continuity", "packet_shortage_ratio"),
+    "multi_truth_packet_ratio": (
+        "packet_continuity", "multi_truth_packet_ratio"),
     "opportunity_Brier": ("opportunity", "Brier"),
     "target_contamination_ratio": ("map", "target_contamination_ratio"),
     "background_expansion_recall": ("map", "background_expansion_recall"),
+    "certified_free_precision": ("map", "certified_free_precision"),
+    "certified_free_recall": ("map", "certified_free_recall"),
+    "false_unknown_static_confirmation": (
+        "epistemic", "false_unknown_static_confirmation"),
+    "unknown_moving_birth_recall": (
+        "epistemic", "unknown_moving_birth_recall"),
+    "mapped_free_hover_birth_recall": (
+        "epistemic", "mapped_free_hover_birth_recall"),
+    "correct_reactivation_rate": ("lifecycle", "correct_reactivation_rate"),
+    "wrong_reactivation_rate": ("lifecycle", "wrong_reactivation_rate"),
     "false_confirmed_tracks_per_min": (
         "track_health", "false_confirmed_tracks_per_min"),
     "max_stale_age_s": ("track_health", "max_stale_age_s"),
@@ -537,8 +554,10 @@ class BenchmarkRunner:
                 os.path.join(self.vofod_root, "config", "b0_mid360_canonical.yaml"),
                 os.path.join(self.tracker_root, "config", "tracking.yaml"),
             ]
-        paths = [os.path.join(
-            self.soft_root, "config", "soft_vofod_v2_canonical.yaml")]
+        config_name = "soft_vofod_v2_canonical.yaml" \
+            if algorithm in ("A1", "A2", "A3", "B1", "B2", "B3", "B4") \
+            else "soft_vofod_v3_canonical.yaml"
+        paths = [os.path.join(self.soft_root, "config", config_name)]
         if algorithm in ("A1", "A2"):
             paths.append(os.path.join(
                 self.soft_root, "config", algorithm.lower() + ".yaml"))
@@ -779,34 +798,75 @@ class BenchmarkRunner:
         if algorithm == "B0":
             return time_prefix + ["roslaunch", "tclv_evaluation", "b0_canonical.launch",
                                   "output:=log"]
-        calibrated_paths = [os.path.join(
-            self.soft_root, "config", "soft_vofod_v2_canonical.yaml"),
-            self.arguments.soft_config_overlay]
+        legacy = algorithm in ("A1", "A2", "A3", "B1", "B2", "B3", "B4")
+        config_path = os.path.join(
+            self.soft_root, "config",
+            "soft_vofod_v2_canonical.yaml" if legacy
+            else "soft_vofod_v3_canonical.yaml")
+        calibrated_paths = [config_path, self.arguments.soft_config_overlay]
         calibrated_groups = str(overlaid_value(
             calibrated_paths, "birth", "min_groups"))
         calibrated_survival = str(overlaid_value(
             calibrated_paths, "tracker", "survival_lambda_per_s"))
-        values = {
-            "A1": ("2", "false", "false", "false"),
-            "A2": ("3", "false", "false", "false"),
-            "A3": ("3", "true", "true", "true"),
-            "B1": ("2", "false", "false", "true", "0.0"),
-            "B2": ("3", "false", "false", "true", "0.0"),
-            "B3": (calibrated_groups, "true", "false", "true",
-                   calibrated_survival),
-            "B4": (calibrated_groups, "true", "true", "true",
-                   calibrated_survival),
-        }[algorithm]
-        if len(values) == 4:
-            values += ("0.05",)
+        defaults = {
+            "groups": calibrated_groups, "opportunity": "true",
+            "feedback": "true", "hungarian": "true",
+            "survival_lambda": calibrated_survival, "split": "true",
+            "imm": "true", "survival": "true", "reportability": "true",
+            "dormant": "true", "certified": "true", "epistemic": "true",
+        }
+        overrides = {
+            "A1": {"groups": "2", "opportunity": "false",
+                   "feedback": "false", "hungarian": "false"},
+            "A2": {"groups": "3", "opportunity": "false",
+                   "feedback": "false", "hungarian": "false"},
+            "A3": {"groups": "3"},
+            "B1": {"groups": "2", "opportunity": "false",
+                   "feedback": "false", "survival_lambda": "0.0"},
+            "B2": {"groups": "3", "opportunity": "false",
+                   "feedback": "false", "survival_lambda": "0.0"},
+            "B3": {"feedback": "false", "reportability": "false",
+                   "dormant": "false"},
+            "B4": {"reportability": "false", "dormant": "false"},
+            "V3-A": {"split": "false", "imm": "false", "dormant": "false"},
+            "V3-B": {"dormant": "false"},
+            "V3-C": {},
+            "S04-base": {"split": "false", "imm": "false",
+                         "dormant": "false"},
+            "S04-split": {"imm": "false", "dormant": "false"},
+            "S04-IMM": {"split": "false", "dormant": "false"},
+            "S04-split-IMM": {"dormant": "false"},
+            "C0": {"opportunity": "false", "survival": "false",
+                   "reportability": "false", "dormant": "false"},
+            "C1": {"survival": "false", "reportability": "false",
+                   "dormant": "false"},
+            "C2": {"dormant": "false"},
+            "C3": {},
+        }
+        values = dict(defaults)
+        values.update(overrides[algorithm])
+        if legacy:
+            values.update({"split": "false", "imm": "false",
+                           "reportability": "false", "dormant": "false",
+                           "certified": "false", "epistemic": "false"})
+            values["survival"] = "false" if algorithm in ("A1", "A2", "B1", "B2") \
+                else "true"
         return time_prefix + [
             "roslaunch", "soft_vofod_mid360", "soft_vofod.launch", "output:=log",
+            "config:=" + config_path,
             "config_overlay:=" + self.arguments.soft_config_overlay,
-            "birth_min_groups:=" + values[0],
-            "opportunity_aware_existence:=" + values[1],
-            "target_feedback:=" + values[2],
-            "hungarian_association:=" + values[3],
-            "survival_lambda_per_s:=" + values[4],
+            "birth_min_groups:=" + values["groups"],
+            "opportunity_aware_existence:=" + values["opportunity"],
+            "target_feedback:=" + values["feedback"],
+            "hungarian_association:=" + values["hungarian"],
+            "survival_lambda_per_s:=" + values["survival_lambda"],
+            "track_conditioned_packet_split:=" + values["split"],
+            "cv_ca_imm:=" + values["imm"],
+            "survival_prediction:=" + values["survival"],
+            "reportability_filtering:=" + values["reportability"],
+            "dormant_reacquisition:=" + values["dormant"],
+            "certified_free_detection:=" + values["certified"],
+            "epistemic_unknown_birth:=" + values["epistemic"],
         ]
 
     def replay(self, algorithm, scene, noise, seed, source_bag, source_manifest):
@@ -871,8 +931,10 @@ class BenchmarkRunner:
                     "/uav1/vofod_mid360/profiling_info",
                     "/uav1/batch/b0/lidar_tracker_mid360/profiling_info",
                 ] if algorithm == "B0" else [
-                    "/soft_vofod/events", "/soft_vofod/tracks",
+                    "/soft_vofod/events", "/soft_vofod/maintenance_packets",
+                    "/soft_vofod/tracks", "/soft_vofod/track_memory",
                     "/soft_vofod/background_voxels", "/soft_vofod/free_voxels",
+                    "/soft_vofod/observed_free_voxels",
                     "/soft_vofod/candidate_background_voxels",
                     "/soft_vofod/opportunity_debug", "/soft_vofod/diagnostics",
                 ])
