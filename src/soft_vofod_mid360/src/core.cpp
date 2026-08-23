@@ -2833,6 +2833,9 @@ void SoftVofodCore::processBatch(
               static_cast<int>(track_index))
         continue;
       const Event& packet = *measurements[measurement_index].packet;
+      if (packet.background_distance_m <
+          config_.map.event_background_exclusion_m)
+        continue;
       const Mat3 innovation_covariance =
           tracks_[track_index].covariance.block<3, 3>(0, 0) +
           packet.covariance;
@@ -2936,7 +2939,7 @@ void SoftVofodCore::processBatch(
       birth_eligible_measurements > 0U)
   {
     const auto compatible_reacquisition_packet =
-        [this](const Event& packet)
+        [this](const Event& packet, const Vec3& innovation)
         {
           if (packet.birth_evidence_type ==
               BirthEvidenceType::certified_free_violation)
@@ -2944,6 +2947,9 @@ void SoftVofodCore::processBatch(
           if (packet.birth_evidence_type !=
               BirthEvidenceType::unknown_independent_motion)
             return false;
+          if (innovation.norm() <= config_.tracker.target_radius_m +
+                  config_.birth.max_residual_m)
+            return true;
           const Event* nearest_prior = nullptr;
           double nearest_distance_squared =
               std::numeric_limits<double>::infinity();
@@ -2999,14 +3005,16 @@ void SoftVofodCore::processBatch(
         if (global_packet_matched[packet_index])
           continue;
         const Event& packet = maintenance_packets[packet_index];
-        if (!compatible_reacquisition_packet(packet))
+        const Vec3 measurement = packet.position_m + track.x.tail<3>() *
+            std::max(0.0, batch_time_s - packet.time_s);
+        const Vec3 innovation = measurement - track.x.head<3>();
+        if (packet.background_distance_m <
+                config_.map.event_background_exclusion_m ||
+            !compatible_reacquisition_packet(packet, innovation))
         {
           ++result->diagnostics.dormant_reacquisition_rejections;
           continue;
         }
-        const Vec3 measurement = packet.position_m + track.x.tail<3>() *
-            std::max(0.0, batch_time_s - packet.time_s);
-        const Vec3 innovation = measurement - track.x.head<3>();
         const Mat3 innovation_covariance =
             track.covariance.block<3, 3>(0, 0) + packet.covariance;
         const Eigen::LDLT<Mat3> decomposition(innovation_covariance);

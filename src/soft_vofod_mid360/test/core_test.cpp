@@ -1118,6 +1118,39 @@ TEST(PacketMaintenance, RawReturnWaitsForPacketAndUnknownCanMaintainTrack)
   EXPECT_DOUBLE_EQ(result.tracks.front().last_measurement_time_s, 0.2);
 }
 
+TEST(PacketMaintenance, StableSurfacePacketCannotCaptureTrack)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  config.tracker.survival_lambda_per_s = 0.0;
+  soft_vofod::SoftVofodCore core(config);
+  for (uint32_t scan = 0U; scan < 10U; ++scan)
+  {
+    const double time_s = 0.01 + 0.2 * scan;
+    core.processScan(
+        scan, time_s,
+        {ray(time_s, soft_vofod::ReturnStatus::valid_return, 5.0)});
+  }
+  ASSERT_EQ(core.backgroundMap().query(
+      soft_vofod::Vec3(5.0, 0.0, 0.0)).state,
+      soft_vofod::VoxelState::stable_background);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.9;
+  track.last_prediction_time_s = 1.81;
+  track.last_existence_time_s = 1.81;
+  track.last_measurement_time_s = 1.81;
+  core.addTrackForTest(track);
+
+  core.processScan(
+      10U, 1.82,
+      {ray(1.82, soft_vofod::ReturnStatus::valid_return, 5.0)});
+  const soft_vofod::ScanResult result = core.processScan(
+      11U, 2.02, {ray(2.02, soft_vofod::ReturnStatus::invalid_range)});
+
+  EXPECT_GT(result.diagnostics.track_explained_maintenance_packets, 0U);
+  EXPECT_EQ(result.diagnostics.matches, 0U);
+}
+
 TEST(PacketMaintenance, TrackConditionedSplitGivesMixedPacketUniqueOwners)
 {
   soft_vofod::Config config = testConfig();
@@ -1228,11 +1261,12 @@ TEST(DormantLifecycle, StationaryUnknownPacketCannotReactivate)
   soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
   track.state = soft_vofod::TrackState::dormant;
   track.existence_probability = 0.9;
+  track.covariance = 4.0 * soft_vofod::Mat6::Identity();
   core.addTrackForTest(track);
   soft_vofod::Event prior;
   prior.group_id = 1U;
   prior.time_s = 0.0;
-  prior.position_m = track.x.head<3>();
+  prior.position_m = soft_vofod::Vec3(7.0, 0.0, 0.0);
   prior.covariance = 0.01 * soft_vofod::Mat3::Identity();
   prior.birth_evidence_type =
       soft_vofod::BirthEvidenceType::unknown_independent_motion;
@@ -1240,7 +1274,7 @@ TEST(DormantLifecycle, StationaryUnknownPacketCannotReactivate)
 
   core.processScan(
       1U, 0.1,
-      {ray(0.1, soft_vofod::ReturnStatus::valid_return, 5.0)});
+      {ray(0.1, soft_vofod::ReturnStatus::valid_return, 7.0)});
   const soft_vofod::ScanResult result = core.processScan(
       2U, 0.3, {ray(0.3, soft_vofod::ReturnStatus::invalid_range)});
 
@@ -1257,9 +1291,10 @@ TEST(DormantLifecycle, MovingUnknownPairReactivatesWithoutFullBirthGroups)
   config.ablation.cv_ca_imm = false;
   config.birth.unknown_motion_gate_d2 = 3.0;
   soft_vofod::SoftVofodCore core(config);
-  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(7.0, 0.0, 0.0));
   track.state = soft_vofod::TrackState::dormant;
   track.existence_probability = 0.9;
+  track.covariance = 4.0 * soft_vofod::Mat6::Identity();
   core.addTrackForTest(track);
   soft_vofod::Event prior;
   prior.group_id = 1U;
