@@ -13,6 +13,9 @@
     <param name="map/dimensions/z" value="6.0"/>
     <param name="map/evidence_scale" value="1.0"/>
     <param name="map/confidence_threshold" value="0.5"/>
+    <param name="map/certified_free_min_epochs" value="3"/>
+    <param name="map/certified_free_min_duration_s" value="0.4"/>
+    <param name="map/certified_free_min_valid_epochs" value="0"/>
     <param name="birth/min_duration_s" value="0.1"/>
     <param name="birth/min_total_anomaly_score" value="1.5"/>
     <param name="safety/max_time_jump_s" value="2.0"/>

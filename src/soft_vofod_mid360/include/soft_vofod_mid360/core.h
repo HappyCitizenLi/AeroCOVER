@@ -19,8 +19,10 @@ namespace soft_vofod
 
 using Vec3 = Eigen::Vector3d;
 using Vec6 = Eigen::Matrix<double, 6, 1>;
+using Vec9 = Eigen::Matrix<double, 9, 1>;
 using Mat3 = Eigen::Matrix3d;
 using Mat6 = Eigen::Matrix<double, 6, 6>;
+using Mat9 = Eigen::Matrix<double, 9, 9>;
 
 enum class ReturnStatus : uint8_t
 {
@@ -34,16 +36,28 @@ enum class ReturnStatus : uint8_t
 enum class VoxelState : uint8_t
 {
   unknown = 0,
-  confident_free = 1,
-  candidate_background = 2,
-  stable_background = 3,
+  observed_free = 1,
+  certified_free = 2,
+  candidate_background = 3,
+  stable_background = 4,
+};
+
+enum class BirthEvidenceType : uint8_t
+{
+  none = 0,
+  certified_free_violation = 1,
+  unknown_independent_motion = 2,
+  track_reactivation = 3,
 };
 
 enum class TrackState : uint8_t
 {
   tentative = 1,
-  confirmed = 2,
-  deleting = 3,
+  confirmed_active = 2,
+  confirmed = confirmed_active,
+  occluded = 3,
+  dormant = 4,
+  deleting = 5,
 };
 
 struct MapConfig
@@ -60,6 +74,10 @@ struct MapConfig
   double map_epoch_hz = 5.0;
   double free_saturation_n0 = 1.0;
   double free_epoch_weight = 1.0;
+  uint32_t certified_free_min_epochs = 3;
+  double certified_free_min_duration_s = 0.4;
+  uint32_t certified_free_min_valid_epochs = 1;
+  double surface_uncertainty_margin_m = 0.75;
   double background_attach_distance_m = 0.8;
   double background_separate_distance_m = 1.0;
   double free_packet_ratio = 0.5;
@@ -103,6 +121,7 @@ struct BirthConfig
   double suppression_radius_m = 1.0;
   double birth_spatial_cell_m = 1.0;
   uint32_t max_births_per_spatial_cell_per_epoch = 1U;
+  double unknown_motion_gate_d2 = 11.345;
 };
 
 struct TrackerConfig
@@ -131,6 +150,19 @@ struct TrackerConfig
   double duplicate_merge_birth_dt_s = 0.5;
   double hard_timeout_s = 30.0;
   double quarantine_duration_s = 2.0;
+  double ca_jerk_sigma_mps3 = 3.0;
+  double imm_initial_acceleration_variance_m2ps4 = 9.0;
+  double imm_cv_to_ca_probability = 0.05;
+  double imm_ca_to_cv_probability = 0.1;
+  double occlusion_enter_score = 0.6;
+  double occluded_to_dormant_s = 1.0;
+  double dormant_timeout_s = 8.0;
+  double dormant_reacquisition_gate_d2 = 16.266;
+  double reacquisition_max_speed_mps = 15.0;
+  double reacquisition_max_acceleration_mps2 = 6.0;
+  double reportability_time_constant_s = 1.0;
+  double reportability_uncertainty_scale_m = 1.5;
+  double reportability_threshold = 0.2;
 };
 
 struct OpportunityConfig
@@ -149,6 +181,10 @@ struct AblationConfig
   bool opportunity_aware_existence = true;
   bool target_feedback = true;
   bool hungarian_association = true;
+  bool track_conditioned_packet_split = true;
+  bool cv_ca_imm = true;
+  bool survival_reportability = true;
+  bool dormant_reacquisition = true;
 };
 
 struct Config
@@ -190,7 +226,9 @@ struct Event
   double stamp_end_s = 0.0;
   uint32_t point_count = 1U;
   std::vector<uint32_t> original_indices;
+  std::vector<Vec3> points_m;
   Mat3 covariance = Mat3::Identity();
+  BirthEvidenceType birth_evidence_type = BirthEvidenceType::none;
 };
 
 struct Track
@@ -205,6 +243,20 @@ struct Track
   double last_existence_time_s = 0.0;
   double last_measurement_time_s = 0.0;
   uint32_t positive_updates = 0;
+  BirthEvidenceType birth_evidence_type = BirthEvidenceType::none;
+  BirthEvidenceType last_evidence_type = BirthEvidenceType::none;
+  Vec6 imm_cv_x = Vec6::Zero();
+  Mat6 imm_cv_covariance = Mat6::Identity();
+  Vec9 imm_ca_x = Vec9::Zero();
+  Mat9 imm_ca_covariance = Mat9::Identity();
+  Eigen::Vector2d imm_mode_probabilities = Eigen::Vector2d(0.8, 0.2);
+  bool imm_initialized = false;
+  double reportability_score = 0.0;
+  bool reportable = true;
+  double state_entry_time_s = 0.0;
+  Vec3 last_measurement_position_m = Vec3::Zero();
+  bool has_measurement_position = false;
+  uint32_t reactivation_count = 0U;
   double cumulative_effective_opportunity = 0.0;
   std::string deletion_reason;
 };
@@ -216,6 +268,9 @@ struct OpportunityResult
   double effective_opportunity = 0.0;
   double measurement_likelihood = 0.0;
   bool matched = false;
+  double occlusion_probability = 0.0;
+  double occlusion_evidence = 0.0;
+  double intersection_evidence = 0.0;
 };
 
 struct VoxelQuery
@@ -248,14 +303,39 @@ struct ProcessDiagnostics
   size_t deleted_hard_timeout = 0;
   size_t merged_duplicates = 0;
   size_t free_voxel_updates = 0;
+  size_t observed_free_voxels = 0;
+  size_t certified_free_voxels = 0;
+  size_t certified_free_violation_packets = 0;
+  size_t unknown_motion_packets = 0;
+  size_t certified_free_births = 0;
+  size_t unknown_motion_births = 0;
+  size_t unknown_motion_rejections = 0;
+  size_t track_conditioned_split_count = 0;
+  size_t track_conditioned_split_packets = 0;
+  size_t split_points_assigned = 0;
+  size_t split_points_unassigned = 0;
+  size_t association_gate_rejections = 0;
+  size_t occluded_transitions = 0;
+  size_t dormant_entries = 0;
+  size_t dormant_reactivations = 0;
+  size_t dormant_expirations = 0;
+  size_t dormant_reacquisition_rejections = 0;
   bool background_endpoint_updates_enabled = true;
   bool birth_enabled = true;
   bool opportunity_aware_existence = true;
   bool target_feedback = true;
   bool hungarian_association = true;
+  bool track_conditioned_packet_split = true;
+  bool cv_ca_imm = true;
+  bool survival_reportability = true;
+  bool dormant_reacquisition = true;
   double processing_ms = 0.0;
   double classification_ms = 0.0;
   double tracking_ms = 0.0;
+  double packet_split_ms = 0.0;
+  double imm_ms = 0.0;
+  double hungarian_ms = 0.0;
+  double dormant_reacquisition_ms = 0.0;
   double map_commit_ms = 0.0;
   size_t map_voxel_count = 0;
   size_t track_count = 0;
@@ -289,6 +369,7 @@ struct ScanResult
   uint32_t scan_id = 0;
   double stamp_s = 0.0;
   std::vector<Event> events;
+  std::vector<Event> maintenance_events;
   std::vector<Track> tracks;
   std::vector<OpportunityResult> opportunities;
   ProcessDiagnostics diagnostics;
@@ -304,12 +385,20 @@ struct BackgroundVoxel
   double candidate_last_time_s = 0.0;
   double last_update_time_s = 0.0;
   double quarantine_until_s = 0.0;
+  uint32_t free_epoch_count = 0U;
+  uint32_t valid_free_epoch_count = 0U;
+  uint32_t no_return_free_epoch_count = 0U;
+  double first_free_epoch_s = 0.0;
+  double last_free_epoch_s = 0.0;
+  bool surface_guarded = false;
   VoxelState state = VoxelState::unknown;
 };
 
 struct MapEpochCommit
 {
   size_t free_voxels = 0;
+  size_t observed_free_voxels = 0;
+  size_t certified_free_voxels = 0;
   size_t background_voxels = 0;
   double raw_free_evidence = 0.0;
   double committed_free_evidence = 0.0;
@@ -362,6 +451,8 @@ public:
 
 private:
   void updateState(BackgroundVoxel* voxel, double time_s, bool allow_promotion);
+  bool nearBackgroundSurface(size_t linear_index) const;
+  void revokeCertifiedNearSurface(size_t linear_index, double time_s);
   void addStableDistanceSource(size_t linear_index) const;
   void rebuildStableDistances() const;
   bool updateUnknownCandidate(
@@ -380,6 +471,8 @@ private:
   double epoch_start_time_s_ = std::numeric_limits<double>::quiet_NaN();
   uint64_t epoch_id_ = 0U;
   std::vector<double> epoch_free_evidence_;
+  std::vector<double> epoch_valid_free_evidence_;
+  std::vector<double> epoch_no_return_free_evidence_;
   std::vector<size_t> epoch_free_voxels_;
   struct EpochReturnVoxel
   {
@@ -438,6 +531,8 @@ public:
 
   static Mat6 transition(double dt_s);
   static Mat6 processNoise(double dt_s, double acceleration_sigma_mps2);
+  static Mat9 caTransition(double dt_s);
+  static Mat9 caProcessNoise(double dt_s, double jerk_sigma_mps3);
   static double missedExistence(double prior, double detection_probability);
   static double survivalExistence(
       double prior, double lambda_per_s, double dt_s);
@@ -460,6 +555,8 @@ public:
   OpportunityResult opportunityForTest(
       const Track& track, const std::vector<RaySample>& rays,
       const std::vector<Track>& tracks, bool matched = false) const;
+  void predictImmForTest(Track* track, double dt_s) const;
+  double updateImmForTest(Track* track, const Event& packet) const;
 
 private:
   struct Measurement
@@ -467,6 +564,8 @@ private:
     const Event* packet = nullptr;
     double anomaly_score = 0.0;
     bool birth_eligible = false;
+    size_t global_packet_index = 0U;
+    int conditioned_track_index = -1;
   };
 
   struct Support
@@ -502,6 +601,8 @@ private:
     uint32_t groups = 0;
     double anomaly_score = 0.0;
     double residual_rms_m = 0.0;
+    double motion_d2 = 0.0;
+    BirthEvidenceType evidence_type = BirthEvidenceType::none;
   };
 
   void processBatch(
@@ -509,9 +610,21 @@ private:
       bool background_endpoint_updates_enabled, bool birth_enabled,
       ScanResult* result);
   void predictTracks(double time_s);
+  void initializeImm(Track* track) const;
+  void predictImm(Track* track, double dt_s) const;
+  double updateImm(Track* track, const Event& packet) const;
+  double updateTrackState(Track* track, const Event& packet) const;
+  void momentMatchImm(Track* track) const;
+  Event packetFromPoints(
+      const Event& source, const std::vector<size_t>& point_indices) const;
+  std::vector<Measurement> maintenanceMeasurements(
+      const std::vector<Event>& packets, size_t birth_eligible_packets,
+      size_t tracks_before_birth, std::vector<Event>* split_packets,
+      ProcessDiagnostics* diagnostics) const;
   void mergeDuplicateTracks(ScanResult* result);
   bool duplicateTracks(const Track& first, const Track& second) const;
-  std::optional<BirthCandidate> bestBirthCandidate(double time_s) const;
+  std::optional<BirthCandidate> bestBirthCandidate(
+      double time_s, ProcessDiagnostics* diagnostics = nullptr) const;
   std::optional<Track> createBirth(
       double time_s, ProcessDiagnostics* diagnostics = nullptr);
   bool birthCellAvailable(const Vec3& position_m, double time_s) const;

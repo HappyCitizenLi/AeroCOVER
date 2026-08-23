@@ -1,6 +1,14 @@
 uint8 TENTATIVE=1
 uint8 CONFIRMED=2
-uint8 DELETING=3
+uint8 CONFIRMED_ACTIVE=2
+uint8 OCCLUDED=3
+uint8 DORMANT=4
+uint8 DELETING=5
+uint8 RETIRED=5
+uint8 BIRTH_NONE=0
+uint8 BIRTH_CERTIFIED_FREE_VIOLATION=1
+uint8 BIRTH_UNKNOWN_INDEPENDENT_MOTION=2
+uint8 BIRTH_TRACK_REACTIVATION=3
 
 std_msgs/Header header
 uint32 track_id
@@ -14,4 +22,9 @@ uint32 num_positive_updates
 float32 cumulative_effective_opportunity
 float32 time_since_last_measurement
 string deletion_reason
-
+uint8 birth_evidence_type
+float32[2] imm_mode_probabilities
+float32 reportability_score
+bool reportable
+uint8 last_evidence_type
+uint32 reactivation_count

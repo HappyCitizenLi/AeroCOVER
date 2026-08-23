@@ -10,4 +10,10 @@ time stamp_start
 time stamp_end
 uint32 point_count
 uint32[] original_indices
+geometry_msgs/Point[] points
 float64[9] covariance
+uint8 NONE=0
+uint8 CERTIFIED_FREE_VIOLATION=1
+uint8 UNKNOWN_INDEPENDENT_MOTION=2
+uint8 TRACK_REACTIVATION=3
+uint8 birth_evidence_type

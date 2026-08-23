@@ -120,12 +120,18 @@ public:
 
     events_pub_ = private_nh_.advertise<
         soft_vofod_mid360::FreeSpaceViolationEvents>("events", 2);
+    maintenance_events_pub_ = private_nh_.advertise<
+        soft_vofod_mid360::FreeSpaceViolationEvents>("maintenance_packets", 2);
     tracks_pub_ = private_nh_.advertise<soft_vofod_mid360::SoftTracks>(
         "tracks", 2);
+    track_memory_pub_ = private_nh_.advertise<soft_vofod_mid360::SoftTracks>(
+        "track_memory", 2);
     background_pub_ = private_nh_.advertise<sensor_msgs::PointCloud2>(
         "background_voxels", 1, true);
     free_pub_ = private_nh_.advertise<sensor_msgs::PointCloud2>(
         "free_voxels", 1, true);
+    observed_free_pub_ = private_nh_.advertise<sensor_msgs::PointCloud2>(
+        "observed_free_voxels", 1, true);
     candidate_pub_ = private_nh_.advertise<sensor_msgs::PointCloud2>(
         "candidate_background_voxels", 1, true);
     opportunity_pub_ = private_nh_.advertise<
@@ -184,6 +190,26 @@ private:
     parameter("map/map_epoch_hz", &config->map.map_epoch_hz);
     parameter("map/free_saturation_n0", &config->map.free_saturation_n0);
     parameter("map/free_epoch_weight", &config->map.free_epoch_weight);
+    int certified_free_min_epochs = static_cast<int>(
+        config->map.certified_free_min_epochs);
+    parameter("map/certified_free_min_epochs", &certified_free_min_epochs);
+    if (certified_free_min_epochs <= 0)
+      throw std::invalid_argument("certified free epochs must be positive");
+    config->map.certified_free_min_epochs =
+        static_cast<uint32_t>(certified_free_min_epochs);
+    parameter("map/certified_free_min_duration_s",
+              &config->map.certified_free_min_duration_s);
+    int certified_free_min_valid_epochs = static_cast<int>(
+        config->map.certified_free_min_valid_epochs);
+    parameter("map/certified_free_min_valid_epochs",
+              &certified_free_min_valid_epochs);
+    if (certified_free_min_valid_epochs < 0)
+      throw std::invalid_argument(
+          "certified valid-free epochs cannot be negative");
+    config->map.certified_free_min_valid_epochs =
+        static_cast<uint32_t>(certified_free_min_valid_epochs);
+    parameter("map/surface_uncertainty_margin_m",
+              &config->map.surface_uncertainty_margin_m);
     parameter("map/background_attach_distance_m",
               &config->map.background_attach_distance_m);
     parameter("map/background_separate_distance_m",
@@ -264,6 +290,8 @@ private:
       throw std::invalid_argument("birth cell cap must be positive");
     config->birth.max_births_per_spatial_cell_per_epoch =
         static_cast<uint32_t>(max_births_per_cell);
+    parameter("birth/unknown_motion_gate_d2",
+              &config->birth.unknown_motion_gate_d2);
 
     parameter("tracker/acceleration_sigma_mps2",
               &config->tracker.acceleration_sigma_mps2);
@@ -306,6 +334,32 @@ private:
     parameter("tracker/hard_timeout_s", &config->tracker.hard_timeout_s);
     parameter("tracker/quarantine_duration_s",
               &config->tracker.quarantine_duration_s);
+    parameter("tracker/ca_jerk_sigma_mps3",
+              &config->tracker.ca_jerk_sigma_mps3);
+    parameter("tracker/imm_initial_acceleration_variance_m2ps4",
+              &config->tracker.imm_initial_acceleration_variance_m2ps4);
+    parameter("tracker/imm_cv_to_ca_probability",
+              &config->tracker.imm_cv_to_ca_probability);
+    parameter("tracker/imm_ca_to_cv_probability",
+              &config->tracker.imm_ca_to_cv_probability);
+    parameter("tracker/occlusion_enter_score",
+              &config->tracker.occlusion_enter_score);
+    parameter("tracker/occluded_to_dormant_s",
+              &config->tracker.occluded_to_dormant_s);
+    parameter("tracker/dormant_timeout_s",
+              &config->tracker.dormant_timeout_s);
+    parameter("tracker/dormant_reacquisition_gate_d2",
+              &config->tracker.dormant_reacquisition_gate_d2);
+    parameter("tracker/reacquisition_max_speed_mps",
+              &config->tracker.reacquisition_max_speed_mps);
+    parameter("tracker/reacquisition_max_acceleration_mps2",
+              &config->tracker.reacquisition_max_acceleration_mps2);
+    parameter("tracker/reportability_time_constant_s",
+              &config->tracker.reportability_time_constant_s);
+    parameter("tracker/reportability_uncertainty_scale_m",
+              &config->tracker.reportability_uncertainty_scale_m);
+    parameter("tracker/reportability_threshold",
+              &config->tracker.reportability_threshold);
 
     parameter("opportunity/return_probability",
               &config->opportunity.return_probability);
@@ -326,6 +380,13 @@ private:
     parameter("ablation/target_feedback", &config->ablation.target_feedback);
     parameter("ablation/hungarian_association",
               &config->ablation.hungarian_association);
+    parameter("ablation/track_conditioned_packet_split",
+              &config->ablation.track_conditioned_packet_split);
+    parameter("ablation/cv_ca_imm", &config->ablation.cv_ca_imm);
+    parameter("ablation/survival_reportability",
+              &config->ablation.survival_reportability);
+    parameter("ablation/dormant_reacquisition",
+              &config->ablation.dormant_reacquisition);
   }
 
   bool convertInput(
@@ -521,6 +582,91 @@ private:
     return output;
   }
 
+  soft_vofod_mid360::FreeSpaceViolationEvent eventMessage(
+      const soft_vofod::Event& event) const
+  {
+    soft_vofod_mid360::FreeSpaceViolationEvent output;
+    output.header.frame_id = world_frame_id_;
+    output.header.stamp = rosTime(event.time_s);
+    output.scan_id = event.scan_id;
+    output.original_index = event.original_index;
+    output.position.x = event.position_m.x();
+    output.position.y = event.position_m.y();
+    output.position.z = event.position_m.z();
+    output.ray_direction.x = event.ray_direction.x();
+    output.ray_direction.y = event.ray_direction.y();
+    output.ray_direction.z = event.ray_direction.z();
+    output.free_confidence = static_cast<float>(event.free_confidence);
+    output.background_distance =
+        static_cast<float>(event.background_distance_m);
+    output.anomaly_score = static_cast<float>(event.anomaly_score);
+    output.stamp_start = rosTime(event.stamp_start_s);
+    output.stamp_end = rosTime(event.stamp_end_s);
+    output.point_count = event.point_count;
+    output.original_indices = event.original_indices;
+    output.points.reserve(event.points_m.size());
+    for (const soft_vofod::Vec3& point : event.points_m)
+    {
+      geometry_msgs::Point message_point;
+      message_point.x = point.x();
+      message_point.y = point.y();
+      message_point.z = point.z();
+      output.points.push_back(message_point);
+    }
+    for (int row = 0; row < 3; ++row)
+    {
+      for (int column = 0; column < 3; ++column)
+        output.covariance[3 * row + column] = event.covariance(row, column);
+    }
+    output.birth_evidence_type =
+        static_cast<uint8_t>(event.birth_evidence_type);
+    return output;
+  }
+
+  soft_vofod_mid360::SoftTrack trackMessage(
+      const soft_vofod::Track& track) const
+  {
+    soft_vofod_mid360::SoftTrack output;
+    output.header.frame_id = world_frame_id_;
+    output.header.stamp = rosTime(track.last_prediction_time_s);
+    output.track_id = track.id;
+    output.position.x = track.x[0];
+    output.position.y = track.x[1];
+    output.position.z = track.x[2];
+    output.velocity.x = track.x[3];
+    output.velocity.y = track.x[4];
+    output.velocity.z = track.x[5];
+    for (int row = 0; row < 6; ++row)
+    {
+      for (int column = 0; column < 6; ++column)
+        output.covariance[6 * row + column] = track.covariance(row, column);
+    }
+    output.existence_probability =
+        static_cast<float>(track.existence_probability);
+    output.state = static_cast<uint8_t>(track.state);
+    output.age = static_cast<float>(
+        std::max(0.0, track.last_prediction_time_s - track.birth_time_s));
+    output.num_positive_updates = track.positive_updates;
+    output.cumulative_effective_opportunity = static_cast<float>(
+        track.cumulative_effective_opportunity);
+    output.time_since_last_measurement = static_cast<float>(std::max(
+        0.0, track.last_prediction_time_s - track.last_measurement_time_s));
+    output.deletion_reason = track.deletion_reason;
+    output.birth_evidence_type =
+        static_cast<uint8_t>(track.birth_evidence_type);
+    output.imm_mode_probabilities[0] = static_cast<float>(
+        track.imm_mode_probabilities[0]);
+    output.imm_mode_probabilities[1] = static_cast<float>(
+        track.imm_mode_probabilities[1]);
+    output.reportability_score =
+        static_cast<float>(track.reportability_score);
+    output.reportable = track.reportable;
+    output.last_evidence_type =
+        static_cast<uint8_t>(track.last_evidence_type);
+    output.reactivation_count = track.reactivation_count;
+    return output;
+  }
+
   void publishResult(
       const soft_vofod::ScanResult& result,
       const std_msgs::Header& source_header)
@@ -529,69 +675,31 @@ private:
     events.header = source_header;
     events.events.reserve(result.events.size());
     for (const auto& event : result.events)
-    {
-      soft_vofod_mid360::FreeSpaceViolationEvent output;
-      output.header.frame_id = world_frame_id_;
-      output.header.stamp = rosTime(event.time_s);
-      output.scan_id = event.scan_id;
-      output.original_index = event.original_index;
-      output.position.x = event.position_m.x();
-      output.position.y = event.position_m.y();
-      output.position.z = event.position_m.z();
-      output.ray_direction.x = event.ray_direction.x();
-      output.ray_direction.y = event.ray_direction.y();
-      output.ray_direction.z = event.ray_direction.z();
-      output.free_confidence = static_cast<float>(event.free_confidence);
-      output.background_distance =
-          static_cast<float>(event.background_distance_m);
-      output.anomaly_score = static_cast<float>(event.anomaly_score);
-      output.stamp_start = rosTime(event.stamp_start_s);
-      output.stamp_end = rosTime(event.stamp_end_s);
-      output.point_count = event.point_count;
-      output.original_indices = event.original_indices;
-      for (int row = 0; row < 3; ++row)
-      {
-        for (int column = 0; column < 3; ++column)
-          output.covariance[3 * row + column] = event.covariance(row, column);
-      }
-      events.events.push_back(output);
-    }
+      events.events.push_back(eventMessage(event));
     events_pub_.publish(events);
 
+    soft_vofod_mid360::FreeSpaceViolationEvents maintenance_events;
+    maintenance_events.header = source_header;
+    maintenance_events.events.reserve(result.maintenance_events.size());
+    for (const auto& event : result.maintenance_events)
+      maintenance_events.events.push_back(eventMessage(event));
+    maintenance_events_pub_.publish(maintenance_events);
+
     soft_vofod_mid360::SoftTracks tracks;
+    soft_vofod_mid360::SoftTracks track_memory;
     tracks.header = source_header;
+    track_memory.header = source_header;
     tracks.tracks.reserve(result.tracks.size());
+    track_memory.tracks.reserve(result.tracks.size());
     for (const auto& track : result.tracks)
     {
-      soft_vofod_mid360::SoftTrack output;
-      output.header.frame_id = world_frame_id_;
-      output.header.stamp = rosTime(track.last_prediction_time_s);
-      output.track_id = track.id;
-      output.position.x = track.x[0];
-      output.position.y = track.x[1];
-      output.position.z = track.x[2];
-      output.velocity.x = track.x[3];
-      output.velocity.y = track.x[4];
-      output.velocity.z = track.x[5];
-      for (int row = 0; row < 6; ++row)
-      {
-        for (int column = 0; column < 6; ++column)
-          output.covariance[6 * row + column] = track.covariance(row, column);
-      }
-      output.existence_probability =
-          static_cast<float>(track.existence_probability);
-      output.state = static_cast<uint8_t>(track.state);
-      output.age = static_cast<float>(
-          std::max(0.0, track.last_prediction_time_s - track.birth_time_s));
-      output.num_positive_updates = track.positive_updates;
-      output.cumulative_effective_opportunity = static_cast<float>(
-          track.cumulative_effective_opportunity);
-      output.time_since_last_measurement = static_cast<float>(std::max(
-          0.0, track.last_prediction_time_s - track.last_measurement_time_s));
-      output.deletion_reason = track.deletion_reason;
-      tracks.tracks.push_back(output);
+      const soft_vofod_mid360::SoftTrack output = trackMessage(track);
+      track_memory.tracks.push_back(output);
+      if (track.reportable)
+        tracks.tracks.push_back(output);
     }
     tracks_pub_.publish(tracks);
+    track_memory_pub_.publish(track_memory);
 
     soft_vofod_mid360::OpportunityDebug opportunity;
     opportunity.header = source_header;
@@ -603,6 +711,8 @@ private:
       opportunity.effective_opportunities.push_back(
           static_cast<float>(item.effective_opportunity));
       opportunity.matched.push_back(item.matched);
+      opportunity.occlusion_probabilities.push_back(
+          static_cast<float>(item.occlusion_probability));
     }
     opportunity_pub_.publish(opportunity);
 
@@ -614,7 +724,10 @@ private:
               soft_vofod::VoxelState::stable_background), source_header));
       free_pub_.publish(mapCloud(
           core_->backgroundMap().points(
-              soft_vofod::VoxelState::confident_free), source_header));
+              soft_vofod::VoxelState::certified_free), source_header));
+      observed_free_pub_.publish(mapCloud(
+          core_->backgroundMap().points(
+              soft_vofod::VoxelState::observed_free), source_header));
       candidate_pub_.publish(mapCloud(
           core_->backgroundMap().points(
               soft_vofod::VoxelState::candidate_background), source_header));
@@ -681,6 +794,48 @@ private:
       status.values.push_back(diagnosticValue(
           "free_voxel_updates", number(diagnostics->free_voxel_updates)));
       status.values.push_back(diagnosticValue(
+          "observed_free_voxels", number(diagnostics->observed_free_voxels)));
+      status.values.push_back(diagnosticValue(
+          "certified_free_voxels", number(diagnostics->certified_free_voxels)));
+      status.values.push_back(diagnosticValue(
+          "certified_free_violation_packets",
+          number(diagnostics->certified_free_violation_packets)));
+      status.values.push_back(diagnosticValue(
+          "unknown_motion_packets", number(diagnostics->unknown_motion_packets)));
+      status.values.push_back(diagnosticValue(
+          "certified_free_births", number(diagnostics->certified_free_births)));
+      status.values.push_back(diagnosticValue(
+          "unknown_motion_births", number(diagnostics->unknown_motion_births)));
+      status.values.push_back(diagnosticValue(
+          "unknown_motion_rejections",
+          number(diagnostics->unknown_motion_rejections)));
+      status.values.push_back(diagnosticValue(
+          "track_conditioned_split_count",
+          number(diagnostics->track_conditioned_split_count)));
+      status.values.push_back(diagnosticValue(
+          "track_conditioned_split_packets",
+          number(diagnostics->track_conditioned_split_packets)));
+      status.values.push_back(diagnosticValue(
+          "split_points_assigned",
+          number(diagnostics->split_points_assigned)));
+      status.values.push_back(diagnosticValue(
+          "split_points_unassigned",
+          number(diagnostics->split_points_unassigned)));
+      status.values.push_back(diagnosticValue(
+          "association_gate_rejections",
+          number(diagnostics->association_gate_rejections)));
+      status.values.push_back(diagnosticValue(
+          "occluded_transitions", number(diagnostics->occluded_transitions)));
+      status.values.push_back(diagnosticValue(
+          "dormant_entries", number(diagnostics->dormant_entries)));
+      status.values.push_back(diagnosticValue(
+          "dormant_reactivations", number(diagnostics->dormant_reactivations)));
+      status.values.push_back(diagnosticValue(
+          "dormant_expirations", number(diagnostics->dormant_expirations)));
+      status.values.push_back(diagnosticValue(
+          "dormant_reacquisition_rejections",
+          number(diagnostics->dormant_reacquisition_rejections)));
+      status.values.push_back(diagnosticValue(
           "background_endpoint_updates_enabled",
           diagnostics->background_endpoint_updates_enabled ? "true" : "false"));
       status.values.push_back(diagnosticValue(
@@ -694,11 +849,31 @@ private:
           "hungarian_association",
           diagnostics->hungarian_association ? "true" : "false"));
       status.values.push_back(diagnosticValue(
+          "track_conditioned_packet_split",
+          diagnostics->track_conditioned_packet_split ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "cv_ca_imm", diagnostics->cv_ca_imm ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "survival_reportability",
+          diagnostics->survival_reportability ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "dormant_reacquisition",
+          diagnostics->dormant_reacquisition ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
           "processing_ms", number(diagnostics->processing_ms)));
       status.values.push_back(diagnosticValue(
           "classification_ms", number(diagnostics->classification_ms)));
       status.values.push_back(diagnosticValue(
           "tracking_ms", number(diagnostics->tracking_ms)));
+      status.values.push_back(diagnosticValue(
+          "packet_split_ms", number(diagnostics->packet_split_ms)));
+      status.values.push_back(diagnosticValue(
+          "imm_ms", number(diagnostics->imm_ms)));
+      status.values.push_back(diagnosticValue(
+          "hungarian_ms", number(diagnostics->hungarian_ms)));
+      status.values.push_back(diagnosticValue(
+          "dormant_reacquisition_ms",
+          number(diagnostics->dormant_reacquisition_ms)));
       status.values.push_back(diagnosticValue(
           "map_commit_ms", number(diagnostics->map_commit_ms)));
       status.values.push_back(diagnosticValue(
@@ -834,9 +1009,12 @@ private:
   message_filters::Subscriber<mid360_ray_msgs::CheckedRayBundle> rays_sub_;
   std::unique_ptr<Synchronizer> synchronizer_;
   ros::Publisher events_pub_;
+  ros::Publisher maintenance_events_pub_;
   ros::Publisher tracks_pub_;
+  ros::Publisher track_memory_pub_;
   ros::Publisher background_pub_;
   ros::Publisher free_pub_;
+  ros::Publisher observed_free_pub_;
   ros::Publisher candidate_pub_;
   ros::Publisher opportunity_pub_;
   ros::Publisher diagnostics_pub_;

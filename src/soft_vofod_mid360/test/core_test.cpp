@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include <Eigen/Eigenvalues>
+
 #include <cmath>
 #include <set>
 #include <vector>
@@ -19,6 +21,9 @@ soft_vofod::Config testConfig()
   config.map.confidence_threshold = 0.5;
   config.map.background_promotion_groups = 3;
   config.map.background_promotion_duration_s = 0.1;
+  config.map.certified_free_min_epochs = 1U;
+  config.map.certified_free_min_duration_s = 0.0;
+  config.map.certified_free_min_valid_epochs = 0U;
   config.map.endpoint_guard_m = 0.5;
   config.map.max_no_return_free_range_m = 10.0;
   config.birth.min_groups = 3;
@@ -36,13 +41,17 @@ soft_vofod::Config testConfig()
 
 soft_vofod::Event event(
     const double time_s, const soft_vofod::Vec3& position,
-    const uint64_t group)
+    const uint64_t group,
+    const soft_vofod::BirthEvidenceType evidence_type =
+        soft_vofod::BirthEvidenceType::certified_free_violation)
 {
   soft_vofod::Event output;
   output.time_s = time_s;
   output.position_m = position;
   output.group_id = group;
   output.anomaly_score = 1.0;
+  output.covariance = 0.01 * soft_vofod::Mat3::Identity();
+  output.birth_evidence_type = evidence_type;
   return output;
 }
 
@@ -74,6 +83,19 @@ soft_vofod::Track trackAt(const soft_vofod::Vec3& position)
   return output;
 }
 
+void certifyFreeAlongX(
+    soft_vofod::BackgroundMap* const map, const double length_m)
+{
+  ASSERT_NE(map, nullptr);
+  EXPECT_FALSE(map->advanceEpoch(0.0).has_value());
+  map->carveFreeRay(
+      ray(0.01, soft_vofod::ReturnStatus::no_return), length_m, 1.0);
+  ASSERT_TRUE(map->advanceEpoch(0.2).has_value());
+  map->carveFreeRay(
+      ray(0.21, soft_vofod::ReturnStatus::no_return), length_m, 1.0);
+  ASSERT_TRUE(map->advanceEpoch(0.4).has_value());
+}
+
 void makeHoverTrack(
     soft_vofod::SoftVofodCore* core, const double target_range,
     const uint32_t first_scan = 0U)
@@ -102,7 +124,7 @@ TEST(BackgroundMap, ConservativeStateTransitions)
   soft_vofod::BackgroundMap map(config.map);
   const soft_vofod::Vec3 free_point(2.0, 0.0, 0.0);
   map.addFreeEvidence(free_point, 2.0, 0.0);
-  EXPECT_EQ(map.query(free_point).state, soft_vofod::VoxelState::confident_free);
+  EXPECT_EQ(map.query(free_point).state, soft_vofod::VoxelState::observed_free);
 
   const soft_vofod::Vec3 background_point(4.0, 1.0, 0.0);
   map.observeBackground(background_point, 0.0, 0U, true);
@@ -134,7 +156,7 @@ TEST(BackgroundMap, CandidateEndpointWinsOverCoarseVoxelFreeEvidence)
   soft_vofod::BackgroundMap map(config.map);
   const soft_vofod::Vec3 point(3.0, 0.0, 0.0);
   map.addFreeEvidence(point, 5.0, 0.0);
-  ASSERT_EQ(map.query(point).state, soft_vofod::VoxelState::confident_free);
+  ASSERT_EQ(map.query(point).state, soft_vofod::VoxelState::observed_free);
   map.observeBackground(point, 0.1, 1U, true);
   EXPECT_EQ(map.query(point).state,
             soft_vofod::VoxelState::candidate_background);
@@ -189,22 +211,86 @@ TEST(MapEpoch, DefersAndSaturatesCorrelatedFreeRays)
   EXPECT_LT(one_thousand, 1.01 * one_hundred);
 }
 
+TEST(CertifiedFree, RequiresIndependentEpochsAndPersistence)
+{
+  soft_vofod::Config config = testConfig();
+  config.map.certified_free_min_epochs = 3U;
+  config.map.certified_free_min_duration_s = 0.4;
+  config.map.certified_free_min_valid_epochs = 1U;
+  config.map.evidence_scale = 0.5;
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 point(2.0, 0.0, 0.0);
+  ASSERT_FALSE(map.advanceEpoch(0.0).has_value());
+  for (uint32_t epoch = 0U; epoch < 3U; ++epoch)
+  {
+    const double time_s = 0.01 + 0.2 * epoch;
+    map.carveFreeRay(
+        ray(time_s, soft_vofod::ReturnStatus::valid_return, 4.0),
+        3.0, 1.0);
+    ASSERT_TRUE(map.advanceEpoch(0.2 * (epoch + 1U)).has_value());
+    EXPECT_EQ(map.query(point).state,
+              epoch < 2U ? soft_vofod::VoxelState::observed_free
+                         : soft_vofod::VoxelState::certified_free);
+  }
+  ASSERT_NE(map.voxel(point), nullptr);
+  EXPECT_EQ(map.voxel(point)->free_epoch_count, 3U);
+  EXPECT_EQ(map.voxel(point)->valid_free_epoch_count, 3U);
+}
+
+TEST(CertifiedFree, ManyRaysInOneEpochCountOnce)
+{
+  soft_vofod::Config config = testConfig();
+  config.map.certified_free_min_epochs = 2U;
+  config.map.certified_free_min_duration_s = 0.2;
+  config.map.evidence_scale = 0.5;
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 point(2.0, 0.0, 0.0);
+  ASSERT_FALSE(map.advanceEpoch(0.0).has_value());
+  for (size_t index = 0U; index < 100U; ++index)
+    map.carveFreeRay(
+        ray(0.01, soft_vofod::ReturnStatus::no_return), 3.0, 1.0);
+  ASSERT_TRUE(map.advanceEpoch(0.2).has_value());
+  ASSERT_NE(map.voxel(point), nullptr);
+  EXPECT_EQ(map.voxel(point)->free_epoch_count, 1U);
+  EXPECT_EQ(map.query(point).state, soft_vofod::VoxelState::observed_free);
+}
+
+TEST(CertifiedFree, SurfaceBandRevokesDetectorGradeFree)
+{
+  soft_vofod::Config config = testConfig();
+  config.map.evidence_scale = 0.5;
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 free_point(2.0, 0.0, 0.0);
+  certifyFreeAlongX(&map, 3.0);
+  ASSERT_EQ(map.query(free_point).state,
+            soft_vofod::VoxelState::certified_free);
+  const soft_vofod::Vec3 surface(2.5, 0.0, 0.0);
+  map.observeBackground(surface, 0.5, 1U, true);
+  EXPECT_EQ(map.query(surface).state,
+            soft_vofod::VoxelState::candidate_background);
+  EXPECT_EQ(map.query(free_point).state,
+            soft_vofod::VoxelState::observed_free);
+  ASSERT_NE(map.voxel(free_point), nullptr);
+  EXPECT_TRUE(map.voxel(free_point)->surface_guarded);
+}
+
 TEST(BackgroundComponents, ExpandsStableAdjacencyAndKeepsViolationsFree)
 {
   soft_vofod::Config config = testConfig();
   soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 violation(2.0, 0.0, 0.0);
+  certifyFreeAlongX(&map, 3.0);
+  ASSERT_EQ(map.query(violation).state,
+            soft_vofod::VoxelState::certified_free);
+
   const soft_vofod::Vec3 stable(4.0, 0.0, 0.0);
-  map.observeBackground(stable, 0.0, 0U, true);
-  map.observeBackground(stable, 0.1, 1U, true);
-  map.observeBackground(stable, 0.2, 2U, true);
+  map.observeBackground(stable, 0.5, 0U, true);
+  map.observeBackground(stable, 0.6, 1U, true);
+  map.observeBackground(stable, 0.7, 2U, true);
   ASSERT_EQ(map.query(stable).state,
             soft_vofod::VoxelState::stable_background);
 
   const soft_vofod::Vec3 adjacent(4.5, 0.0, 0.0);
-  const soft_vofod::Vec3 violation(2.0, 0.0, 0.0);
-  map.addFreeEvidence(violation, 2.0, 1.0);
-  ASSERT_EQ(map.query(violation).state,
-            soft_vofod::VoxelState::confident_free);
   map.advanceEpoch(2.0);
   map.accumulateReturn(adjacent, 2.01, false, true);
   map.accumulateReturn(violation, 2.01, false, true);
@@ -215,7 +301,7 @@ TEST(BackgroundComponents, ExpandsStableAdjacencyAndKeepsViolationsFree)
   EXPECT_EQ(map.query(adjacent).state,
             soft_vofod::VoxelState::stable_background);
   EXPECT_EQ(map.query(violation).state,
-            soft_vofod::VoxelState::confident_free);
+            soft_vofod::VoxelState::certified_free);
   EXPECT_DOUBLE_EQ(map.voxel(violation)->background_evidence, 0.0);
 }
 
@@ -309,7 +395,7 @@ TEST(ColdStartBackground, PromotesOnlyPersistentWorldStaticComponent)
       EXPECT_TRUE(map.nearCandidateBackground(wall));
       map.addFreeEvidence(wall, 2.0, 0.21);
       ASSERT_EQ(map.query(wall).state,
-                soft_vofod::VoxelState::confident_free);
+                soft_vofod::VoxelState::observed_free);
     }
     if (epoch < 5U)
     {
@@ -379,20 +465,18 @@ TEST(Packetizer, AggregatesReturnsAndKeepsSingleton)
   soft_vofod::BackgroundMap map(config.map);
   const soft_vofod::Vec3 cluster(2.0, 0.0, 0.0);
   const soft_vofod::Vec3 singleton(4.0, 0.0, 0.0);
-  map.addFreeEvidence(cluster, 2.0, 0.0);
-  map.addFreeEvidence(singleton, 2.0, 0.0);
-  map.advanceEpoch(0.0);
+  certifyFreeAlongX(&map, 5.0);
   for (uint32_t index = 0U; index < 10U; ++index)
   {
     map.accumulateReturn(
         cluster + soft_vofod::Vec3(0.0, 0.005 * index, 0.0),
-        0.001 * index, false, true, index, soft_vofod::Vec3::UnitX(),
+        0.401 + 0.001 * index, false, true, index, soft_vofod::Vec3::UnitX(),
         1.0, 2.0, 1.0);
   }
   map.accumulateReturn(
-      singleton, 0.01, false, true, 10U, soft_vofod::Vec3::UnitX(),
+      singleton, 0.41, false, true, 10U, soft_vofod::Vec3::UnitX(),
       1.0, 2.0, 1.0);
-  const auto commit = map.advanceEpoch(0.2);
+  const auto commit = map.advanceEpoch(0.6);
   ASSERT_TRUE(commit.has_value());
   ASSERT_EQ(commit->violation_packets.size(), 2U);
   std::vector<uint32_t> counts;
@@ -413,16 +497,14 @@ TEST(Packetizer, DoesNotMergeTargetsBeyondPacketGate)
   soft_vofod::BackgroundMap map(config.map);
   const soft_vofod::Vec3 first(2.1, 0.0, 0.0);
   const soft_vofod::Vec3 second(2.9, 0.0, 0.0);
-  map.addFreeEvidence(first, 2.0, 0.0);
-  map.addFreeEvidence(second, 2.0, 0.0);
-  map.advanceEpoch(0.0);
+  certifyFreeAlongX(&map, 4.0);
   map.accumulateReturn(
-      first, 0.01, false, true, 1U, soft_vofod::Vec3::UnitX(),
+      first, 0.41, false, true, 1U, soft_vofod::Vec3::UnitX(),
       1.0, 2.0, 1.0);
   map.accumulateReturn(
-      second, 0.01, false, true, 2U, soft_vofod::Vec3::UnitX(),
+      second, 0.41, false, true, 2U, soft_vofod::Vec3::UnitX(),
       1.0, 2.0, 1.0);
-  const auto commit = map.advanceEpoch(0.2);
+  const auto commit = map.advanceEpoch(0.6);
   ASSERT_TRUE(commit.has_value());
   EXPECT_EQ(commit->violation_packets.size(), 2U);
 }
@@ -436,6 +518,36 @@ TEST(MotionModel, WhiteAccelerationScalesWithRealDt)
   EXPECT_NEAR(q(0, 0), 4.0 * std::pow(0.2, 4) / 4.0, 1.0e-12);
   EXPECT_NEAR(q(0, 3), 4.0 * std::pow(0.2, 3) / 2.0, 1.0e-12);
   EXPECT_NEAR(q(3, 3), 4.0 * std::pow(0.2, 2), 1.0e-12);
+}
+
+TEST(MotionModel, ConstantAccelerationTransitionAndJerkNoiseArePhysical)
+{
+  const soft_vofod::Mat9 f = soft_vofod::SoftVofodCore::caTransition(0.2);
+  EXPECT_DOUBLE_EQ(f(0, 3), 0.2);
+  EXPECT_DOUBLE_EQ(f(0, 6), 0.02);
+  EXPECT_DOUBLE_EQ(f(3, 6), 0.2);
+  const soft_vofod::Mat9 q =
+      soft_vofod::SoftVofodCore::caProcessNoise(0.2, 2.0);
+  EXPECT_NEAR(q(0, 0), 4.0 * std::pow(0.2, 6) / 36.0, 1.0e-12);
+  EXPECT_NEAR(q(0, 3), 4.0 * std::pow(0.2, 5) / 12.0, 1.0e-12);
+  EXPECT_GE(Eigen::SelfAdjointEigenSolver<soft_vofod::Mat9>(q).
+                eigenvalues().minCoeff(), -1.0e-12);
+}
+
+TEST(MotionModel, ImmMixingUsesConfiguredMarkovProbabilities)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3::Zero());
+  track.imm_mode_probabilities = Eigen::Vector2d(0.8, 0.2);
+  core.predictImmForTest(&track, 0.1);
+  ASSERT_TRUE(track.imm_initialized);
+  EXPECT_NEAR(track.imm_mode_probabilities[0], 0.78, 1.0e-12);
+  EXPECT_NEAR(track.imm_mode_probabilities[1], 0.22, 1.0e-12);
+  EXPECT_NEAR(track.imm_mode_probabilities.sum(), 1.0, 1.0e-12);
+  EXPECT_TRUE(track.x.allFinite());
+  EXPECT_GE(Eigen::SelfAdjointEigenSolver<soft_vofod::Mat6>(track.covariance).
+                eigenvalues().minCoeff(), -1.0e-12);
 }
 
 TEST(Birth, RequiresIndependentTrajectoryGroups)
@@ -479,6 +591,51 @@ TEST(Birth, HoverIsAValidTrajectory)
   const auto birth = core.tryBirthForTest(0.2);
   ASSERT_TRUE(birth.has_value());
   EXPECT_NEAR(birth->x.tail<3>().norm(), 0.0, 1.0e-12);
+  EXPECT_EQ(birth->birth_evidence_type,
+            soft_vofod::BirthEvidenceType::certified_free_violation);
+}
+
+TEST(Birth, StationaryUnknownNeverBecomesTarget)
+{
+  soft_vofod::SoftVofodCore core(testConfig());
+  const soft_vofod::Vec3 position(5.0, 0.0, 1.0);
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    core.addBirthEventForTest(event(
+        0.1 * group, position, group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion));
+  }
+  EXPECT_FALSE(core.tryBirthForTest(0.2).has_value());
+}
+
+TEST(Birth, SignificantUnknownMotionCanBecomeTarget)
+{
+  soft_vofod::SoftVofodCore core(testConfig());
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    core.addBirthEventForTest(event(
+        0.1 * group, soft_vofod::Vec3(0.5 * group, 0.0, 0.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion));
+  }
+  const auto birth = core.tryBirthForTest(0.2);
+  ASSERT_TRUE(birth.has_value());
+  EXPECT_EQ(birth->birth_evidence_type,
+            soft_vofod::BirthEvidenceType::unknown_independent_motion);
+}
+
+TEST(Birth, DoesNotMixEpistemicProvenance)
+{
+  soft_vofod::SoftVofodCore core(testConfig());
+  core.addBirthEventForTest(event(
+      0.0, soft_vofod::Vec3::Zero(), 0U,
+      soft_vofod::BirthEvidenceType::certified_free_violation));
+  core.addBirthEventForTest(event(
+      0.1, soft_vofod::Vec3(0.1, 0.0, 0.0), 1U,
+      soft_vofod::BirthEvidenceType::certified_free_violation));
+  core.addBirthEventForTest(event(
+      0.2, soft_vofod::Vec3(0.2, 0.0, 0.0), 2U,
+      soft_vofod::BirthEvidenceType::unknown_independent_motion));
+  EXPECT_FALSE(core.tryBirthForTest(0.2).has_value());
 }
 
 TEST(Birth, RejectsImpossibleOrInconsistentEvents)
@@ -814,6 +971,125 @@ TEST(PacketMaintenance, RawReturnWaitsForPacketAndUnknownCanMaintainTrack)
   EXPECT_DOUBLE_EQ(result.tracks.front().last_measurement_time_s, 0.2);
 }
 
+TEST(PacketMaintenance, TrackConditionedSplitGivesMixedPacketUniqueOwners)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  config.ablation.track_conditioned_packet_split = true;
+  config.tracker.survival_lambda_per_s = 0.0;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track lower = trackAt(soft_vofod::Vec3(5.0, -0.3, 0.0));
+  lower.id = 1U;
+  lower.existence_probability = 0.9;
+  soft_vofod::Track upper = trackAt(soft_vofod::Vec3(5.0, 0.3, 0.0));
+  upper.id = 2U;
+  upper.existence_probability = 0.9;
+  core.addTrackForTest(lower);
+  core.addTrackForTest(upper);
+
+  std::vector<soft_vofod::RaySample> returns;
+  for (size_t index = 0U; index < 4U; ++index)
+  {
+    soft_vofod::RaySample sample = ray(
+        0.01, soft_vofod::ReturnStatus::valid_return, 5.0);
+    sample.original_index = static_cast<uint32_t>(index);
+    sample.point_m.y() = index < 2U ? -0.3 + 0.05 * index
+                                    : 0.25 + 0.05 * (index - 2U);
+    returns.push_back(sample);
+  }
+  core.processScan(1U, 0.01, returns);
+  const soft_vofod::ScanResult result = core.processScan(
+      2U, 0.2, {ray(0.2, soft_vofod::ReturnStatus::invalid_range)});
+  EXPECT_EQ(result.diagnostics.maintenance_packets, 1U);
+  EXPECT_EQ(result.diagnostics.track_conditioned_split_count, 1U);
+  EXPECT_EQ(result.diagnostics.track_conditioned_split_packets, 2U);
+  EXPECT_EQ(result.diagnostics.split_points_assigned, 4U);
+  EXPECT_EQ(result.diagnostics.matches, 2U);
+}
+
+TEST(DormantLifecycle, OcclusionDormancyAndCompatiblePacketReactivateOldId)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  config.tracker.survival_lambda_per_s = 0.02;
+  config.tracker.occluded_to_dormant_s = 0.3;
+  config.tracker.dormant_timeout_s = 2.0;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.9;
+  track.last_measurement_position_m = track.x.head<3>();
+  track.has_measurement_position = true;
+  core.addTrackForTest(track);
+
+  soft_vofod::RaySample foreground = ray(
+      0.1, soft_vofod::ReturnStatus::valid_return, 2.0);
+  soft_vofod::ScanResult result = core.processScan(
+      1U, foreground.time_s, {foreground});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::occluded);
+  EXPECT_EQ(result.diagnostics.occluded_transitions, 1U);
+  EXPECT_GT(result.opportunities.front().occlusion_probability, 0.9);
+
+  result = core.processScan(
+      2U, 0.5, {ray(0.5, soft_vofod::ReturnStatus::invalid_range)});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  EXPECT_FALSE(result.tracks.front().reportable);
+
+  soft_vofod::RaySample reappearance = ray(
+      0.51, soft_vofod::ReturnStatus::valid_return, 5.0);
+  core.processScan(3U, reappearance.time_s, {reappearance});
+  result = core.processScan(
+      4U, 0.8, {ray(0.8, soft_vofod::ReturnStatus::invalid_range)});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().id, 1U);
+  EXPECT_EQ(result.tracks.front().state,
+            soft_vofod::TrackState::confirmed_active);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 1U);
+  EXPECT_EQ(result.tracks.front().last_evidence_type,
+            soft_vofod::BirthEvidenceType::track_reactivation);
+  EXPECT_EQ(result.diagnostics.dormant_reactivations, 1U);
+}
+
+TEST(DormantLifecycle, UnrelatedPacketCannotReactivate)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(2.0, 0.0, 0.0));
+  track.state = soft_vofod::TrackState::dormant;
+  track.existence_probability = 0.9;
+  track.last_measurement_position_m = track.x.head<3>();
+  track.has_measurement_position = true;
+  core.addTrackForTest(track);
+  core.processScan(
+      1U, 0.01,
+      {ray(0.01, soft_vofod::ReturnStatus::valid_return, 8.0)});
+  const soft_vofod::ScanResult result = core.processScan(
+      2U, 0.2, {ray(0.2, soft_vofod::ReturnStatus::invalid_range)});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 0U);
+  EXPECT_EQ(result.diagnostics.dormant_reactivations, 0U);
+}
+
+TEST(DormantLifecycle, DormantMemoryExpiresBoundedly)
+{
+  soft_vofod::Config config = testConfig();
+  config.tracker.dormant_timeout_s = 0.5;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(2.0, 0.0, 0.0));
+  track.state = soft_vofod::TrackState::dormant;
+  track.state_entry_time_s = 0.0;
+  track.existence_probability = 0.9;
+  core.addTrackForTest(track);
+  const soft_vofod::ScanResult result = core.processScan(1U, 0.6, {});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::deleting);
+  EXPECT_EQ(result.tracks.front().deletion_reason, "dormant_timeout");
+  EXPECT_EQ(result.diagnostics.dormant_expirations, 1U);
+}
+
 TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
 {
   soft_vofod::Config config = testConfig();
@@ -834,7 +1110,7 @@ TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
   boundary.original_index = 0U;
   core.processScan(4U, boundary.time_s, {boundary});
   EXPECT_EQ(core.backgroundMap().query(soft_vofod::Vec3(5.0, 0.0, 0.0)).state,
-            soft_vofod::VoxelState::confident_free);
+            soft_vofod::VoxelState::certified_free);
 
   size_t packets = 0U;
   for (uint32_t scan = 5U; scan < 10U; ++scan)
@@ -853,7 +1129,7 @@ TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
       soft_vofod::VoxelState::stable_background);
   EXPECT_EQ(core.backgroundMap().query(
       soft_vofod::Vec3(4.0, 0.0, 0.0)).state,
-      soft_vofod::VoxelState::confident_free);
+      soft_vofod::VoxelState::certified_free);
 }
 
 TEST(Pipeline, DisabledBirthIsMapOnlyWarmup)
