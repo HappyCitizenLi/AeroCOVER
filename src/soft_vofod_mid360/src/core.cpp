@@ -3391,6 +3391,7 @@ ScanResult SoftVofodCore::processScan(
       ++result.diagnostics.deleted_hard_timeout;
     }
     else if (track.state != TrackState::deleting &&
+             track.state != TrackState::tentative &&
              track.state != TrackState::occluded &&
              track.state != TrackState::dormant &&
              track.existence_probability <= config_.tracker.delete_threshold)

@@ -1011,6 +1011,29 @@ TEST(TrackManagement, TentativeAndConfirmedHaveSeparateDeadlines)
   EXPECT_EQ(result.tracks.front().deletion_reason, "confirmed_timeout");
 }
 
+TEST(TrackManagement, TentativeUsesItsDeadlineInsteadOfConfirmedExistenceCutoff)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::Track tentative = trackAt(
+      soft_vofod::Vec3(5.0, 0.0, 0.0));
+  tentative.state = soft_vofod::TrackState::tentative;
+  tentative.existence_probability = 0.05;
+  tentative.last_measurement_time_s = 0.0;
+  soft_vofod::SoftVofodCore core(config);
+  core.addTrackForTest(tentative);
+
+  soft_vofod::ScanResult result = core.processScan(1U, 0.1, {});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::tentative);
+  EXPECT_TRUE(result.tracks.front().deletion_reason.empty());
+
+  result = core.processScan(
+      2U, config.tracker.tentative_max_no_measurement_s + 0.01, {});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::deleting);
+  EXPECT_EQ(result.tracks.front().deletion_reason, "tentative_timeout");
+}
+
 TEST(PacketMaintenance, RawReturnWaitsForPacketAndUnknownCanMaintainTrack)
 {
   soft_vofod::Config config = testConfig();
