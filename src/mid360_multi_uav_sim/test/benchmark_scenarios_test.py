@@ -53,6 +53,9 @@ class BenchmarkScenariosTest(unittest.TestCase):
         stationary = self.load("S08C")["targets"][0]["waypoints"]
         self.assertEqual(len({(item["x"], item["y"], item["z"])
                               for item in stationary}), 1)
+        hover = self.load("IT11")["targets"][0]["waypoints"]
+        self.assertEqual({(item["x"], item["y"], item["z"])
+                          for item in hover}, {(8.0, 0.0, 1.75)})
         for scene in ("S08B", "S08C"):
             config = self.load(scene)
             target = config["targets"][0]

@@ -15,7 +15,7 @@ targets:
   - id: uav2
     spawn_time_s: 10.5
     waypoints:
-      - {t: 0.0, x: 8.0, y: 0.0, z: 2.5}
-      - {t: 35.0, x: 8.0, y: 0.0, z: 2.5}
+      - {t: 0.0, x: 8.0, y: 0.0, z: 1.75}
+      - {t: 35.0, x: 8.0, y: 0.0, z: 1.75}
 events:
   - {t: 10.5, id: mapped_free_hover_spawn}
