@@ -1220,6 +1220,69 @@ TEST(DormantLifecycle, UnrelatedPacketCannotReactivate)
   EXPECT_EQ(result.diagnostics.dormant_reactivations, 0U);
 }
 
+TEST(DormantLifecycle, StationaryUnknownPacketCannotReactivate)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.state = soft_vofod::TrackState::dormant;
+  track.existence_probability = 0.9;
+  core.addTrackForTest(track);
+  soft_vofod::Event prior;
+  prior.group_id = 1U;
+  prior.time_s = 0.0;
+  prior.position_m = track.x.head<3>();
+  prior.covariance = 0.01 * soft_vofod::Mat3::Identity();
+  prior.birth_evidence_type =
+      soft_vofod::BirthEvidenceType::unknown_independent_motion;
+  core.addBirthEventForTest(prior);
+
+  core.processScan(
+      1U, 0.1,
+      {ray(0.1, soft_vofod::ReturnStatus::valid_return, 5.0)});
+  const soft_vofod::ScanResult result = core.processScan(
+      2U, 0.3, {ray(0.3, soft_vofod::ReturnStatus::invalid_range)});
+
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 0U);
+  EXPECT_EQ(result.diagnostics.dormant_reactivations, 0U);
+  EXPECT_GT(result.diagnostics.dormant_reacquisition_rejections, 0U);
+}
+
+TEST(DormantLifecycle, MovingUnknownPairReactivatesWithoutFullBirthGroups)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  config.birth.unknown_motion_gate_d2 = 3.0;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.state = soft_vofod::TrackState::dormant;
+  track.existence_probability = 0.9;
+  core.addTrackForTest(track);
+  soft_vofod::Event prior;
+  prior.group_id = 1U;
+  prior.time_s = 0.0;
+  prior.position_m = soft_vofod::Vec3(3.0, 0.0, 0.0);
+  prior.covariance = 0.01 * soft_vofod::Mat3::Identity();
+  prior.birth_evidence_type =
+      soft_vofod::BirthEvidenceType::unknown_independent_motion;
+  core.addBirthEventForTest(prior);
+
+  core.processScan(
+      1U, 0.2,
+      {ray(0.2, soft_vofod::ReturnStatus::valid_return, 5.0)});
+  const soft_vofod::ScanResult result = core.processScan(
+      2U, 0.4, {ray(0.4, soft_vofod::ReturnStatus::invalid_range)});
+
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state,
+            soft_vofod::TrackState::confirmed_active);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 1U);
+  EXPECT_EQ(result.diagnostics.dormant_reactivations, 1U);
+}
+
 TEST(DormantLifecycle, ForegroundOccluderCannotReactivateHiddenTrack)
 {
   soft_vofod::Config config = testConfig();

@@ -2935,6 +2935,51 @@ void SoftVofodCore::processBatch(
   if (config_.ablation.dormant_reacquisition &&
       birth_eligible_measurements > 0U)
   {
+    const auto compatible_reacquisition_packet =
+        [this](const Event& packet)
+        {
+          if (packet.birth_evidence_type ==
+              BirthEvidenceType::certified_free_violation)
+            return true;
+          if (packet.birth_evidence_type !=
+              BirthEvidenceType::unknown_independent_motion)
+            return false;
+          const Event* nearest_prior = nullptr;
+          double nearest_distance_squared =
+              std::numeric_limits<double>::infinity();
+          for (const Event& prior : birth_buffer_)
+          {
+            const double dt = packet.time_s - prior.time_s;
+            if (prior.birth_evidence_type !=
+                    BirthEvidenceType::unknown_independent_motion ||
+                prior.group_id == packet.group_id ||
+                dt < config_.birth.pair_dt_min_s ||
+                dt > config_.birth.pair_dt_max_s)
+              continue;
+            const double distance_squared =
+                (packet.position_m - prior.position_m).squaredNorm();
+            if (distance_squared < nearest_distance_squared)
+            {
+              nearest_distance_squared = distance_squared;
+              nearest_prior = &prior;
+            }
+          }
+          if (!nearest_prior)
+            return false;
+          const double dt = packet.time_s - nearest_prior->time_s;
+          const Vec3 displacement =
+              packet.position_m - nearest_prior->position_m;
+          if (displacement.norm() / dt > config_.birth.max_speed_mps)
+            return false;
+          const Mat3 covariance =
+              packet.covariance + nearest_prior->covariance;
+          const Eigen::LDLT<Mat3> decomposition(covariance);
+          const double motion_d2 = decomposition.info() == Eigen::Success
+              ? displacement.dot(decomposition.solve(displacement))
+              : 0.0;
+          return std::isfinite(motion_d2) &&
+              motion_d2 > config_.birth.unknown_motion_gate_d2;
+        };
     std::vector<size_t> dormant_tracks;
     for (size_t track_index = 0U;
          track_index < tracks_before_birth; ++track_index)
@@ -2954,9 +2999,7 @@ void SoftVofodCore::processBatch(
         if (global_packet_matched[packet_index])
           continue;
         const Event& packet = maintenance_packets[packet_index];
-        if (geometrically_occluded_tracks.count(track.id) != 0U &&
-            packet.birth_evidence_type !=
-                BirthEvidenceType::certified_free_violation)
+        if (!compatible_reacquisition_packet(packet))
         {
           ++result->diagnostics.dormant_reacquisition_rejections;
           continue;
