@@ -675,6 +675,27 @@ TEST(Birth, IndependentPacketsAccumulateUnknownMotionSignificance)
   EXPECT_TRUE(core.tryBirthForTest(0.9).has_value());
 }
 
+TEST(Birth, ExtendedUnknownSurfaceCannotMasqueradeAsCompactTarget)
+{
+  soft_vofod::Config config = testConfig();
+  config.birth.min_groups = 10U;
+  soft_vofod::SoftVofodCore core(config);
+  for (uint64_t group = 0U; group < 10U; ++group)
+  {
+    const soft_vofod::Vec3 position(0.2 * group, 0.0, 0.0);
+    soft_vofod::Event sample = event(
+        0.1 * group, position, group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion);
+    sample.anomaly_score = 0.0;
+    sample.covariance = 0.25 * soft_vofod::Mat3::Identity();
+    sample.points_m = {
+        position + soft_vofod::Vec3(0.0, 2.0, 0.0),
+        position - soft_vofod::Vec3(0.0, 2.0, 0.0)};
+    core.addBirthEventForTest(sample);
+  }
+  EXPECT_FALSE(core.tryBirthForTest(0.9).has_value());
+}
+
 TEST(Birth, UnknownMotionMustExceedTheConfiguredSignificanceLevel)
 {
   const double displacement_m = std::sqrt(0.24);  // D^2 = 0.24 / 0.02 = 12.

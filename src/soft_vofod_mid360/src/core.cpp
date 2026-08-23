@@ -1844,6 +1844,37 @@ SoftVofodCore::bestBirthCandidate(
           residual_rms > config_.birth.max_residual_m)
         continue;
 
+      if (a.birth_evidence_type ==
+          BirthEvidenceType::unknown_independent_motion)
+      {
+        const double footprint_radius_m =
+            config_.tracker.target_radius_m +
+            config_.birth.max_residual_m;
+        bool compact_footprint = true;
+        for (const size_t index : indices)
+        {
+          const Event& event = birth_buffer_[index];
+          const Vec3 predicted = mean_position + fitted_velocity *
+              (event.time_s - mean_time);
+          for (const Vec3& point_m : event.points_m)
+          {
+            if ((point_m - predicted).norm() > footprint_radius_m)
+            {
+              compact_footprint = false;
+              break;
+            }
+          }
+          if (!compact_footprint)
+            break;
+        }
+        if (!compact_footprint)
+        {
+          if (diagnostics)
+            ++diagnostics->unknown_motion_rejections;
+          continue;
+        }
+      }
+
       const auto by_time = [this](const size_t first_index,
                                   const size_t second_index)
       {
