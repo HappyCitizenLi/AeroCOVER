@@ -1122,7 +1122,8 @@ def main():
                                  "A1", "A2", "A3", "V3-A", "V3-B",
                                  "V3-C", "C0", "C1", "C2", "C3",
                                  "S04-base", "S04-split", "S04-IMM",
-                                 "S04-split-IMM"))
+                                 "S04-split-IMM", "S05_base", "S05_IMM",
+                                 "S05_dormant", "S05_IMM+dormant"))
     parser.add_argument("--scenario", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--resource")
