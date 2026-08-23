@@ -3392,10 +3392,18 @@ ScanResult SoftVofodCore::processScan(
   const auto enter_dormant =
       [this, existence_time_s, &result](Track* const track)
       {
+        if (track->has_measurement_position)
+          track->x.head<3>() = track->last_measurement_position_m;
+        track->x.tail<3>().setZero();
+        track->covariance.block<3, 3>(0, 3).setZero();
+        track->covariance.block<3, 3>(3, 0).setZero();
+        track->covariance.block<3, 3>(3, 3) +=
+            config_.tracker.initial_velocity_variance_m2ps2 *
+            Mat3::Identity();
         if (config_.ablation.cv_ca_imm && track->imm_initialized)
         {
-          track->x = track->imm_cv_x;
-          track->covariance = track->imm_cv_covariance;
+          track->imm_cv_x = track->x;
+          track->imm_cv_covariance = track->covariance;
           track->imm_ca_x.setZero();
           track->imm_ca_x.head<6>() = track->x;
           track->imm_ca_covariance.setZero();
