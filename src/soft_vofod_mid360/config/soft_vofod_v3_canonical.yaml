@@ -72,8 +72,9 @@ birth:
   suppression_radius_m: 1.0
   birth_spatial_cell_m: 1.0
   max_births_per_spatial_cell_per_epoch: 1
-  # 3-D chi-square 99% candidate; CAL06-CAL08/S08 are not used to select it.
-  unknown_motion_gate_d2: 11.345
+  # 3-D chi-square 99.9% gate: UNKNOWN needs stronger evidence than a
+  # background surface footprint drifting with exploration.
+  unknown_motion_gate_d2: 16.266
 
 tracker:
   acceleration_sigma_mps2: 3.0

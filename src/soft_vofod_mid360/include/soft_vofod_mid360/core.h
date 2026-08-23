@@ -122,7 +122,7 @@ struct BirthConfig
   double suppression_radius_m = 1.0;
   double birth_spatial_cell_m = 1.0;
   uint32_t max_births_per_spatial_cell_per_epoch = 1U;
-  double unknown_motion_gate_d2 = 11.345;
+  double unknown_motion_gate_d2 = 16.266;
 };
 
 struct TrackerConfig

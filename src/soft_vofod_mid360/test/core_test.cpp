@@ -641,6 +641,34 @@ TEST(Birth, SignificantUnknownMotionCanBecomeTarget)
             soft_vofod::BirthEvidenceType::unknown_independent_motion);
 }
 
+TEST(Birth, UnknownMotionMustExceedTheConfiguredSignificanceLevel)
+{
+  const double displacement_m = std::sqrt(0.24);  // D^2 = 0.24 / 0.02 = 12.
+  soft_vofod::Config strict_config = testConfig();
+  strict_config.birth.unknown_motion_gate_d2 = 16.266;
+  soft_vofod::SoftVofodCore strict_core(strict_config);
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    strict_core.addBirthEventForTest(event(
+        0.1 * group,
+        soft_vofod::Vec3(0.5 * displacement_m * group, 0.0, 0.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion));
+  }
+  EXPECT_FALSE(strict_core.tryBirthForTest(0.2).has_value());
+
+  soft_vofod::Config permissive_config = strict_config;
+  permissive_config.birth.unknown_motion_gate_d2 = 11.345;
+  soft_vofod::SoftVofodCore permissive_core(permissive_config);
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    permissive_core.addBirthEventForTest(event(
+        0.1 * group,
+        soft_vofod::Vec3(0.5 * displacement_m * group, 0.0, 0.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion));
+  }
+  EXPECT_TRUE(permissive_core.tryBirthForTest(0.2).has_value());
+}
+
 TEST(Birth, DoesNotMixEpistemicProvenance)
 {
   soft_vofod::SoftVofodCore core(testConfig());
