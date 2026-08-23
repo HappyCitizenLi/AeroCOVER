@@ -28,7 +28,8 @@ import yaml
 ALGORITHMS = (
     "B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3",
     "V3-A", "V3-B", "V3-C", "C0", "C1", "C2", "C3",
-    "S04-base", "S04-split", "S04-IMM", "S04-split-IMM")
+    "S04-base", "S04-split", "S04-IMM", "S04-split-IMM",
+    "S05_base", "S05_IMM", "S05_dormant", "S05_IMM+dormant")
 DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
 SCENES = DEFAULT_SCENES + (
     "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04",
@@ -844,6 +845,10 @@ class BenchmarkRunner:
             "S04-split": {"imm": "false", "dormant": "false"},
             "S04-IMM": {"split": "false", "dormant": "false"},
             "S04-split-IMM": {"dormant": "false"},
+            "S05_base": {"imm": "false", "dormant": "false"},
+            "S05_IMM": {"dormant": "false"},
+            "S05_dormant": {"imm": "false"},
+            "S05_IMM+dormant": {},
             "C0": {"opportunity": "false", "survival": "false",
                    "reportability": "false", "dormant": "false"},
             "C1": {"survival": "false", "reportability": "false",

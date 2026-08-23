@@ -180,6 +180,10 @@ class RunnerTest(unittest.TestCase):
                 "S04-split": ("true", "false", "false"),
                 "S04-IMM": ("false", "true", "false"),
                 "S04-split-IMM": ("true", "true", "false"),
+                "S05_base": ("true", "false", "false"),
+                "S05_IMM": ("true", "true", "false"),
+                "S05_dormant": ("true", "false", "true"),
+                "S05_IMM+dormant": ("true", "true", "true"),
             }
             for algorithm, wanted in expected.items():
                 values = launch_values(runner.algorithm_command(
