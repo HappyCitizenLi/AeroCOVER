@@ -142,7 +142,7 @@ struct TrackerConfig
   double clutter_density = 1.0e-3;
   double survival_lambda_per_s = 0.05;
   double tentative_max_age_s = 1.0;
-  double tentative_max_no_measurement_s = 0.3;
+  double tentative_max_no_measurement_s = 0.5;
   double confirmed_max_no_measurement_s = 6.0;
   double duplicate_merge_position_d2 = 1.0;
   double duplicate_merge_distance_m = 0.25;

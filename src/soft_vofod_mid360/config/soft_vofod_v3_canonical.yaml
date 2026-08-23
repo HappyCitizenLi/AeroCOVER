@@ -93,7 +93,8 @@ tracker:
   # CAL09 candidate, evaluated together with dormant/reportability.
   survival_lambda_per_s: 0.1
   tentative_max_age_s: 1.0
-  tentative_max_no_measurement_s: 0.3
+  # Allow two 5 Hz map epochs plus phase jitter for the first maintenance hit.
+  tentative_max_no_measurement_s: 0.5
   confirmed_max_no_measurement_s: 6.0
   duplicate_merge_position_d2: 1.0
   duplicate_merge_distance_m: 0.25

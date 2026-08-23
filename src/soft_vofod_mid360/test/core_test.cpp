@@ -994,7 +994,8 @@ TEST(TrackManagement, TentativeAndConfirmedHaveSeparateDeadlines)
   soft_vofod::SoftVofodCore tentative_core(config);
   tentative_core.addTrackForTest(tentative);
   soft_vofod::RaySample invalid = ray(
-      0.31, soft_vofod::ReturnStatus::invalid_range);
+      config.tracker.tentative_max_no_measurement_s + 0.01,
+      soft_vofod::ReturnStatus::invalid_range);
   soft_vofod::ScanResult result = tentative_core.processScan(
       1U, invalid.time_s, {invalid});
   ASSERT_EQ(result.tracks.size(), 1U);
