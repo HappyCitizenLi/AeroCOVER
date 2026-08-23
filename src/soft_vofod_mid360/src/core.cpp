@@ -1811,7 +1811,9 @@ SoftVofodCore::bestBirthCandidate(
         anomaly_score += event.anomaly_score;
       }
       if (denominator <= 1.0e-12 ||
-          anomaly_score < config_.birth.min_total_anomaly_score)
+          (a.birth_evidence_type ==
+               BirthEvidenceType::certified_free_violation &&
+           anomaly_score < config_.birth.min_total_anomaly_score))
         continue;
       const Vec3 fitted_velocity = numerator / denominator;
       if (!fitted_velocity.allFinite() ||

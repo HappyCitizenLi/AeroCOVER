@@ -641,6 +641,23 @@ TEST(Birth, SignificantUnknownMotionCanBecomeTarget)
             soft_vofod::BirthEvidenceType::unknown_independent_motion);
 }
 
+TEST(Birth, UnknownMotionDoesNotRequireFreeSpaceAnomalyScore)
+{
+  soft_vofod::SoftVofodCore core(testConfig());
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    soft_vofod::Event sample = event(
+        0.1 * group, soft_vofod::Vec3(0.5 * group, 0.0, 0.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion);
+    sample.anomaly_score = 0.0;
+    core.addBirthEventForTest(sample);
+  }
+  const auto birth = core.tryBirthForTest(0.2);
+  ASSERT_TRUE(birth.has_value());
+  EXPECT_EQ(birth->birth_evidence_type,
+            soft_vofod::BirthEvidenceType::unknown_independent_motion);
+}
+
 TEST(Birth, UnknownMotionMustExceedTheConfiguredSignificanceLevel)
 {
   const double displacement_m = std::sqrt(0.24);  // D^2 = 0.24 / 0.02 = 12.
