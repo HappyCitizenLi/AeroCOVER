@@ -78,6 +78,10 @@ class EvaluationTest(unittest.TestCase):
         result = METRICS.map_metrics(
             [(2.0, {contaminated})], [], [], [], truth, "E0_open")
         self.assertGreater(result["target_contamination_ratio"], 0.0)
+        self.assertEqual(result["map_contamination_ratio"],
+                         result["target_contamination_ratio"])
+        self.assertGreaterEqual(
+            result["background_recovery_latency_s"]["mean"], 0.0)
         self.assertLess(result["free_space_retention"], 1.0)
 
     def test_packet_ghost_and_diagnostic_metrics(self):
@@ -89,6 +93,8 @@ class EvaluationTest(unittest.TestCase):
         ])]
         event = METRICS.event_metrics(packets, truth, 60.0)
         self.assertEqual(event["event_count"], 2)
+        self.assertEqual(event["target_induced_violation_packets"], 1)
+        self.assertEqual(event["target_induced_violation_packets_per_min"], 1.0)
         self.assertEqual(event["raw_anomaly_points_in_packets"], 5)
         self.assertEqual(event["packet_singleton_ratio"], 0.5)
 

@@ -48,6 +48,15 @@ class RunnerTest(unittest.TestCase):
         with self.assertRaises(Exception):
             RUNNER.comma_list("A4", RUNNER.ALGORITHMS)
 
+    def test_integration_scene_names_reuse_the_existing_semantic_cases(self):
+        runner = object.__new__(RUNNER.BenchmarkRunner)
+        runner.scenario_root = os.path.join(
+            os.path.dirname(ROOT), "mid360_multi_uav_sim", "config",
+            "benchmarks")
+        for alias, scene in RUNNER.INTEGRATION_SCENE_ALIASES.items():
+            self.assertIn(alias, RUNNER.SCENES)
+            self.assertTrue(runner.scene_path(alias).endswith(scene + ".yaml"))
+
     def test_calibration_overlay_selects_the_last_explicit_value(self):
         with tempfile.TemporaryDirectory() as directory:
             canonical = os.path.join(directory, "canonical.yaml")
@@ -191,6 +200,22 @@ class RunnerTest(unittest.TestCase):
                 actual = (values["track_conditioned_packet_split"],
                           values["cv_ca_imm"],
                           values["dormant_reacquisition"])
+                self.assertEqual(actual, wanted)
+
+            strict = {
+                "C0": ("false", "false", "false", "false"),
+                "C1": ("true", "false", "false", "false"),
+                "C2": ("true", "true", "true", "false"),
+                "C3": ("true", "true", "true", "true"),
+            }
+            for algorithm, wanted in strict.items():
+                values = launch_values(runner.algorithm_command(
+                    algorithm, os.path.join(directory, "resource.txt")))
+                actual = (values["opportunity_aware_existence"],
+                          values["survival_prediction"],
+                          values["reportability_filtering"],
+                          values["dormant_reacquisition"])
+                self.assertEqual(values["birth_min_groups"], "5")
                 self.assertEqual(actual, wanted)
 
 

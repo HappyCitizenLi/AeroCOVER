@@ -34,7 +34,15 @@ DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
 SCENES = DEFAULT_SCENES + (
     "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04",
     "NEG05", "NEG06", "CAL01", "CAL02", "CAL03", "CAL04", "CAL05",
-    "CAL06", "CAL07", "CAL08", "CAL09", "IT11")
+    "CAL06", "CAL07", "CAL08", "CAL09", "IT10", "IT11", "IT12",
+    "IT13", "IT14", "IT15")
+INTEGRATION_SCENE_ALIASES = {
+    "IT10": "NEG05",  # moving observer at a wall edge
+    "IT12": "S08C",   # stationary unknown
+    "IT13": "S08B",   # moving unknown
+    "IT14": "S04",    # dense four-target turn
+    "IT15": "S05",    # long occlusion and reappearance
+}
 WORLD_FILES = {
     "E0_open": "E0_open.world",
     "E1_sparse": "E1_sparse.world",
@@ -92,6 +100,11 @@ SUMMARY_METRICS = {
         "packet_continuity", "multi_truth_packet_ratio"),
     "opportunity_Brier": ("opportunity", "Brier"),
     "target_contamination_ratio": ("map", "target_contamination_ratio"),
+    "map_contamination_ratio": ("map", "map_contamination_ratio"),
+    "background_recovery_cost_mean_s": (
+        "map", "background_recovery_latency_s", "mean"),
+    "target_induced_violation_packets": (
+        "event", "target_induced_violation_packets"),
     "background_expansion_recall": ("map", "background_expansion_recall"),
     "certified_free_precision": ("map", "certified_free_precision"),
     "certified_free_recall": ("map", "certified_free_recall"),
@@ -517,7 +530,9 @@ class BenchmarkRunner:
         return result.stdout.strip() if result.returncode == 0 else "uncommitted-no-commit"
 
     def scene_path(self, scene):
-        path = os.path.join(self.scenario_root, scene + ".yaml")
+        path = os.path.join(
+            self.scenario_root,
+            INTEGRATION_SCENE_ALIASES.get(scene, scene) + ".yaml")
         if not os.path.exists(path):
             raise RuntimeError("missing benchmark scene {}".format(scene))
         return path

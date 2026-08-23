@@ -583,6 +583,9 @@ def event_metrics(events, truth_frames, duration):
         if truth_with_return else 0.0,
         "false_events_per_min": false_events / max(duration / 60.0, 1.0e-9),
         "event_count": packet_count,
+        "target_induced_violation_packets": true_events,
+        "target_induced_violation_packets_per_min":
+            true_events / max(duration / 60.0, 1.0e-9),
         "raw_anomaly_points_in_packets": raw_endpoints,
         "packet_singleton_ratio": singleton_packets / float(packet_count)
         if packet_count else 0.0,
@@ -921,9 +924,13 @@ def map_metrics(background, candidate_background, free, observed_free,
     final_observed_free = observed_free[-1][1] if observed_free else final_free
     contamination = background_union & path
     trail = 0.0
+    recovery_first = {}
     for stamp, keys in background:
         for key in keys & path:
             trail = max(trail, stamp - last_time.get(key, stamp))
+            if stamp >= last_time.get(key, stamp):
+                recovery_first.setdefault(
+                    key, stamp - last_time.get(key, stamp))
     static = static_voxels(world)
     candidate_first = {}
     for stamp, keys in candidate_background:
@@ -950,9 +957,13 @@ def map_metrics(background, candidate_background, free, observed_free,
                              if key in certified_free_first and
                              certified_free_first[key] >= stamp]
     false_certified = final_free & static
+    contamination_ratio = len(contamination) / float(len(path)) \
+        if path else None
     return {
-        "target_contamination_ratio": len(contamination) / float(len(path))
-        if path else None,
+        "target_contamination_ratio": contamination_ratio,
+        "map_contamination_ratio": contamination_ratio,
+        "background_recovery_latency_s": distribution(
+            list(recovery_first.values())),
         "trail_duration_max_s": max(0.0, trail),
         "free_space_retention": 1.0 - len(contamination) / float(len(path))
         if path else None,
