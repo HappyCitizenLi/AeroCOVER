@@ -979,7 +979,20 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
         ++voxel.valid_free_epoch_count;
       if (epoch_no_return_free_evidence_[linear_index] > 0.0)
         ++voxel.no_return_free_epoch_count;
-      voxel.surface_guarded = nearBackgroundSurface(linear_index);
+      const vofod::VoxelMap::vec3i_t index =
+          geometry_.indexFromLinear(linear_index);
+      const vofod::VoxelMap::vec3i_t sizes = geometry_.sizes();
+      const int boundary_layers = static_cast<int>(std::ceil(
+          config_.surface_uncertainty_margin_m / config_.voxel_size_m));
+      bool near_map_boundary = false;
+      for (int axis = 0; axis < 3; ++axis)
+      {
+        near_map_boundary = near_map_boundary ||
+            index[axis] < boundary_layers ||
+            index[axis] >= sizes[axis] - boundary_layers;
+      }
+      voxel.surface_guarded = near_map_boundary ||
+          nearBackgroundSurface(linear_index);
       updateState(&voxel, commit_time_s, true);
       output.committed_free_evidence += evidence;
       ++output.free_voxels;

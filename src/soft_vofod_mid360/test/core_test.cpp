@@ -274,6 +274,24 @@ TEST(CertifiedFree, SurfaceBandRevokesDetectorGradeFree)
   EXPECT_TRUE(map.voxel(free_point)->surface_guarded);
 }
 
+TEST(CertifiedFree, MapBoundaryNeverBecomesDetectorGradeFree)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  EXPECT_FALSE(map.advanceEpoch(0.0).has_value());
+  map.carveFreeRay(
+      ray(0.01, soft_vofod::ReturnStatus::no_return), 10.9, 1.0);
+  ASSERT_TRUE(map.advanceEpoch(0.2).has_value());
+  map.carveFreeRay(
+      ray(0.21, soft_vofod::ReturnStatus::no_return), 10.9, 1.0);
+  ASSERT_TRUE(map.advanceEpoch(0.4).has_value());
+
+  EXPECT_EQ(map.query(soft_vofod::Vec3(5.0, 0.0, 0.0)).state,
+            soft_vofod::VoxelState::certified_free);
+  EXPECT_EQ(map.query(soft_vofod::Vec3(10.75, 0.0, 0.0)).state,
+            soft_vofod::VoxelState::observed_free);
+}
+
 TEST(BackgroundComponents, ExpandsStableAdjacencyAndKeepsViolationsFree)
 {
   soft_vofod::Config config = testConfig();
