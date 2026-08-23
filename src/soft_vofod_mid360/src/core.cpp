@@ -2941,8 +2941,6 @@ void SoftVofodCore::processBatch(
       track.last_measurement_position_m = aligned_packet.position_m;
       track.has_measurement_position = true;
       track.last_evidence_type = BirthEvidenceType::track_reactivation;
-      track.existence_probability = std::max(
-          track.existence_probability, config_.tracker.confirm_threshold);
       ++track.positive_updates;
       ++track.reactivation_count;
       matched[track_index] = true;
@@ -3311,6 +3309,12 @@ ScanResult SoftVofodCore::processScan(
           track.existence_probability, observed_pd,
           std::max(kProbabilityEpsilon, evidence->measurement_likelihood),
           config_.tracker.clutter_density);
+      if (track.last_evidence_type ==
+          BirthEvidenceType::track_reactivation)
+      {
+        track.existence_probability = std::max(
+            track.existence_probability, config_.tracker.confirm_threshold);
+      }
     }
     else if (track.state != TrackState::occluded &&
              track.state != TrackState::dormant &&

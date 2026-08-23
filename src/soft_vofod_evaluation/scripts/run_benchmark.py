@@ -39,6 +39,7 @@ WORLD_FILES = {
     "E1_sparse": "E1_sparse.world",
     "E2_occlusion_arena": "E2_occlusion_arena.world",
     "E3_cluttered": "E3_cluttered.world",
+    "E4_long_occlusion": "E4_long_occlusion.world",
 }
 
 
@@ -427,10 +428,11 @@ def static_primitives(world):
     if world == "E1_sparse":
         output.append({"id": "wide_wall", "type": "box",
                        "pose": [25, 0, 4, 0, 0, 0], "size": [0.5, 30, 8]})
-    elif world == "E2_occlusion_arena":
+    elif world in ("E2_occlusion_arena", "E4_long_occlusion"):
         output += [
             {"id": "background_wall", "type": "box",
-             "pose": [10, 0, 3, 0, 0, 0], "size": [0.5, 0.8, 6]},
+             "pose": [10, 0, 3, 0, 0, 0],
+             "size": [0.5, 3.0 if world == "E4_long_occlusion" else 0.8, 6]},
             {"id": "pillar", "type": "cylinder",
              "pose": [7, -6, 2, 0, 0, 0], "radius": 0.6, "length": 4},
         ]
@@ -781,6 +783,7 @@ class BenchmarkRunner:
             "source_bag_sha256": sha256(bag_path),
             "scenario_config_sha256": sha256(generated_scenario),
             "sensor_model_sha256": sha256(observer_model),
+            "world_sha256": sha256(world_path),
             "truth_config_sha256": sha256(truth_path)
             if scenario["targets"] else None,
             "no_target_control": not bool(scenario["targets"]),

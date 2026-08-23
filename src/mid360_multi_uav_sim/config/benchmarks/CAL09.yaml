@@ -1,6 +1,6 @@
 schema_version: 1
 scenario_id: CAL09_long_occlusion_survival
-world: E2_occlusion_arena
+world: E4_long_occlusion
 seed: 2009
 start_delay_s: 4.0
 duration_s: 45.0
@@ -20,20 +20,20 @@ targets:
       # radial x=8 -> x=12 interpolation would pass through the collision and
       # turn wall returns into an artificial target-maintenance measurement.
       - {t: 14.0, x: 8.0, y: 0.0, z: 2.25}
-      - {t: 15.0, x: 8.0, y: 2.0, z: 2.25}
-      - {t: 16.0, x: 12.0, y: 2.0, z: 2.25}
+      - {t: 15.0, x: 8.0, y: 3.0, z: 2.25}
+      - {t: 16.0, x: 12.0, y: 3.0, z: 2.25}
       - {t: 17.0, x: 12.0, y: 0.0, z: 2.25}
       - {t: 23.0, x: 12.0, y: 0.0, z: 2.25}
-      - {t: 24.0, x: 12.0, y: 2.0, z: 2.25}
-      - {t: 25.0, x: 8.0, y: 2.0, z: 2.25}
+      - {t: 24.0, x: 12.0, y: 3.0, z: 2.25}
+      - {t: 25.0, x: 8.0, y: 3.0, z: 2.25}
       - {t: 26.0, x: 8.0, y: 0.0, z: 2.25}
       - {t: 29.0, x: 8.0, y: 0.0, z: 2.25}
-      - {t: 30.0, x: 8.0, y: -2.0, z: 2.25}
-      - {t: 31.0, x: 12.0, y: -2.0, z: 2.25}
+      - {t: 30.0, x: 8.0, y: -3.0, z: 2.25}
+      - {t: 31.0, x: 12.0, y: -3.0, z: 2.25}
       - {t: 32.0, x: 12.0, y: 0.0, z: 2.25}
       - {t: 39.0, x: 12.0, y: 0.0, z: 2.25}
-      - {t: 40.0, x: 12.0, y: -2.0, z: 2.25}
-      - {t: 41.0, x: 8.0, y: -2.0, z: 2.25}
+      - {t: 40.0, x: 12.0, y: -3.0, z: 2.25}
+      - {t: 41.0, x: 8.0, y: -3.0, z: 2.25}
       - {t: 42.0, x: 8.0, y: 0.0, z: 2.25}
       - {t: 45.0, x: 8.0, y: 0.0, z: 2.25}
 events:

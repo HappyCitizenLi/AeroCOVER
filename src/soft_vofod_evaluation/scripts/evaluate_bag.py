@@ -279,8 +279,9 @@ def static_voxels(world, voxel_size=0.5):
         for y in np.arange(-15.0, 15.0 + voxel_size, voxel_size):
             for z in np.arange(0.0, 8.0 + voxel_size, voxel_size):
                 output.add(quantize((25.0, y, z), voxel_size))
-    if world == "E2_occlusion_arena":
-        for y in np.arange(-0.4, 0.4 + voxel_size, voxel_size):
+    if world in ("E2_occlusion_arena", "E4_long_occlusion"):
+        half_wall_y = 1.5 if world == "E4_long_occlusion" else 0.4
+        for y in np.arange(-half_wall_y, half_wall_y + voxel_size, voxel_size):
             for z in np.arange(0.0, 6.0 + voxel_size, voxel_size):
                 output.add(quantize((10.0, y, z), voxel_size))
         for angle in np.linspace(0.0, 2.0 * math.pi, 24, endpoint=False):
