@@ -1228,6 +1228,7 @@ TEST(DormantLifecycle, OcclusionDormancyAndCompatiblePacketReactivateOldId)
   EXPECT_EQ(result.tracks.front().reactivation_count, 1U);
   EXPECT_EQ(result.tracks.front().last_evidence_type,
             soft_vofod::BirthEvidenceType::track_reactivation);
+  EXPECT_FALSE(result.tracks.front().reportable);
   EXPECT_EQ(result.diagnostics.dormant_reactivations, 1U);
 }
 

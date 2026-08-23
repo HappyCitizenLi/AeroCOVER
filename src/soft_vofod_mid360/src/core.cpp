@@ -2063,6 +2063,8 @@ std::optional<Track> SoftVofodCore::createBirth(
   track.state_entry_time_s = time_s;
   track.last_measurement_position_m = candidate->x.head<3>();
   track.has_measurement_position = true;
+  track.last_reliable_position_m = candidate->x.head<3>();
+  track.has_reliable_position = true;
   track.reportability_score = config_.tracker.birth_existence;
   if (diagnostics)
   {
@@ -3392,6 +3394,8 @@ ScanResult SoftVofodCore::processScan(
   const auto enter_dormant =
       [this, existence_time_s, &result](Track* const track)
       {
+        if (track->has_reliable_position)
+          track->x.head<3>() = track->last_reliable_position_m;
         track->x.tail<3>().setZero();
         track->covariance.block<3, 3>(0, 3).setZero();
         track->covariance.block<3, 3>(3, 0).setZero();
@@ -3559,6 +3563,7 @@ ScanResult SoftVofodCore::processScan(
               config_.tracker.reportability_uncertainty_scale_m));
       track.reportable = track.state != TrackState::dormant &&
           track.state != TrackState::deleting &&
+          track.last_evidence_type != BirthEvidenceType::track_reactivation &&
           track.reportability_score >= config_.tracker.reportability_threshold;
     }
     else
@@ -3567,6 +3572,12 @@ ScanResult SoftVofodCore::processScan(
       track.reportability_score = track.existence_probability;
       track.reportable = track.state != TrackState::dormant &&
           track.state != TrackState::deleting;
+    }
+    if (track.reportable &&
+        track.last_evidence_type != BirthEvidenceType::track_reactivation)
+    {
+      track.last_reliable_position_m = track.x.head<3>();
+      track.has_reliable_position = true;
     }
     if (track.state == TrackState::deleting &&
         config_.ablation.target_feedback && was_confirmed)

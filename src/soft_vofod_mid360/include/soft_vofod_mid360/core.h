@@ -259,6 +259,8 @@ struct Track
   double state_entry_time_s = 0.0;
   Vec3 last_measurement_position_m = Vec3::Zero();
   bool has_measurement_position = false;
+  Vec3 last_reliable_position_m = Vec3::Zero();
+  bool has_reliable_position = false;
   uint32_t reactivation_count = 0U;
   double cumulative_effective_opportunity = 0.0;
   std::string deletion_reason;
