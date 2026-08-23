@@ -70,6 +70,8 @@ class BenchmarkScenariosTest(unittest.TestCase):
                 for index in range(3)))
             self.assertGreater(spawn_range, 21.5)
             self.assertLess(spawn_range, 22.5)
+            self.assertLess(position[0], 24.5)
+            self.assertGreater(position[2], 8.5)
             if scene == "S08B":
                 next_position, _ = MODULE.sample(
                     target_waypoints, target["spawn_time_s"] + 1.0)
