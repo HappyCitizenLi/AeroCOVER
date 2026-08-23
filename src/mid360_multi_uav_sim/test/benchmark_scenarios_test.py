@@ -53,6 +53,23 @@ class BenchmarkScenariosTest(unittest.TestCase):
         stationary = self.load("S08C")["targets"][0]["waypoints"]
         self.assertEqual(len({(item["x"], item["y"], item["z"])
                               for item in stationary}), 1)
+        for scene in ("S08B", "S08C"):
+            config = self.load(scene)
+            target = config["targets"][0]
+            observer_waypoints = MODULE.parse_waypoints(
+                config["observer"]["waypoints"], "observer",
+                config["duration_s"])
+            target_waypoints = MODULE.parse_waypoints(
+                target["waypoints"], "target", config["duration_s"])
+            observer, _ = MODULE.sample(observer_waypoints,
+                                        target["spawn_time_s"])
+            position, _ = MODULE.sample(target_waypoints,
+                                        target["spawn_time_s"])
+            spawn_range = math.sqrt(sum(
+                (position[index] - observer[index]) ** 2
+                for index in range(3)))
+            self.assertGreater(spawn_range, 20.75)
+            self.assertLess(spawn_range, 39.25)
 
     def test_calibration_splits_are_disjoint_and_semantic(self):
         expected = {
