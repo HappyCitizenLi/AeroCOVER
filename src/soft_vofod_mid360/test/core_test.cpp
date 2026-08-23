@@ -1424,11 +1424,15 @@ TEST(DormantLifecycle, LowExistenceConfirmedTrackBecomesDormantMemory)
   track.existence_probability = 0.05;
   track.last_measurement_position_m = track.x.head<3>();
   track.has_measurement_position = true;
+  track.last_reliable_position_m = soft_vofod::Vec3(4.0, 0.0, 0.0);
+  track.has_reliable_position = true;
   core.addTrackForTest(track);
 
   const soft_vofod::ScanResult result = core.processScan(1U, 0.1, {});
   ASSERT_EQ(result.tracks.size(), 1U);
   EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  EXPECT_TRUE(result.tracks.front().x.head<3>().isApprox(
+      track.last_reliable_position_m));
   EXPECT_FALSE(result.tracks.front().reportable);
   EXPECT_TRUE(result.tracks.front().deletion_reason.empty());
   EXPECT_EQ(result.diagnostics.dormant_entries, 1U);
