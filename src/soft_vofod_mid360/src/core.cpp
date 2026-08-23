@@ -3389,6 +3389,26 @@ ScanResult SoftVofodCore::processScan(
   }
 
   const double existence_time_s = rays.empty() ? scan_stamp_s : rays.back().time_s;
+  const auto enter_dormant =
+      [this, existence_time_s, &result](Track* const track)
+      {
+        if (config_.ablation.cv_ca_imm && track->imm_initialized)
+        {
+          track->x = track->imm_cv_x;
+          track->covariance = track->imm_cv_covariance;
+          track->imm_ca_x.setZero();
+          track->imm_ca_x.head<6>() = track->x;
+          track->imm_ca_covariance.setZero();
+          track->imm_ca_covariance.block<6, 6>(0, 0) = track->covariance;
+          track->imm_ca_covariance.block<3, 3>(6, 6) =
+              config_.tracker.imm_initial_acceleration_variance_m2ps4 *
+              Mat3::Identity();
+          track->imm_mode_probabilities = Eigen::Vector2d(0.8, 0.2);
+        }
+        track->state = TrackState::dormant;
+        track->state_entry_time_s = existence_time_s;
+        ++result.diagnostics.dormant_entries;
+      };
   for (Track& track : tracks_)
   {
     if (track.state == TrackState::deleting ||
@@ -3470,9 +3490,7 @@ ScanResult SoftVofodCore::processScan(
              existence_time_s - track.last_measurement_time_s >
                  config_.tracker.occluded_to_dormant_s)
     {
-      track.state = TrackState::dormant;
-      track.state_entry_time_s = existence_time_s;
-      ++result.diagnostics.dormant_entries;
+      enter_dormant(&track);
     }
     else if ((track.state == TrackState::confirmed_active ||
               (track.state == TrackState::occluded &&
@@ -3507,11 +3525,7 @@ ScanResult SoftVofodCore::processScan(
              track.existence_probability <= config_.tracker.delete_threshold)
     {
       if (config_.ablation.dormant_reacquisition)
-      {
-        track.state = TrackState::dormant;
-        track.state_entry_time_s = existence_time_s;
-        ++result.diagnostics.dormant_entries;
-      }
+        enter_dormant(&track);
       else
       {
         track.state = TrackState::deleting;

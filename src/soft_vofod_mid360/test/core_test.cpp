@@ -1431,6 +1431,33 @@ TEST(DormantLifecycle, LowExistenceConfirmedTrackBecomesDormantMemory)
   EXPECT_EQ(result.diagnostics.dormant_entries, 1U);
 }
 
+TEST(DormantLifecycle, EnteringDormantDropsStaleImmAcceleration)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.05;
+  track.imm_initialized = true;
+  track.imm_cv_x = track.x;
+  track.imm_cv_covariance = track.covariance;
+  track.imm_ca_x.head<6>() = track.x;
+  track.imm_ca_x.tail<3>() = soft_vofod::Vec3(10.0, 0.0, 0.0);
+  track.imm_ca_covariance = soft_vofod::Mat9::Identity();
+  track.imm_mode_probabilities = Eigen::Vector2d(0.1, 0.9);
+  core.addTrackForTest(track);
+
+  const soft_vofod::ScanResult result = core.processScan(1U, 0.1, {});
+
+  ASSERT_EQ(result.tracks.size(), 1U);
+  const soft_vofod::Track& dormant = result.tracks.front();
+  EXPECT_EQ(dormant.state, soft_vofod::TrackState::dormant);
+  EXPECT_TRUE(dormant.x.isApprox(dormant.imm_cv_x));
+  EXPECT_TRUE(dormant.covariance.isApprox(dormant.imm_cv_covariance));
+  EXPECT_TRUE(dormant.imm_ca_x.tail<3>().isZero());
+  EXPECT_TRUE(dormant.imm_mode_probabilities.isApprox(
+      Eigen::Vector2d(0.8, 0.2)));
+}
+
 TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
 {
   soft_vofod::Config config = testConfig();
