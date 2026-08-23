@@ -70,6 +70,12 @@ class BenchmarkScenariosTest(unittest.TestCase):
                 for index in range(3)))
             self.assertGreater(spawn_range, 20.75)
             self.assertLess(spawn_range, 39.25)
+            if scene == "S08B":
+                next_position, _ = MODULE.sample(
+                    target_waypoints, target["spawn_time_s"] + 1.0)
+                self.assertGreater(math.sqrt(sum(
+                    (next_position[index] - position[index]) ** 2
+                    for index in range(3))), 0.5)
 
     def test_calibration_splits_are_disjoint_and_semantic(self):
         expected = {
