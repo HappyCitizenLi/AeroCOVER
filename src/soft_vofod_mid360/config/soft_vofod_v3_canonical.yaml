@@ -140,7 +140,10 @@ safety:
   max_time_jump_s: 1.0
 
 initialization:
-  warmup_duration_s: 0.0
+  # Protocol-derived: source bags provide strictly more than 10 s without a
+  # target; use it to assimilate previously unknown static surfaces before
+  # target birth is enabled.
+  warmup_duration_s: 10.0
 
 output:
   map_every_n_scans: 5

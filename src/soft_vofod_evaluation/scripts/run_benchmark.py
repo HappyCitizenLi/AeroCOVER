@@ -373,8 +373,6 @@ def validate_run_timing(algorithm, evidence, source_manifest):
             "INVALID_INPUT_HANDSHAKE",
             "first input ack {} missed source input {}".format(
                 first_ack, first_source))
-    if algorithm != "B0":
-        return
     complete = evidence.get("background_warmup_complete_stamp")
     gate = source_manifest.get("first_target_spawn_stamp")
     if gate is None:
@@ -681,6 +679,13 @@ class BenchmarkRunner:
                     if values.get("first_input_ack") == "true" and first_ack is None:
                         first_ack = stamp
                         bootstrap_start = float(values["map_bootstrap_start_stamp"])
+                    if warmup_complete is None and \
+                            values.get("birth_enabled") == "true":
+                        warmup_complete = stamp
+                    if first_scored_warmup_active is None and \
+                            stamp >= scoring_stamp:
+                        first_scored_warmup_active = \
+                            values.get("birth_enabled") != "true"
         return {
             "first_input_ack_stamp": first_ack,
             "bootstrap_start_stamp": bootstrap_start,

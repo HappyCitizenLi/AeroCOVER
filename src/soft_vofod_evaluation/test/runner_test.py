@@ -99,6 +99,7 @@ class RunnerTest(unittest.TestCase):
             "first_scored_warmup_active": False,
         }
         RUNNER.validate_run_timing("B0", evidence, source)
+        RUNNER.validate_run_timing("V3-C", evidence, source)
         evidence["background_warmup_complete_stamp"] = 15.4
         with self.assertRaises(RUNNER.RunContractError) as raised:
             RUNNER.validate_run_timing("B0", evidence, source)
