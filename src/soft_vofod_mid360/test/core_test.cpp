@@ -1457,8 +1457,6 @@ TEST(DormantLifecycle, EnteringDormantDropsStaleImmAcceleration)
   EXPECT_EQ(dormant.state, soft_vofod::TrackState::dormant);
   EXPECT_TRUE(dormant.x.isApprox(dormant.imm_cv_x));
   EXPECT_TRUE(dormant.x.tail<3>().isZero());
-  EXPECT_TRUE(dormant.x.head<3>().isApprox(
-      track.last_measurement_position_m));
   EXPECT_TRUE(dormant.covariance.isApprox(dormant.imm_cv_covariance));
   EXPECT_TRUE(dormant.imm_ca_x.tail<3>().isZero());
   EXPECT_TRUE(dormant.imm_mode_probabilities.isApprox(

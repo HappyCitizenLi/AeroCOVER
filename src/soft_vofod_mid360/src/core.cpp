@@ -3392,8 +3392,6 @@ ScanResult SoftVofodCore::processScan(
   const auto enter_dormant =
       [this, existence_time_s, &result](Track* const track)
       {
-        if (track->has_measurement_position)
-          track->x.head<3>() = track->last_measurement_position_m;
         track->x.tail<3>().setZero();
         track->covariance.block<3, 3>(0, 3).setZero();
         track->covariance.block<3, 3>(3, 0).setZero();
