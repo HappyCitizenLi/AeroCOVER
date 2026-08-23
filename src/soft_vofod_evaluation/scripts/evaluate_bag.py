@@ -685,6 +685,8 @@ def packet_continuity_metrics(packets, truth_frames, track_frames):
 
 
 def epistemic_metrics(scenario_id, tracks, diagnostics, duration):
+    confirmed_target_ids = {item["id"] for item in tracks
+                            if item["state"] in ("active", "occluded")}
     confirmed_unknown_ids = {item["id"] for item in tracks
                              if item["state"] in ("active", "occluded") and
                              item["birth_evidence_type"] == 2}
@@ -702,10 +704,10 @@ def epistemic_metrics(scenario_id, tracks, diagnostics, duration):
     moving = "S08B" in scenario_id or "unknown_moving" in scenario_id
     hover = "hover" in scenario_id.lower()
     return {
-        "false_unknown_static_confirmation": len(confirmed_unknown_ids)
+        "false_unknown_static_confirmation": len(confirmed_target_ids)
         if stationary else None,
         "false_target_confirmation_rate":
-            min(1.0, len(confirmed_unknown_ids)) if stationary else None,
+            min(1.0, len(confirmed_target_ids)) if stationary else None,
         "unknown_unresolved_duration_s": duration * unresolved_samples /
         float(len(diagnostic_samples)) if diagnostic_samples else None,
         "unresolved_fraction": unresolved_samples /

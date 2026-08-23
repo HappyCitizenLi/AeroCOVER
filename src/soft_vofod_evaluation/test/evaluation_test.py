@@ -124,13 +124,16 @@ class EvaluationTest(unittest.TestCase):
 
         tracks = [{"stamp": 0.0, "id": 1, "state": "active",
                    "birth_evidence_type": 2, "reportable": True,
+                   "reactivation_count": 0, "position": (1.0, 0.0, 0.0)},
+                  {"stamp": 0.1, "id": 2, "state": "active",
+                   "birth_evidence_type": 1, "reportable": True,
                    "reactivation_count": 0, "position": (1.0, 0.0, 0.0)}]
         epistemic = METRICS.epistemic_metrics(
             "S08C_unknown_stationary", tracks,
             [(0.0, {"unknown_candidates": 1.0,
                     "unresolved_candidate_returns": 2.0,
                     "valid_returns": 4.0})], 10.0)
-        self.assertEqual(epistemic["false_unknown_static_confirmation"], 1)
+        self.assertEqual(epistemic["false_unknown_static_confirmation"], 2)
         self.assertEqual(epistemic["background_candidate_fraction"], 0.5)
 
         memory = [

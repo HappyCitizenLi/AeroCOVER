@@ -68,8 +68,8 @@ class BenchmarkScenariosTest(unittest.TestCase):
             spawn_range = math.sqrt(sum(
                 (position[index] - observer[index]) ** 2
                 for index in range(3)))
-            self.assertGreater(spawn_range, 20.75)
-            self.assertLess(spawn_range, 39.25)
+            self.assertGreater(spawn_range, 21.5)
+            self.assertLess(spawn_range, 22.5)
             if scene == "S08B":
                 next_position, _ = MODULE.sample(
                     target_waypoints, target["spawn_time_s"] + 1.0)
