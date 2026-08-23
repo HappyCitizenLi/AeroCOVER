@@ -2948,18 +2948,19 @@ void SoftVofodCore::processBatch(
     for (size_t row = 0U; row < dormant_tracks.size(); ++row)
     {
       const Track& track = tracks_[dormant_tracks[row]];
-      if (geometrically_occluded_tracks.count(track.id) != 0U)
-      {
-        result->diagnostics.dormant_reacquisition_rejections +=
-            birth_eligible_measurements;
-        continue;
-      }
       for (size_t packet_index = 0U;
            packet_index < birth_eligible_measurements; ++packet_index)
       {
         if (global_packet_matched[packet_index])
           continue;
         const Event& packet = maintenance_packets[packet_index];
+        if (geometrically_occluded_tracks.count(track.id) != 0U &&
+            packet.birth_evidence_type !=
+                BirthEvidenceType::certified_free_violation)
+        {
+          ++result->diagnostics.dormant_reacquisition_rejections;
+          continue;
+        }
         const Vec3 measurement = packet.position_m + track.x.tail<3>() *
             std::max(0.0, batch_time_s - packet.time_s);
         const Vec3 innovation = measurement - track.x.head<3>();
@@ -3454,9 +3455,18 @@ ScanResult SoftVofodCore::processScan(
              track.state != TrackState::dormant &&
              track.existence_probability <= config_.tracker.delete_threshold)
     {
-      track.state = TrackState::deleting;
-      track.deletion_reason = "existence_probability";
-      ++result.diagnostics.deleted_existence;
+      if (config_.ablation.dormant_reacquisition)
+      {
+        track.state = TrackState::dormant;
+        track.state_entry_time_s = existence_time_s;
+        ++result.diagnostics.dormant_entries;
+      }
+      else
+      {
+        track.state = TrackState::deleting;
+        track.deletion_reason = "existence_probability";
+        ++result.diagnostics.deleted_existence;
+      }
     }
     const double stale_s = std::max(
         0.0, existence_time_s - track.last_measurement_time_s);

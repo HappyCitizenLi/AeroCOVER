@@ -1317,6 +1317,22 @@ TEST(DormantLifecycle, LowExistenceDoesNotDeleteOccludedMemory)
   EXPECT_TRUE(result.tracks.front().deletion_reason.empty());
 }
 
+TEST(DormantLifecycle, LowExistenceConfirmedTrackBecomesDormantMemory)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.05;
+  core.addTrackForTest(track);
+
+  const soft_vofod::ScanResult result = core.processScan(1U, 0.1, {});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  EXPECT_FALSE(result.tracks.front().reportable);
+  EXPECT_TRUE(result.tracks.front().deletion_reason.empty());
+  EXPECT_EQ(result.diagnostics.dormant_entries, 1U);
+}
+
 TEST(Pipeline, EndpointGuardAndHoverNeverBecomeBackground)
 {
   soft_vofod::Config config = testConfig();
