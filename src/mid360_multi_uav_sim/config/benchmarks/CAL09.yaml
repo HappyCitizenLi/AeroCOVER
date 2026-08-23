@@ -16,17 +16,28 @@ targets:
     spawn_time_s: 10.5
     waypoints:
       - {t: 0.0, x: 8.0, y: 0.0, z: 2.25}
-      - {t: 16.0, x: 8.0, y: 0.0, z: 2.25}
-      - {t: 18.0, x: 12.0, y: 0.0, z: 2.25}
-      - {t: 24.0, x: 12.0, y: 0.0, z: 2.25}
+      # Move around the finite wall before entering/exiting its shadow.  A
+      # radial x=8 -> x=12 interpolation would pass through the collision and
+      # turn wall returns into an artificial target-maintenance measurement.
+      - {t: 14.0, x: 8.0, y: 0.0, z: 2.25}
+      - {t: 15.0, x: 8.0, y: 2.0, z: 2.25}
+      - {t: 16.0, x: 12.0, y: 2.0, z: 2.25}
+      - {t: 17.0, x: 12.0, y: 0.0, z: 2.25}
+      - {t: 23.0, x: 12.0, y: 0.0, z: 2.25}
+      - {t: 24.0, x: 12.0, y: 2.0, z: 2.25}
+      - {t: 25.0, x: 8.0, y: 2.0, z: 2.25}
       - {t: 26.0, x: 8.0, y: 0.0, z: 2.25}
-      - {t: 32.0, x: 8.0, y: 0.0, z: 2.25}
-      - {t: 34.0, x: 12.0, y: 0.0, z: 2.25}
-      - {t: 41.0, x: 12.0, y: 0.0, z: 2.25}
-      - {t: 43.0, x: 8.0, y: 0.0, z: 2.25}
+      - {t: 29.0, x: 8.0, y: 0.0, z: 2.25}
+      - {t: 30.0, x: 8.0, y: -2.0, z: 2.25}
+      - {t: 31.0, x: 12.0, y: -2.0, z: 2.25}
+      - {t: 32.0, x: 12.0, y: 0.0, z: 2.25}
+      - {t: 39.0, x: 12.0, y: 0.0, z: 2.25}
+      - {t: 40.0, x: 12.0, y: -2.0, z: 2.25}
+      - {t: 41.0, x: 8.0, y: -2.0, z: 2.25}
+      - {t: 42.0, x: 8.0, y: 0.0, z: 2.25}
       - {t: 45.0, x: 8.0, y: 0.0, z: 2.25}
 events:
-  - {t: 18.0, id: occlusion_6s_start}
-  - {t: 24.0, id: occlusion_6s_end}
-  - {t: 34.0, id: occlusion_7s_start}
-  - {t: 41.0, id: occlusion_7s_end}
+  - {t: 17.0, id: occlusion_6s_start}
+  - {t: 23.0, id: occlusion_6s_end}
+  - {t: 32.0, id: occlusion_7s_start}
+  - {t: 39.0, id: occlusion_7s_end}
