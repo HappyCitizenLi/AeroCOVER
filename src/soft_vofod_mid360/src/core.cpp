@@ -1850,13 +1850,38 @@ SoftVofodCore::bestBirthCandidate(
         return birth_buffer_[first_index].time_s <
             birth_buffer_[second_index].time_s;
       };
-      const auto bounds = std::minmax_element(
-          indices.begin(), indices.end(), by_time);
-      const Event& earliest = birth_buffer_[*bounds.first];
-      const Event& latest = birth_buffer_[*bounds.second];
-      const Vec3 displacement = latest.position_m - earliest.position_m;
+      std::vector<size_t> motion_indices = indices;
+      std::sort(motion_indices.begin(), motion_indices.end(), by_time);
+      const size_t endpoint_count = std::max<size_t>(
+          1U, motion_indices.size() / 2U);
+      const double earliest_time_s =
+          birth_buffer_[motion_indices.front()].time_s;
+      const double latest_time_s =
+          birth_buffer_[motion_indices.back()].time_s;
+      const auto endpoint =
+          [this, &motion_indices, &fitted_velocity, residual_rms,
+           endpoint_count](const size_t begin, const double reference_time_s)
+      {
+        Vec3 position = Vec3::Zero();
+        Mat3 covariance = Mat3::Zero();
+        for (size_t offset = 0U; offset < endpoint_count; ++offset)
+        {
+          const Event& event = birth_buffer_[motion_indices[begin + offset]];
+          position += event.position_m - fitted_velocity *
+              (event.time_s - reference_time_s);
+          covariance += event.covariance;
+        }
+        position /= static_cast<double>(endpoint_count);
+        covariance /= static_cast<double>(endpoint_count * endpoint_count);
+        covariance += residual_rms * residual_rms * Mat3::Identity();
+        return std::make_pair(position, covariance);
+      };
+      const auto earliest = endpoint(0U, earliest_time_s);
+      const auto latest = endpoint(
+          motion_indices.size() - endpoint_count, latest_time_s);
+      const Vec3 displacement = latest.first - earliest.first;
       const Mat3 displacement_covariance =
-          earliest.covariance + latest.covariance;
+          earliest.second + latest.second;
       const Eigen::LDLT<Mat3> motion_decomposition(displacement_covariance);
       const double motion_d2 = motion_decomposition.info() == Eigen::Success
           ? displacement.dot(motion_decomposition.solve(displacement))
