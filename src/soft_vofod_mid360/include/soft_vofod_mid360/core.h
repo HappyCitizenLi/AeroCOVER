@@ -318,6 +318,7 @@ struct ProcessDiagnostics
   size_t split_points_assigned = 0;
   size_t split_points_unassigned = 0;
   size_t association_gate_rejections = 0;
+  size_t occlusion_association_rejections = 0;
   size_t occluded_transitions = 0;
   size_t dormant_entries = 0;
   size_t dormant_reactivations = 0;
@@ -614,6 +615,7 @@ private:
   void processBatch(
       uint32_t scan_id, const std::vector<RaySample>& rays,
       bool background_endpoint_updates_enabled, bool birth_enabled,
+      const std::unordered_set<uint32_t>& geometrically_occluded_tracks,
       ScanResult* result);
   void predictTracks(double time_s);
   void initializeImm(Track* track) const;

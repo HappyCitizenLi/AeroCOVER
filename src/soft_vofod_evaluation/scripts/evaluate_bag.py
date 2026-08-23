@@ -898,6 +898,7 @@ def diagnostics_metrics(diagnostics):
         "unknown_motion_rejections", "track_conditioned_split_count",
         "track_conditioned_split_packets", "split_points_assigned",
         "split_points_unassigned", "association_gate_rejections",
+        "occlusion_association_rejections",
         "occluded_transitions", "dormant_entries", "dormant_reactivations",
         "dormant_expirations", "dormant_reacquisition_rejections")
     return {

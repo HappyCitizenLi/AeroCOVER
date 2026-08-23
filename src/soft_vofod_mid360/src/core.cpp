@@ -2604,6 +2604,7 @@ SoftVofodCore::maintenanceMeasurements(
 void SoftVofodCore::processBatch(
     const uint32_t scan_id, const std::vector<RaySample>& rays,
     const bool background_endpoint_updates_enabled, const bool birth_enabled,
+    const std::unordered_set<uint32_t>& geometrically_occluded_tracks,
     ScanResult* const result)
 {
   if (!result || rays.empty())
@@ -2747,6 +2748,12 @@ void SoftVofodCore::processBatch(
     if (tracks_[track_index].state == TrackState::deleting ||
         tracks_[track_index].state == TrackState::dormant)
       continue;
+    if (geometrically_occluded_tracks.count(tracks_[track_index].id) != 0U)
+    {
+      result->diagnostics.occlusion_association_rejections +=
+          measurements.size();
+      continue;
+    }
     for (size_t measurement_index = 0U;
          measurement_index < measurements.size(); ++measurement_index)
     {
@@ -2870,6 +2877,12 @@ void SoftVofodCore::processBatch(
     for (size_t row = 0U; row < dormant_tracks.size(); ++row)
     {
       const Track& track = tracks_[dormant_tracks[row]];
+      if (geometrically_occluded_tracks.count(track.id) != 0U)
+      {
+        result->diagnostics.dormant_reacquisition_rejections +=
+            birth_eligible_measurements;
+        continue;
+      }
       for (size_t packet_index = 0U;
            packet_index < birth_eligible_measurements; ++packet_index)
       {
@@ -2928,6 +2941,8 @@ void SoftVofodCore::processBatch(
       track.last_measurement_position_m = aligned_packet.position_m;
       track.has_measurement_position = true;
       track.last_evidence_type = BirthEvidenceType::track_reactivation;
+      track.existence_probability = std::max(
+          track.existence_probability, config_.tracker.confirm_threshold);
       ++track.positive_updates;
       ++track.reactivation_count;
       matched[track_index] = true;
@@ -3182,6 +3197,34 @@ ScanResult SoftVofodCore::processScan(
       throw std::invalid_argument("ray geometry/time contract is invalid");
   }
 
+  // A full scan has the angular coverage needed to distinguish a target
+  // return from a foreground occluder.  Map packets are emitted only at 5 Hz,
+  // so allowing their wall points to update a geometrically hidden track can
+  // otherwise lock the track onto the occluding surface.
+  std::unordered_set<uint32_t> geometrically_occluded_tracks;
+  std::vector<OpportunityResult> scan_occlusion_results;
+  if (config_.ablation.opportunity_aware_existence &&
+      config_.ablation.reportability_filtering && !rays.empty())
+  {
+    const RayAngularIndex scan_index = indexRays(rays);
+    for (const Track& track : tracks_)
+    {
+      if (track.state != TrackState::confirmed_active &&
+          track.state != TrackState::occluded &&
+          track.state != TrackState::dormant)
+        continue;
+      OpportunityResult candidate = opportunity(
+          track, rays, tracks_, false, scan_index, nullptr);
+      if (candidate.intersection_evidence > 0.0 &&
+          candidate.occlusion_probability >=
+              config_.tracker.occlusion_enter_score)
+      {
+        geometrically_occluded_tracks.insert(track.id);
+        scan_occlusion_results.push_back(candidate);
+      }
+    }
+  }
+
   size_t begin = 0U;
   while (begin < rays.size())
   {
@@ -3192,7 +3235,7 @@ ScanResult SoftVofodCore::processScan(
     std::vector<RaySample> batch(rays.begin() + begin, rays.begin() + end);
     processBatch(
         scan_id, batch, background_endpoint_updates_enabled, birth_enabled,
-        &result);
+        geometrically_occluded_tracks, &result);
     ++result.diagnostics.micro_batches;
     begin = end;
   }
@@ -3200,6 +3243,28 @@ ScanResult SoftVofodCore::processScan(
   {
     prune(scan_stamp_s);
     predictTracks(scan_stamp_s);
+  }
+
+  for (const OpportunityResult& scan_opportunity : scan_occlusion_results)
+  {
+    auto existing = std::find_if(
+        result.opportunities.begin(), result.opportunities.end(),
+        [&scan_opportunity](const OpportunityResult& item)
+        { return item.track_id == scan_opportunity.track_id; });
+    if (existing == result.opportunities.end())
+      result.opportunities.push_back(scan_opportunity);
+    else
+    {
+      existing->occlusion_probability = std::max(
+          existing->occlusion_probability,
+          scan_opportunity.occlusion_probability);
+      existing->occlusion_evidence = std::max(
+          existing->occlusion_evidence,
+          scan_opportunity.occlusion_evidence);
+      existing->intersection_evidence = std::max(
+          existing->intersection_evidence,
+          scan_opportunity.intersection_evidence);
+    }
   }
 
   const double existence_time_s = rays.empty() ? scan_stamp_s : rays.back().time_s;

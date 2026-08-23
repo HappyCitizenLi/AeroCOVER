@@ -1095,6 +1095,69 @@ TEST(DormantLifecycle, UnrelatedPacketCannotReactivate)
   EXPECT_EQ(result.diagnostics.dormant_reactivations, 0U);
 }
 
+TEST(DormantLifecycle, ForegroundOccluderCannotReactivateHiddenTrack)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  config.tracker.occluded_to_dormant_s = 0.3;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.9;
+  core.addTrackForTest(track);
+
+  core.processScan(
+      1U, 0.1,
+      {ray(0.1, soft_vofod::ReturnStatus::valid_return, 2.0)});
+  soft_vofod::ScanResult result = core.processScan(
+      2U, 0.5,
+      {ray(0.5, soft_vofod::ReturnStatus::valid_return, 2.0)});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  ASSERT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  result = core.processScan(
+      3U, 0.7,
+      {ray(0.7, soft_vofod::ReturnStatus::valid_return, 2.0)});
+
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 0U);
+  EXPECT_GT(result.diagnostics.dormant_reacquisition_rejections, 0U);
+}
+
+TEST(DormantLifecycle, ReactivationRestoresConfirmedExistenceFloor)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  config.tracker.delete_threshold = 0.01;
+  config.tracker.survival_lambda_per_s = 3.0;
+  config.tracker.occluded_to_dormant_s = 0.3;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.9;
+  core.addTrackForTest(track);
+
+  core.processScan(
+      1U, 0.1,
+      {ray(0.1, soft_vofod::ReturnStatus::valid_return, 2.0)});
+  soft_vofod::ScanResult result = core.processScan(
+      2U, 0.5,
+      {ray(0.5, soft_vofod::ReturnStatus::valid_return, 2.0)});
+  ASSERT_EQ(result.tracks.size(), 1U);
+  ASSERT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+  core.processScan(
+      3U, 0.51,
+      {ray(0.51, soft_vofod::ReturnStatus::valid_return, 5.0)});
+  result = core.processScan(
+      4U, 0.8,
+      {ray(0.8, soft_vofod::ReturnStatus::valid_return, 5.0)});
+
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_EQ(result.tracks.front().state,
+            soft_vofod::TrackState::confirmed_active);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 1U);
+  EXPECT_GE(result.tracks.front().existence_probability,
+            config.tracker.confirm_threshold);
+}
+
 TEST(DormantLifecycle, DormantMemoryExpiresBoundedly)
 {
   soft_vofod::Config config = testConfig();

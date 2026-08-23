@@ -837,6 +837,9 @@ private:
           "association_gate_rejections",
           number(diagnostics->association_gate_rejections)));
       status.values.push_back(diagnosticValue(
+          "occlusion_association_rejections",
+          number(diagnostics->occlusion_association_rejections)));
+      status.values.push_back(diagnosticValue(
           "occluded_transitions", number(diagnostics->occluded_transitions)));
       status.values.push_back(diagnosticValue(
           "dormant_entries", number(diagnostics->dormant_entries)));
