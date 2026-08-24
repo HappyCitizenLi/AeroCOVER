@@ -1435,7 +1435,7 @@ def main():
                                  "A1", "A2", "A3", "V3-A", "V3-B",
                                  "V3-C", "C0", "C1", "C2", "C3",
                                  "O0", "O1", "O2", "O3",
-                                 "U0", "U1", "R0", "R1",
+                                 "U0", "U1", "R0", "R1", "M0", "M1",
                                  "S04-base", "S04-split", "S04-IMM",
                                  "S04-split-IMM", "S05_base", "S05_IMM",
                                  "S05_dormant", "S05_IMM+dormant"))
