@@ -1,4 +1,4 @@
-# SOFT-VoFOD V3 / V2.1 最终修正报告
+# SOFT-VoFOD V3 / V2.1 当前实现、实验结果与分析
 
 日期：2026-08-24
 
@@ -56,23 +56,134 @@ Mahalanobis 和物理 reachable gate。进入 dormant 时清除 stale CA acceler
 显式输出 target-induced violation count、map contamination、target-path background recovery latency。
 IT10/12/13/14/15 复用已有等价语义场景，避免复制 YAML；IT11 保留独立 certified-hover 场景。
 
+### 2.6 Production 数据流
+
+当前只有一条生产路径：
+
+```text
+points_world + rays_checked
+  -> 10 ms micro-batch / 5 Hz deferred map epoch
+  -> OBSERVED_FREE / CERTIFIED_FREE / CANDIDATE_BACKGROUND / STABLE_BACKGROUND
+  -> F violation packets 或 U independent-motion packets
+  -> 5-group birth
+  -> track-conditioned maintenance packets
+  -> CV/CA IMM + Hungarian association
+  -> existence / reportability / active-occluded-dormant lifecycle
+  -> reportable tracks
+  -> confirmed-track-limited deferred map protection
+```
+
+没有 raw endpoint birth、raw-event map support、scene-specific 参数切换、旧 tracker 输入模式、
+`nadir_seed` 或 standalone launch。Birth 与 maintenance 故意解耦：前者需要跨时间独立证据，后者可在
+已有轨迹预测门内使用普通 return packet，因此 stationary hover 不会因 U-birth motion gate 被删除。
+
+### 2.7 代码、配置和测试落点
+
+| 位置 | 当前职责 |
+|---|---|
+| `src/soft_vofod_mid360/include/soft_vofod_mid360/core.h` | V3 状态、配置、track/IMM/lifecycle 数据契约 |
+| `src/soft_vofod_mid360/src/core.cpp` | map、packet、birth、IMM、association、opportunity、dormant 的唯一算法实现 |
+| `src/soft_vofod_mid360/src/soft_vofod_node.cpp` | ROS 参数、同步输入、消息发布和诊断输出；不含第二套算法 |
+| `src/soft_vofod_mid360/config/soft_vofod_v3_canonical.yaml` | 唯一正式 V3 参数集 |
+| `src/soft_vofod_mid360/msg/SoftTrack.msg` | provenance、IMM probability、reportability、reactivation 输出 |
+| `src/soft_vofod_evaluation/scripts/evaluate_bag.py` | tracking/map/epistemic/lifecycle/runtime 指标 |
+| `src/soft_vofod_evaluation/scripts/run_benchmark.py` | record-once/replay-many、variant 和 hash/coverage 合同 |
+| `src/soft_vofod_mid360/test/core_test.cpp` | 66 个 core contracts 的主要来源 |
+
+正式配置不按场景变化。关键冻结值为：5 Hz map epoch；certified-free 至少3 epochs、0.4 s、1个
+VALID_RETURN epoch、0.75 m surface band；U motion gate `D²=16.266`；birth 5 groups；CV→CA/CA→CV
+转移概率0.05/0.1；dormant timeout 10 s；reactivation gate `D²=16.266`；reportability threshold0.2；
+target-free warm-up 10 s。
+
 ## 3. 关键实验结果
 
-完整表、paired delta 和 hash 合同见 `SOFT_VOFOD_V3_ABLATION.md`。摘要：
+### 3.1 R1：Certified Free
 
-- R1 8-case macro：false-free 0.10085、static recall 0.14516、certified precision/recall
-  0.97166/0.22129，worst p95 97.33 ms；
-- R2：S08C false confirmation=0，S08B moving birth=1，IT11 hover birth=1，worst p95 97.39 ms；
-- R3 split+IMM：HOTA0.95486、FP29.4、FN51.6、frag8.3、IDSW0.1；相对 base 10/10 HOTA/FP/FN/
-  frag 改善；
-- R4 IMM+dormant：HOTA0.58867、FP9.6、FN173.1、frag3、IDSW0，3.3 correct reactivations/run、
-  wrong0，worst reported stale0.395 s、worst p9586.01 ms；
-- R5 C3：HOTA0.58622、FP9.9、FN173.8、frag3、IDSW0，无 >3 s ghost，worst p9586.76 ms；
-- 所有最终 phase worst p95 <100 ms。
+CAL06–08、NEG03/04/05/06 和 S08A 的 8-case macro：
 
-R3/R4/R5 的正式矩阵分别 40 runs，全部 manifest/coverage/source-sharing 合同通过；R4/R5 大 bag
+| false-free | static recall | certified precision | certified recall | expansion recall | false packets/min | worst p95 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.10085 | 0.14516 | 0.97166 | 0.22129 | 0.80107 | 0.55179 | 97.33 ms |
+
+`false-free<=0.18` 和 `static recall>=0.12` 两个工程门限均通过。S08A 单独的 false-free/static recall
+为0.15092/0.06355，说明总体通过不代表每个 exploration geometry 都均衡；这是当前 map recall 的
+主要残余风险。
+
+### 3.2 R2：Epistemic 三联测试
+
+| case | 语义结果 | HOTA | FN | TTFT | p95 |
+|---|---|---:|---:|---:|---:|
+| S08B moving unknown | birth recall=1 | 0.46018 | 268 | 18.1 s | 97.39 ms |
+| S08C stationary unknown | false confirmation=0 | 0 | 340 | N/A | 96.10 ms |
+| IT11 mapped-free hover | hover birth recall=1 | 0.98326 | 8 | 0.801 s | 83.56 ms |
+
+三种输入分别证明“U-stationary 不误报”“U-moving 可 birth”“F-hover 可 birth”，没有用同一个
+speed threshold 混淆三者。三份 source 的 target-free input 为10.328/10.495/10.489 s，严格超过
+10 s warm-up。S08B 的18.1 s TTFT 和不同 source realization 下的 HOTA 波动说明语义正确但召回不稳。
+
+### 3.3 R3：S04 track-conditioned packet / IMM
+
+N0/N1×5，同 source paired 共40 runs：
+
+| variant | HOTA | FP | FN | frag | IDSW | mean p95 |
+|---|---:|---:|---:|---:|---:|---:|
+| base | 0.87840 | 101.3 | 113.1 | 15.5 | 1.0 | 85.31 ms |
+| split | 0.88133 | 86.0 | 111.2 | 13.5 | 0.3 | 84.98 ms |
+| IMM | 0.79079 | 104.4 | 67.9 | 10.6 | 9.0 | 85.01 ms |
+| split+IMM | 0.95486 | 29.4 | 51.6 | 8.3 | 0.1 | 84.63 ms |
+
+组合相对 base：HOTA +0.07646、FP −71.9、FN −61.5、frag −7.2，四项在10/10 pairs 中方向一致，
+IDSW −0.9；worst p95=86.96 ms。旧 B0 的 HOTA/FP/FN/frag 为0.98711/12.2/11.1/0.1，因此 V3
+组合解决了当前 B4 退化，却没有全面达到 B0。
+
+### 3.4 R4：S05 IMM / Dormant
+
+N0/N1×5，同 source paired 共40 runs：
+
+| variant | HOTA | FP | FN | frag | IDSW | track-gap reacq | reactivation/run | worst stale | worst p95 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| base | 0.28394 | 6.9 | 200.7 | 2.1 | 2.1 | 9.064 s | 0 | 0.321 s | 85.25 ms |
+| IMM | 0.28421 | 6.8 | 200.6 | 2.1 | 2.1 | 9.053 s | 0 | 0.321 s | 87.53 ms |
+| dormant | 0.58703 | 10.0 | 173.5 | 3.0 | 0 | 5.547 s | 3.3 | 0.395 s | 86.35 ms |
+| IMM+dormant | 0.58867 | 9.6 | 173.1 | 3.0 | 0 | 5.534 s | 3.3 | 0.395 s | 86.01 ms |
+
+组合相对 base：HOTA +0.30474、FN −27.6、IDSW −2.1，HOTA/FN 在10/10 pairs 改善；所有
+reactivation correct rate=1、wrong rate=0。主要效应来自 dormant，而非 IMM。相对旧 B0 的 FN147.7，
+最终 FN 仍高25.4（17.2%），所以 R4 只能判“显著改善且 ghost-safe”，不能判“超过 B0”。
+
+### 3.5 R5：Opportunity 严格单因素
+
+四个 variants 的 birth groups 都固定为5；N0/N1×5，共40 runs：
+
+| variant | HOTA | FP | FN | frag | IDSW | worst stale | >3 s ghost/run | reactivation/run |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| C0 no opportunity | 0.64895 | 104.7 | 112.2 | 9.5 | 0 | 3.396 s | 0.4 | 0 |
+| C1 + opportunity | 0.28403 | 40.3 | 186.3 | 5.1 | 2.4 | 1.921 s | 0 | 0 |
+| C2 + survival/reportability | 0.28406 | 6.1 | 203.1 | 2.0 | 2.0 | 0.321 s | 0 | 0 |
+| C3 + dormant | 0.58622 | 9.9 | 173.8 | 3.0 | 0 | 0.395 s | 0 | 3.2 |
+
+| transition | ΔHOTA | ΔFP | ΔFN | Δfrag | ΔIDSW | paired 一致性 |
+|---|---:|---:|---:|---:|---:|---|
+| C0→C1 | −0.36492 | −64.4 | +74.1 | −4.4 | +2.4 | HOTA/FP/FN/frag 10/10 |
+| C1→C2 | +0.00003 | −34.2 | +16.8 | −3.1 | −0.4 | FP 10/10 降，FN 9/10 升 |
+| C2→C3 | +0.30216 | +3.8 | −29.3 | +1.0 | −2.0 | HOTA/FN 10/10 改善 |
+
+Opportunity 独立降低 FP、fragmentation 和 long-stale ghost，却显著增加 FN、降低 HOTA；这是一项
+明确 trade-off，不是净正收益。Survival/reportability 继续清理输出但不能恢复 recall；dormant 能恢复
+部分 FN、old ID 和 HOTA。C3 worst p95=86.76 ms。
+
+### 3.6 Map protection 重新解释
+
+旧 B3/B4 的100个 paired runs 显示 target-induced violation packets/run 从341.46降至12.37，
+而 contamination ratio 仅从0.006301降至0.006267，target-path trail 从0.970 s降至0.888 s。因此
+map protection 的可信收益是 violation suppression，不是已清除 map contamination。
+
+### 3.7 证据有效性
+
+R3/R4/R5 的正式矩阵分别40 runs，全部 manifest/coverage/source-sharing 合同通过；R4/R5 大 bag
 均已删除。R2 final 3 runs 也全部通过并删 bag。R1/R3 使用较早冻结 implementation/evaluator hash，
 后续 lifecycle/evaluator-only 修改不改变其受测模块；报告不把它们伪装成同一 commit 的单矩阵。
+所有最终 phase worst p95<100 ms，总体 worst=97.39 ms。
 
 ## 4. 根因与修正链
 
@@ -144,7 +255,21 @@ R4/R5 final manifests 各自拥有单 commit、单 algorithm/config/evaluator ha
 为控制工作盘，正式大 bag 在 metrics/manifest/CSV/log 验证后删除，不可从仓库恢复；可用冻结 scene、
 seed、noise、commit 和 runner 重录。保留的 invalid/pre-fix 目录用于解释修正链，不进入正式均值。
 
-### 7.1 最终验证
+### 7.1 证据索引
+
+| Phase | 正式目录 | 保留内容 |
+|---|---|---|
+| R1 | `artifacts/v3_r1/` | certified-free calibration/test metrics |
+| R2 | `artifacts/v3_r2_final/` | S08B/S08C/IT11 metrics、summary、manifest |
+| R3 | `artifacts/v3_r3/` | 四 variant 40-run aggregate 和 paired deltas |
+| R4 | `artifacts/v3_r4/` | 四 variant 40-run lifecycle aggregate 和 paired deltas |
+| R5 | `artifacts/v3_r5/` | C0–C3 40-run strict ablation aggregate 和 paired deltas |
+
+各目录的正式入口是 `metrics/summary.csv`、`metrics/aggregate.json`、
+`metrics/ablation_deltas.csv` 和 `benchmark_summary.json`。当前 `artifacts/v3*` 下不再保留 `.bag`；旧
+V1/V2 bag 未因本轮清理而删除。
+
+### 7.2 最终验证
 
 - `catkin build --no-status -j2`：11/11 packages 成功；
 - `catkin run_tests --no-status -j1` + `catkin_test_results build`：443 tests，0 errors，
