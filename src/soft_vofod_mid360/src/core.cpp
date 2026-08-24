@@ -210,6 +210,7 @@ void validateConfig(const Config& config)
       !finitePositive(config.tracker.reacquisition_max_speed_mps) ||
       !finitePositive(
           config.tracker.reacquisition_max_acceleration_mps2) ||
+      !finitePositive(config.tracker.reactivation_confirm_s) ||
       !finitePositive(config.tracker.reportability_time_constant_s) ||
       !finitePositive(config.tracker.reportability_uncertainty_scale_m) ||
       config.tracker.reportability_threshold < 0.0 ||
@@ -3309,6 +3310,13 @@ void SoftVofodCore::processBatch(
     track.last_measurement_position_m = aligned_packet.position_m;
     track.has_measurement_position = true;
     track.last_evidence_type = packet.birth_evidence_type;
+    if (track.state == TrackState::pre_reactivated)
+    {
+      track.state = TrackState::confirmed_active;
+      track.state_entry_time_s = batch_time_s;
+      ++track.reactivation_count;
+      ++result->diagnostics.dormant_reactivations;
+    }
     if (track.state == TrackState::occluded)
     {
       track.state = TrackState::confirmed_active;
@@ -3443,18 +3451,34 @@ void SoftVofodCore::processBatch(
       aligned_packet.position_m += track.x.tail<3>() *
           std::max(0.0, batch_time_s - aligned_packet.time_s);
       likelihoods[track_index] = updateTrackState(&track, aligned_packet);
-      track.state = TrackState::confirmed_active;
+      track.state = config_.ablation.two_stage_dormant_reactivation
+          ? TrackState::pre_reactivated : TrackState::confirmed_active;
       track.state_entry_time_s = batch_time_s;
       track.last_measurement_time_s = batch_time_s;
       track.last_measurement_position_m = aligned_packet.position_m;
       track.has_measurement_position = true;
       track.last_evidence_type = BirthEvidenceType::track_reactivation;
+      track.pre_reactivation_evidence_type =
+          aligned_packet.birth_evidence_type;
       ++track.positive_updates;
-      ++track.reactivation_count;
+      if (config_.ablation.two_stage_dormant_reactivation)
+      {
+        ++result->diagnostics.dormant_pre_reactivations;
+        if (aligned_packet.birth_evidence_type ==
+            BirthEvidenceType::certified_free_violation)
+          ++result->diagnostics.pre_reactivations_certified_free;
+        else if (aligned_packet.birth_evidence_type ==
+                 BirthEvidenceType::unknown_independent_motion)
+          ++result->diagnostics.pre_reactivations_unknown_motion;
+      }
+      else
+      {
+        ++track.reactivation_count;
+        ++result->diagnostics.dormant_reactivations;
+      }
       matched[track_index] = true;
       global_packet_matched[packet_index] = 1U;
       ++result->diagnostics.matches;
-      ++result->diagnostics.dormant_reactivations;
     }
   }
   result->diagnostics.dormant_reacquisition_ms +=
@@ -3692,6 +3716,8 @@ ScanResult SoftVofodCore::processScan(
       config_.ablation.reportability_filtering;
   result.diagnostics.dormant_reacquisition =
       config_.ablation.dormant_reacquisition;
+  result.diagnostics.two_stage_dormant_reactivation =
+      config_.ablation.two_stage_dormant_reactivation;
   result.diagnostics.require_certified_free_for_events =
       config_.map.require_certified_free_for_events;
   result.diagnostics.epistemic_unknown_birth =
@@ -3866,7 +3892,8 @@ ScanResult SoftVofodCore::processScan(
       continue;
     const bool was_confirmed = track.state == TrackState::confirmed_active ||
         track.state == TrackState::occluded ||
-        track.state == TrackState::dormant;
+        track.state == TrackState::dormant ||
+        track.state == TrackState::pre_reactivated;
     const auto evidence = std::find_if(
         result.opportunities.begin(), result.opportunities.end(),
         [&track](const OpportunityResult& item)
@@ -3962,6 +3989,13 @@ ScanResult SoftVofodCore::processScan(
       track.deletion_reason = "dormant_timeout";
       ++result.diagnostics.dormant_expirations;
     }
+    else if (track.state == TrackState::pre_reactivated &&
+             existence_time_s - track.state_entry_time_s >
+                 config_.tracker.reactivation_confirm_s)
+    {
+      enter_dormant(&track);
+      ++result.diagnostics.reactivation_second_packet_failures;
+    }
     else if (track.state != TrackState::deleting &&
              existence_time_s - track.last_measurement_time_s >
                  config_.tracker.hard_timeout_s)
@@ -3974,6 +4008,7 @@ ScanResult SoftVofodCore::processScan(
              track.state != TrackState::tentative &&
              track.state != TrackState::occluded &&
              track.state != TrackState::dormant &&
+             track.state != TrackState::pre_reactivated &&
              track.existence_probability <= config_.tracker.delete_threshold)
     {
       if (config_.ablation.dormant_reacquisition)
@@ -3993,6 +4028,7 @@ ScanResult SoftVofodCore::processScan(
     if (track.state == TrackState::occluded)
       state_factor = 0.35;
     else if (track.state == TrackState::dormant ||
+             track.state == TrackState::pre_reactivated ||
              track.state == TrackState::deleting)
       state_factor = 0.0;
     if (config_.ablation.reportability_filtering)
@@ -4004,6 +4040,7 @@ ScanResult SoftVofodCore::processScan(
           std::exp(-position_sigma_m /
               config_.tracker.reportability_uncertainty_scale_m));
       track.reportable = track.state != TrackState::dormant &&
+          track.state != TrackState::pre_reactivated &&
           track.state != TrackState::deleting &&
           track.last_evidence_type != BirthEvidenceType::track_reactivation &&
           track.reportability_score >= config_.tracker.reportability_threshold;
@@ -4013,6 +4050,7 @@ ScanResult SoftVofodCore::processScan(
       // The ablation is the V2 output contract: every live track is visible.
       track.reportability_score = track.existence_probability;
       track.reportable = track.state != TrackState::dormant &&
+          track.state != TrackState::pre_reactivated &&
           track.state != TrackState::deleting;
     }
     if (track.reportable &&

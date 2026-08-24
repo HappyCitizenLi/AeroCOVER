@@ -36,6 +36,7 @@ soft_vofod::Config testConfig()
   config.tracker.target_radius_m = 0.5;
   config.tracker.map_support_uncertainty_cap_m = 0.5;
   config.ablation.sequential_unknown_inference = false;
+  config.ablation.two_stage_dormant_reactivation = false;
   config.micro_batch_dt_s = 0.01;
   return config;
 }
@@ -1388,6 +1389,47 @@ TEST(DormantLifecycle, OcclusionDormancyAndCompatiblePacketReactivateOldId)
   EXPECT_EQ(result.tracks.front().last_evidence_type,
             soft_vofod::BirthEvidenceType::track_reactivation);
   EXPECT_FALSE(result.tracks.front().reportable);
+  EXPECT_EQ(result.diagnostics.dormant_reactivations, 1U);
+}
+
+TEST(DormantLifecycle, TwoStageReactivationRequiresSecondOrdinaryPacket)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.cv_ca_imm = false;
+  config.ablation.two_stage_dormant_reactivation = true;
+  config.tracker.survival_lambda_per_s = 0.02;
+  config.tracker.occluded_to_dormant_s = 0.3;
+  config.tracker.reactivation_confirm_s = 0.6;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.existence_probability = 0.9;
+  track.last_measurement_position_m = track.x.head<3>();
+  track.has_measurement_position = true;
+  core.addTrackForTest(track);
+
+  core.processScan(1U, 0.1,
+      {ray(0.1, soft_vofod::ReturnStatus::valid_return, 2.0)});
+  soft_vofod::ScanResult result = core.processScan(2U, 0.5,
+      {ray(0.5, soft_vofod::ReturnStatus::valid_return, 2.0)});
+  ASSERT_EQ(result.tracks.front().state, soft_vofod::TrackState::dormant);
+
+  core.processScan(3U, 0.51,
+      {ray(0.51, soft_vofod::ReturnStatus::valid_return, 5.0)});
+  result = core.processScan(4U, 0.8,
+      {ray(0.8, soft_vofod::ReturnStatus::invalid_range)});
+  ASSERT_EQ(result.tracks.front().state,
+            soft_vofod::TrackState::pre_reactivated);
+  EXPECT_FALSE(result.tracks.front().reportable);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 0U);
+  EXPECT_EQ(result.diagnostics.dormant_pre_reactivations, 1U);
+
+  core.processScan(5U, 0.81,
+      {ray(0.81, soft_vofod::ReturnStatus::valid_return, 5.0)});
+  result = core.processScan(6U, 1.0,
+      {ray(1.0, soft_vofod::ReturnStatus::invalid_range)});
+  ASSERT_EQ(result.tracks.front().state,
+            soft_vofod::TrackState::confirmed_active);
+  EXPECT_EQ(result.tracks.front().reactivation_count, 1U);
   EXPECT_EQ(result.diagnostics.dormant_reactivations, 1U);
 }
 

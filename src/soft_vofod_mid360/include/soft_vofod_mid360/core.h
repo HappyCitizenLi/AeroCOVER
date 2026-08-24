@@ -65,6 +65,7 @@ enum class TrackState : uint8_t
   occluded = 3,
   dormant = 4,
   deleting = 5,
+  pre_reactivated = 6,
 };
 
 struct MapConfig
@@ -174,6 +175,7 @@ struct TrackerConfig
   double dormant_reacquisition_gate_d2 = 16.266;
   double reacquisition_max_speed_mps = 15.0;
   double reacquisition_max_acceleration_mps2 = 6.0;
+  double reactivation_confirm_s = 1.0;
   double reportability_time_constant_s = 1.0;
   double reportability_uncertainty_scale_m = 1.5;
   double reportability_threshold = 0.2;
@@ -204,6 +206,7 @@ struct AblationConfig
   bool survival_prediction = true;
   bool reportability_filtering = true;
   bool dormant_reacquisition = true;
+  bool two_stage_dormant_reactivation = true;
   bool epistemic_unknown_birth = true;
   bool sequential_unknown_inference = true;
   bool effective_opportunity_cells = false;
@@ -287,6 +290,7 @@ struct Track
   bool has_reliable_position = false;
   uint32_t reliable_reportable_streak = 0U;
   uint32_t reactivation_count = 0U;
+  BirthEvidenceType pre_reactivation_evidence_type = BirthEvidenceType::none;
   double cumulative_effective_opportunity = 0.0;
   std::string deletion_reason;
 };
@@ -356,6 +360,10 @@ struct ProcessDiagnostics
   size_t occluded_transitions = 0;
   size_t dormant_entries = 0;
   size_t dormant_reactivations = 0;
+  size_t dormant_pre_reactivations = 0;
+  size_t reactivation_second_packet_failures = 0;
+  size_t pre_reactivations_certified_free = 0;
+  size_t pre_reactivations_unknown_motion = 0;
   size_t dormant_expirations = 0;
   size_t dormant_reacquisition_rejections = 0;
   bool background_endpoint_updates_enabled = true;
@@ -368,6 +376,7 @@ struct ProcessDiagnostics
   bool survival_prediction = true;
   bool reportability_filtering = true;
   bool dormant_reacquisition = true;
+  bool two_stage_dormant_reactivation = true;
   bool require_certified_free_for_events = true;
   bool epistemic_unknown_birth = true;
   bool sequential_unknown_inference = true;

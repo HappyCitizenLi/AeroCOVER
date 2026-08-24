@@ -461,6 +461,7 @@ def load_run(path, algorithm, score_start, score_end):
                         state = "active" if track.state == track.CONFIRMED else \
                             "occluded" if track.state == getattr(track, "OCCLUDED", -1) \
                             else "dormant" if track.state == getattr(track, "DORMANT", -1) \
+                            else "pre_reactivated" if track.state == getattr(track, "PRE_REACTIVATED", -1) \
                             else "tentative" if track.state == track.TENTATIVE \
                             else "deleting"
                     if not confirmed:
@@ -476,6 +477,7 @@ def load_run(path, algorithm, score_start, score_end):
                     state = "active" if track.state == track.CONFIRMED else \
                         "occluded" if track.state == getattr(track, "OCCLUDED", -1) \
                         else "dormant" if track.state == getattr(track, "DORMANT", -1) \
+                        else "pre_reactivated" if track.state == getattr(track, "PRE_REACTIVATED", -1) \
                         else "tentative" if track.state == track.TENTATIVE \
                         else "deleting"
                     all_tracks.append({
@@ -493,6 +495,8 @@ def load_run(path, algorithm, score_start, score_end):
                             track, "last_evidence_type", 0)),
                         "reactivation_count": int(getattr(
                             track, "reactivation_count", 0)),
+                        "pre_reactivation_evidence_type": int(getattr(
+                            track, "pre_reactivation_evidence_type", 0)),
                         "position": (track.position.x, track.position.y,
                                      track.position.z),
                     })
@@ -756,9 +760,16 @@ def lifecycle_metrics(tracks, truth_frames, scenario_events):
         by_id[item["id"]].append(item)
     occluded_duration = dormant_duration = 0.0
     reactivations = []
+    pre_reactivations = []
+    second_packet_failures = 0
     for samples in by_id.values():
         samples.sort(key=lambda item: item["stamp"])
         previous_reactivations = 0
+        for index, item in enumerate(samples):
+            if item["state"] == "pre_reactivated" and \
+                    (index == 0 or
+                     samples[index - 1]["state"] != "pre_reactivated"):
+                pre_reactivations.append(item)
         for first, second in zip(samples, samples[1:]):
             dt = max(0.0, second["stamp"] - first["stamp"])
             occluded_duration += dt if first["state"] == "occluded" else 0.0
@@ -766,6 +777,9 @@ def lifecycle_metrics(tracks, truth_frames, scenario_events):
             if second["reactivation_count"] > previous_reactivations:
                 reactivations.append(second)
             previous_reactivations = second["reactivation_count"]
+            if first["state"] == "pre_reactivated" and \
+                    second["state"] == "dormant":
+                second_packet_failures += 1
     correct = 0
     for item in reactivations:
         targets = nearest(truth_frames, item["stamp"]) or []
@@ -773,20 +787,46 @@ def lifecycle_metrics(tracks, truth_frames, scenario_events):
             np.linalg.norm(np.asarray(item["position"]) -
                            np.asarray(target["position"]))
             for target in targets) <= MAIN_THRESHOLD_M)
+    correct_pre = 0
+    for item in pre_reactivations:
+        targets = nearest(truth_frames, item["stamp"]) or []
+        correct_pre += bool(targets and min(
+            np.linalg.norm(np.asarray(item["position"]) -
+                           np.asarray(target["position"]))
+            for target in targets) <= MAIN_THRESHOLD_M)
     end_times = [item.get("sim_time") for item in scenario_events
                  if str(item.get("event", item.get("id", ""))).endswith("_end")]
     latencies = []
+    pre_latencies = []
     for end_time in end_times:
         if end_time is None:
             continue
         later = [item["stamp"] - end_time for item in reactivations
                  if item["stamp"] >= end_time]
+        pre_later = [item["stamp"] - end_time for item in pre_reactivations
+                     if item["stamp"] >= end_time]
         if later:
             latencies.append(min(later))
+        if pre_later:
+            pre_latencies.append(min(pre_later))
+    provenance = {"certified_free_violation": 0,
+                  "unknown_independent_motion": 0}
+    for item in pre_reactivations:
+        if item["pre_reactivation_evidence_type"] == 1:
+            provenance["certified_free_violation"] += 1
+        elif item["pre_reactivation_evidence_type"] == 2:
+            provenance["unknown_independent_motion"] += 1
     return {
         "occlusion_detected_duration_s": occluded_duration,
         "dormant_duration_s": dormant_duration,
         "reactivation_latency_s": distribution(latencies),
+        "time_target_visible_to_pre_reactivate_s": distribution(pre_latencies),
+        "time_target_visible_to_reportable_s": distribution(latencies),
+        "pre_reactivation_false_rate":
+            (len(pre_reactivations) - correct_pre) /
+            float(len(pre_reactivations)) if pre_reactivations else None,
+        "reactivation_second_packet_failure": second_packet_failures,
+        "reactivation_by_provenance": provenance,
         "correct_reactivation_rate": correct / float(len(reactivations))
         if reactivations else None,
         "wrong_reactivation_rate": (len(reactivations) - correct) /
@@ -1017,7 +1057,10 @@ def diagnostics_metrics(diagnostics):
         "split_points_unassigned", "association_gate_rejections",
         "occlusion_association_rejections",
         "occluded_transitions", "dormant_entries", "dormant_reactivations",
-        "dormant_expirations", "dormant_reacquisition_rejections")
+        "dormant_pre_reactivations", "reactivation_second_packet_failures",
+        "pre_reactivations_certified_free",
+        "pre_reactivations_unknown_motion", "dormant_expirations",
+        "dormant_reacquisition_rejections")
     return {
         "module_runtime_ms": {key: summaries[key] for key in runtime_keys
                               if key in summaries},
@@ -1213,7 +1256,8 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
               encoding="utf-8") as stream:
         columns = ("stamp", "id", "state", "existence", "reportability",
                    "reportable", "stale_s", "birth_evidence_type",
-                   "last_evidence_type", "reactivation_count", "position")
+                   "last_evidence_type", "reactivation_count",
+                   "pre_reactivation_evidence_type", "position")
         writer = csv.DictWriter(stream, fieldnames=columns)
         writer.writeheader()
         writer.writerows(all_tracks)
@@ -1248,7 +1292,7 @@ def main():
                                  "A1", "A2", "A3", "V3-A", "V3-B",
                                  "V3-C", "C0", "C1", "C2", "C3",
                                  "O0", "O1", "O2", "O3",
-                                 "U0", "U1",
+                                 "U0", "U1", "R0", "R1",
                                  "S04-base", "S04-split", "S04-IMM",
                                  "S04-split-IMM", "S05_base", "S05_IMM",
                                  "S05_dormant", "S05_IMM+dormant"))

@@ -19,6 +19,7 @@
   <arg name="survival_prediction" default="true"/>
   <arg name="reportability_filtering" default="true"/>
   <arg name="dormant_reacquisition" default="true"/>
+  <arg name="two_stage_dormant_reactivation" default="false"/>
   <arg name="certified_free_detection" default="true"/>
   <arg name="epistemic_unknown_birth" default="true"/>
   <arg name="sequential_unknown_inference" default="true"/>
@@ -50,6 +51,8 @@
            value="$(arg reportability_filtering)"/>
     <param name="ablation/dormant_reacquisition"
            value="$(arg dormant_reacquisition)"/>
+    <param name="ablation/two_stage_dormant_reactivation"
+           value="$(arg two_stage_dormant_reactivation)"/>
     <param name="map/require_certified_free_for_events"
            value="$(arg certified_free_detection)"/>
     <param name="ablation/epistemic_unknown_birth"

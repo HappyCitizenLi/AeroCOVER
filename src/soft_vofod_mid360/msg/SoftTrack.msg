@@ -5,6 +5,7 @@ uint8 OCCLUDED=3
 uint8 DORMANT=4
 uint8 DELETING=5
 uint8 RETIRED=5
+uint8 PRE_REACTIVATED=6
 uint8 BIRTH_NONE=0
 uint8 BIRTH_CERTIFIED_FREE_VIOLATION=1
 uint8 BIRTH_UNKNOWN_INDEPENDENT_MOTION=2
@@ -28,3 +29,4 @@ float32 reportability_score
 bool reportable
 uint8 last_evidence_type
 uint32 reactivation_count
+uint8 pre_reactivation_evidence_type

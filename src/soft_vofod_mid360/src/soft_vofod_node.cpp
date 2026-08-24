@@ -375,6 +375,8 @@ private:
               &config->tracker.reacquisition_max_speed_mps);
     parameter("tracker/reacquisition_max_acceleration_mps2",
               &config->tracker.reacquisition_max_acceleration_mps2);
+    parameter("tracker/reactivation_confirm_s",
+              &config->tracker.reactivation_confirm_s);
     parameter("tracker/reportability_time_constant_s",
               &config->tracker.reportability_time_constant_s);
     parameter("tracker/reportability_uncertainty_scale_m",
@@ -418,6 +420,8 @@ private:
               &config->ablation.reportability_filtering);
     parameter("ablation/dormant_reacquisition",
               &config->ablation.dormant_reacquisition);
+    parameter("ablation/two_stage_dormant_reactivation",
+              &config->ablation.two_stage_dormant_reactivation);
     parameter("ablation/epistemic_unknown_birth",
               &config->ablation.epistemic_unknown_birth);
     parameter("ablation/sequential_unknown_inference",
@@ -708,6 +712,8 @@ private:
     output.last_evidence_type =
         static_cast<uint8_t>(track.last_evidence_type);
     output.reactivation_count = track.reactivation_count;
+    output.pre_reactivation_evidence_type =
+        static_cast<uint8_t>(track.pre_reactivation_evidence_type);
     return output;
   }
 
@@ -905,6 +911,18 @@ private:
       status.values.push_back(diagnosticValue(
           "dormant_reactivations", number(diagnostics->dormant_reactivations)));
       status.values.push_back(diagnosticValue(
+          "dormant_pre_reactivations",
+          number(diagnostics->dormant_pre_reactivations)));
+      status.values.push_back(diagnosticValue(
+          "reactivation_second_packet_failures",
+          number(diagnostics->reactivation_second_packet_failures)));
+      status.values.push_back(diagnosticValue(
+          "pre_reactivations_certified_free",
+          number(diagnostics->pre_reactivations_certified_free)));
+      status.values.push_back(diagnosticValue(
+          "pre_reactivations_unknown_motion",
+          number(diagnostics->pre_reactivations_unknown_motion)));
+      status.values.push_back(diagnosticValue(
           "dormant_expirations", number(diagnostics->dormant_expirations)));
       status.values.push_back(diagnosticValue(
           "dormant_reacquisition_rejections",
@@ -936,6 +954,9 @@ private:
       status.values.push_back(diagnosticValue(
           "dormant_reacquisition",
           diagnostics->dormant_reacquisition ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "two_stage_dormant_reactivation",
+          diagnostics->two_stage_dormant_reactivation ? "true" : "false"));
       status.values.push_back(diagnosticValue(
           "require_certified_free_for_events",
           diagnostics->require_certified_free_for_events ? "true" : "false"));

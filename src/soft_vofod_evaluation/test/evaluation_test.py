@@ -170,6 +170,29 @@ class EvaluationTest(unittest.TestCase):
         self.assertEqual(lifecycle["reactivation_count"], 1)
         self.assertEqual(lifecycle["correct_reactivation_rate"], 1.0)
 
+        two_stage = [
+            {"stamp": 0.0, "id": 1, "state": "dormant",
+             "reactivation_count": 0, "pre_reactivation_evidence_type": 0,
+             "position": (1.0, 0.0, 0.0)},
+            {"stamp": 0.05, "id": 1, "state": "pre_reactivated",
+             "reactivation_count": 0, "pre_reactivation_evidence_type": 1,
+             "position": (1.0, 0.0, 0.0)},
+            {"stamp": 0.1, "id": 1, "state": "active",
+             "reactivation_count": 1, "pre_reactivation_evidence_type": 1,
+             "position": (1.0, 0.0, 0.0)},
+        ]
+        lifecycle = METRICS.lifecycle_metrics(
+            two_stage, truth, [{"id": "occlusion_end", "sim_time": 0.0}])
+        self.assertEqual(
+            lifecycle["time_target_visible_to_pre_reactivate_s"]["mean"],
+            0.05)
+        self.assertEqual(
+            lifecycle["time_target_visible_to_reportable_s"]["mean"], 0.1)
+        self.assertEqual(lifecycle["pre_reactivation_false_rate"], 0.0)
+        self.assertEqual(
+            lifecycle["reactivation_by_provenance"]
+            ["certified_free_violation"], 1)
+
     def test_resource_parser(self):
         with tempfile.NamedTemporaryFile("w", delete=False) as stream:
             stream.write("User time (seconds): 2.5\n")

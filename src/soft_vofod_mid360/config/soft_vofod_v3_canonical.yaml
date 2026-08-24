@@ -121,6 +121,7 @@ tracker:
   dormant_reacquisition_gate_d2: 16.266
   reacquisition_max_speed_mps: 15.0
   reacquisition_max_acceleration_mps2: 6.0
+  reactivation_confirm_s: 1.0
   reportability_time_constant_s: 1.0
   reportability_uncertainty_scale_m: 1.5
   reportability_threshold: 0.2
@@ -150,6 +151,9 @@ ablation:
   survival_prediction: true
   reportability_filtering: true
   dormant_reacquisition: true
+  # R0/R1 S05 gate: explicit PRE was safe but added 0.20 s report latency and
+  # did not improve HOTA/FN, so it remains an evaluated development path.
+  two_stage_dormant_reactivation: false
   epistemic_unknown_birth: true
   sequential_unknown_inference: true
   effective_opportunity_cells: true

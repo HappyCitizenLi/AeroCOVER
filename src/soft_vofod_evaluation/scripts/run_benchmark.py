@@ -29,7 +29,7 @@ ALGORITHMS = (
     "B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3",
     "V3-A", "V3-B", "V3-C", "C0", "C1", "C2", "C3",
     "O0", "O1", "O2", "O3",
-    "U0", "U1",
+    "U0", "U1", "R0", "R1",
     "S04-base", "S04-split", "S04-IMM", "S04-split-IMM",
     "S05_base", "S05_IMM", "S05_dormant", "S05_IMM+dormant")
 DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
@@ -848,7 +848,7 @@ class BenchmarkRunner:
             "survival_lambda": calibrated_survival, "split": "true",
             "imm": "true", "survival": "true", "reportability": "true",
             "dormant": "true", "certified": "true", "epistemic": "true",
-            "sequential_unknown": "true",
+            "sequential_unknown": "true", "two_stage_reactivation": "false",
         }
         overrides = {
             "A1": {"groups": "2", "opportunity": "false",
@@ -890,6 +890,10 @@ class BenchmarkRunner:
                    "sequential_unknown": "false"},
             "U1": {"opportunity": "false", "effective_opportunity": "true",
                    "sequential_unknown": "true"},
+            "R0": {"opportunity": "true", "effective_opportunity": "true",
+                   "two_stage_reactivation": "false"},
+            "R1": {"opportunity": "true", "effective_opportunity": "true",
+                   "two_stage_reactivation": "true"},
         }
         values = dict(defaults)
         values.update(overrides[algorithm])
@@ -897,7 +901,8 @@ class BenchmarkRunner:
             values.update({"split": "false", "imm": "false",
                            "reportability": "false", "dormant": "false",
                            "certified": "false", "epistemic": "false",
-                           "sequential_unknown": "false"})
+                           "sequential_unknown": "false",
+                           "two_stage_reactivation": "false"})
             values["survival"] = "false" if algorithm in ("A1", "A2", "B1", "B2") \
                 else "true"
         return time_prefix + [
@@ -914,6 +919,8 @@ class BenchmarkRunner:
             "survival_prediction:=" + values["survival"],
             "reportability_filtering:=" + values["reportability"],
             "dormant_reacquisition:=" + values["dormant"],
+            "two_stage_dormant_reactivation:=" +
+                values["two_stage_reactivation"],
             "certified_free_detection:=" + values["certified"],
             "epistemic_unknown_birth:=" + values["epistemic"],
             "sequential_unknown_inference:=" + values["sequential_unknown"],

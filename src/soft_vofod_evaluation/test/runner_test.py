@@ -178,6 +178,8 @@ class RunnerTest(unittest.TestCase):
                 self.assertEqual(values["cv_ca_imm"], "false")
                 self.assertEqual(values["reportability_filtering"], "false")
                 self.assertEqual(values["dormant_reacquisition"], "false")
+                self.assertEqual(
+                    values["two_stage_dormant_reactivation"], "false")
                 self.assertEqual(values["certified_free_detection"], "false")
                 self.assertEqual(values["epistemic_unknown_birth"], "false")
 
@@ -240,6 +242,14 @@ class RunnerTest(unittest.TestCase):
                 self.assertEqual(values["opportunity_aware_existence"], "false")
                 self.assertEqual(values["effective_opportunity_cells"], "true")
                 self.assertEqual(values["sequential_unknown_inference"], enabled)
+
+            for algorithm, enabled in (("R0", "false"), ("R1", "true")):
+                values = launch_values(runner.algorithm_command(
+                    algorithm, os.path.join(directory, "resource.txt")))
+                self.assertEqual(values["dormant_reacquisition"], "true")
+                self.assertEqual(values["opportunity_aware_existence"], "true")
+                self.assertEqual(
+                    values["two_stage_dormant_reactivation"], enabled)
 
 
 if __name__ == "__main__":
