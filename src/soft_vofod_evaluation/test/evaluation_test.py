@@ -193,6 +193,24 @@ class EvaluationTest(unittest.TestCase):
             lifecycle["reactivation_by_provenance"]
             ["certified_free_violation"], 1)
 
+        occlusion_truth = [
+            (stamp, [{"id": "a", "position": (1.0, 0.0, 0.0),
+                      "present": True, "in_range": True, "in_fov": True,
+                      "line_of_sight": stamp != 1.0,
+                      "occlusion": 1 if stamp == 1.0 else 0}])
+            for stamp in (0.0, 1.0, 2.0)]
+        occlusion_tracks = [
+            {"stamp": stamp, "id": 1, "position": (1.0, 0.0, 0.0)}
+            for stamp in (0.0, 1.0, 2.0)]
+        occlusion_opportunities = [
+            (stamp, [{"track_id": 1, "occlusion": probability}])
+            for stamp, probability in ((0.0, 0.1), (1.0, 0.8), (2.0, 0.2))]
+        occlusion = METRICS.occlusion_metrics(
+            occlusion_opportunities, occlusion_tracks, occlusion_truth)
+        self.assertEqual(occlusion["occlusion_precision"], 1.0)
+        self.assertEqual(occlusion["occlusion_recall"], 1.0)
+        self.assertEqual(occlusion["false_occlusion_rate"], 0.0)
+
     def test_resource_parser(self):
         with tempfile.NamedTemporaryFile("w", delete=False) as stream:
             stream.write("User time (seconds): 2.5\n")

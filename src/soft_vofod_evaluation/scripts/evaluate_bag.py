@@ -835,6 +835,71 @@ def lifecycle_metrics(tracks, truth_frames, scenario_events):
     }
 
 
+def occlusion_metrics(opportunities, tracks, truth_frames, threshold=0.6):
+    tracks_by_stamp = defaultdict(list)
+    for item in tracks:
+        tracks_by_stamp[round(item["stamp"], 9)].append(item)
+    track_frames = sorted(tracks_by_stamp.items())
+    sequences = defaultdict(list)
+    tp = fp = fn = tn = eligible = 0
+    for stamp, targets in truth_frames:
+        frame_tracks = nearest(track_frames, stamp) or []
+        frame_opportunities = nearest(opportunities, stamp) or []
+        by_id = {item["track_id"]: item for item in frame_opportunities}
+        for target in targets:
+            if not (target.get("present", True) and
+                    target.get("in_range", True) and
+                    target.get("in_fov", True)):
+                continue
+            candidates = sorted(
+                ((np.linalg.norm(np.asarray(track["position"]) -
+                                 np.asarray(target["position"])), track)
+                 for track in frame_tracks), key=lambda item: item[0])
+            if not candidates or candidates[0][0] > 2.0:
+                continue
+            opportunity = by_id.get(candidates[0][1]["id"])
+            if opportunity is None:
+                continue
+            eligible += 1
+            truth_occluded = not target.get("line_of_sight", True) and \
+                target.get("occlusion", 0) != 0
+            predicted_occluded = opportunity["occlusion"] >= threshold
+            tp += truth_occluded and predicted_occluded
+            fp += not truth_occluded and predicted_occluded
+            fn += truth_occluded and not predicted_occluded
+            tn += not truth_occluded and not predicted_occluded
+            sequences[target["id"]].append(
+                (stamp, truth_occluded, predicted_occluded))
+
+    onset_delays = []
+    end_delays = []
+    for samples in sequences.values():
+        samples.sort()
+        for index in range(1, len(samples)):
+            stamp, truth, _ = samples[index]
+            previous_truth = samples[index - 1][1]
+            if truth and not previous_truth:
+                later = [item[0] - stamp for item in samples[index:]
+                         if item[2]]
+                if later:
+                    onset_delays.append(min(later))
+            elif previous_truth and not truth:
+                later = [item[0] - stamp for item in samples[index:]
+                         if not item[2]]
+                if later:
+                    end_delays.append(min(later))
+    return {
+        "eligible_track_frames": eligible,
+        "occluded_truth_frames": tp + fn,
+        "occlusion_precision": tp / float(tp + fp) if tp + fp else None,
+        "occlusion_recall": tp / float(tp + fn) if tp + fn else None,
+        "occlusion_onset_delay_s": distribution(onset_delays),
+        "occlusion_end_delay_s": distribution(end_delays),
+        "false_occlusion_rate": fp / float(fp + tn) if fp + tn else None,
+        "confusion": {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
+    }
+
+
 def calibration_reliability(samples, bin_count=10):
     bins = []
     for index in range(bin_count):
@@ -1189,6 +1254,9 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
         if algorithm != "B0" else {},
         "lifecycle": lifecycle_metrics(
             all_tracks, truth_frames, scenario_events)
+        if algorithm != "B0" else {},
+        "occlusion": occlusion_metrics(
+            opportunities, all_tracks, truth_frames)
         if algorithm != "B0" else {},
         "opportunity": opportunity_metrics(
             opportunities,
