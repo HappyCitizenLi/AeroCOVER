@@ -21,6 +21,9 @@
 | R6 | 仅 R1–R5 通过后：S01–S08C，B0+V3 × 5 | 小矩阵无 regression |
 | R7 | 仅四问题都改善后扩 10 seeds | 统计扩展，不用于继续调参 |
 
+本轮执行结果：R1/R2 通过，R3 相对 V3 base 通过，R4 仅部分通过，R5 证明 opportunity 独立净收益
+不成立；因此按本表预先定义的门禁没有运行 R6/R7。
+
 ## 3. Variant 合同
 
 所有 V3 variants 读取同一 canonical YAML。runner 的唯一差异是显式 booleans：
@@ -54,3 +57,6 @@ artifacts/v3_r5/
 每个目录保留 `metrics/{summary.csv,aggregate.json,ablation_deltas.csv}` 和
 `runs/<algorithm>/<scene>/<noise>/seed_<seed>/` 的小型证据文件。大 bag 在完成 hash/coverage/metric
 检查后删除。
+
+`IT10/12/13/14/15` 在 runner 中分别解析到已经执行的 NEG05/S08C/S08B/S04/S05 语义场景；这是
+测试入口别名，不是算法 scene switch。IT11 因 certified-free hover 几何不同，保留独立 YAML。
