@@ -105,6 +105,9 @@ class BenchmarkScenario:
         self.duration = number(raw["duration_s"], "duration_s")
         self.score_start = number(raw["score_start_s"], "score_start_s")
         self.score_end = number(raw["score_end_s"], "score_end_s")
+        self.cold_start = raw.get("cold_start", False)
+        if not isinstance(self.cold_start, bool):
+            raise ValueError("cold_start must be boolean")
         if not 0.0 < self.score_start < self.score_end <= self.duration:
             raise ValueError("invalid scoring interval")
         self.start_delay = number(raw.get("start_delay_s", 2.0), "start_delay_s")
@@ -118,7 +121,7 @@ class BenchmarkScenario:
                 raise ValueError("target ids must be unique and exclude uav1")
             ids.add(target_id)
             spawn_time = number(target["spawn_time_s"], "target.spawn_time_s")
-            if spawn_time < self.score_start:
+            if spawn_time < self.score_start and not self.cold_start:
                 raise ValueError("targets may not spawn during target-free warmup")
             waypoints = parse_waypoints(
                 target["waypoints"], "targets[{}].waypoints".format(index),
@@ -261,4 +264,3 @@ if __name__ == "__main__":
     except Exception as exception:
         rospy.logfatal("benchmark scenario failed: %s", exception)
         raise
-

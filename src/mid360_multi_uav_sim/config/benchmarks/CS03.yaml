@@ -1,4 +1,5 @@
 schema_version: 1
+cold_start: true
 scenario_id: CS03_zero_background_stationary_unknown
 world: E1_sparse
 seed: 2103

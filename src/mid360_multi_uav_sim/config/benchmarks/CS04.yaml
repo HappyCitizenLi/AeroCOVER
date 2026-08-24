@@ -1,4 +1,5 @@
 schema_version: 1
+cold_start: true
 scenario_id: CS04_later_certified_free_corridor
 world: E1_sparse
 seed: 2104

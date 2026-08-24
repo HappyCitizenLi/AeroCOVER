@@ -1,4 +1,5 @@
 schema_version: 1
+cold_start: true
 scenario_id: CS05_active_target_known_to_unknown
 world: E1_sparse
 seed: 2105

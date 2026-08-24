@@ -81,6 +81,12 @@ class BenchmarkScenariosTest(unittest.TestCase):
                 self.assertGreater(math.sqrt(sum(
                     (next_position[index] - position[index]) ** 2
                     for index in range(3))), 0.5)
+        for scene in ("CS01", "CS02", "CS03", "CS04", "CS05"):
+            config = self.load(scene)
+            self.assertTrue(config["cold_start"])
+            self.assertLess(config["score_start_s"], 1.0)
+            for target in config["targets"]:
+                self.assertEqual(target["spawn_time_s"], 0.0)
 
     def test_calibration_splits_are_disjoint_and_semantic(self):
         expected = {
@@ -94,6 +100,7 @@ class BenchmarkScenariosTest(unittest.TestCase):
             "CAL12": ("opportunity_range_angle", 1),
             "CAL13": ("opportunity_fill_factor", 1),
             "CAL14": ("opportunity_miss_likelihood", 1),
+            "CAL16": ("packet_surface_bias", 1),
         }
         for scene, (suffix, targets) in expected.items():
             config = self.load(scene)
