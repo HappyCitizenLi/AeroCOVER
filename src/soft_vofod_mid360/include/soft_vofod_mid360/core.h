@@ -352,6 +352,7 @@ struct ProcessDiagnostics
   size_t unresolved_hypotheses = 0;
   size_t sequential_motion_decisions = 0;
   size_t sequential_background_decisions = 0;
+  size_t certified_free_birth_quarantines = 0;
   size_t track_conditioned_split_count = 0;
   size_t track_conditioned_split_packets = 0;
   size_t split_points_assigned = 0;
@@ -611,6 +612,8 @@ public:
   void addTrackForTest(const Track& track);
   void classifyUnknownPacketsForTest(
       std::vector<Event>* packets, ProcessDiagnostics* diagnostics = nullptr);
+  bool certifiedFreeBirthConflictsWithUnknownHistoryForTest(
+      const Event& packet) const;
   std::optional<Track> tryBirthForTest(double time_s);
   OpportunityResult opportunityForTest(
       const Track& track, const std::vector<RaySample>& rays,
@@ -690,6 +693,8 @@ private:
       double time_s, ProcessDiagnostics* diagnostics = nullptr);
   void classifyUnknownPackets(
       std::vector<Event>* packets, ProcessDiagnostics* diagnostics);
+  bool certifiedFreeBirthConflictsWithUnknownHistory(
+      const Event& packet) const;
   bool birthCellAvailable(const Vec3& position_m, double time_s) const;
   void recordBirthCell(const Vec3& position_m, double time_s);
   std::vector<Support> supports(double time_s) const;

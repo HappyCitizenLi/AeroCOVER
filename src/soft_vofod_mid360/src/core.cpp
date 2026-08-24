@@ -1810,6 +1810,33 @@ void SoftVofodCore::classifyUnknownPacketsForTest(
   classifyUnknownPackets(packets, diagnostics);
 }
 
+bool SoftVofodCore::certifiedFreeBirthConflictsWithUnknownHistoryForTest(
+    const Event& packet) const
+{
+  return certifiedFreeBirthConflictsWithUnknownHistory(packet);
+}
+
+bool SoftVofodCore::certifiedFreeBirthConflictsWithUnknownHistory(
+    const Event& packet) const
+{
+  const double gate_m = std::max(
+      config_.map.unknown_match_distance_m,
+      config_.tracker.target_radius_m + config_.birth.max_residual_m);
+  for (const UnresolvedMotionHypothesis& hypothesis : unresolved_hypotheses_)
+  {
+    if (hypothesis.decision == EpistemicState::independent_motion ||
+        hypothesis.first_time_s > packet.time_s)
+      continue;
+    const double dt = std::max(0.0, packet.time_s - hypothesis.last_time_s);
+    const Vec3 moving_prediction =
+        hypothesis.moving_x.head<3>() + hypothesis.moving_x.tail<3>() * dt;
+    if (std::min((packet.position_m - hypothesis.static_mean_m).norm(),
+                 (packet.position_m - moving_prediction).norm()) <= gate_m)
+      return true;
+  }
+  return false;
+}
+
 void SoftVofodCore::classifyUnknownPackets(
     std::vector<Event>* const packets, ProcessDiagnostics* const diagnostics)
 {
@@ -2154,10 +2181,22 @@ SoftVofodCore::bestBirthCandidate(
         const double footprint_radius_m =
             config_.tracker.target_radius_m +
             config_.birth.max_residual_m;
+        const Vec3 lower_bound =
+            config_.map.center_m - 0.5 * config_.map.dimensions_m;
+        const Vec3 upper_bound =
+            config_.map.center_m + 0.5 * config_.map.dimensions_m;
         bool compact_footprint = true;
         for (const size_t index : indices)
         {
           const Event& event = birth_buffer_[index];
+          if (((event.position_m - lower_bound).array() <
+                  footprint_radius_m).any() ||
+              ((upper_bound - event.position_m).array() <
+                  footprint_radius_m).any())
+          {
+            compact_footprint = false;
+            break;
+          }
           const Vec3 predicted = mean_position + fitted_velocity *
               (event.time_s - mean_time);
           for (const Vec3& point_m : event.points_m)
@@ -3119,21 +3158,37 @@ void SoftVofodCore::processBatch(
         unresolved_packets.size();
     result->diagnostics.events += epoch_commit->violation_packets.size();
     violation_measurements = epoch_commit->violation_packets.size();
-    birth_eligible_measurements = violation_measurements +
+    std::vector<Event> eligible_violation_packets;
+    std::vector<Event> quarantined_violation_packets;
+    eligible_violation_packets.reserve(violation_measurements);
+    for (Event packet : epoch_commit->violation_packets)
+    {
+      packet.scan_id = scan_id;
+      result->events.push_back(packet);
+      if (config_.ablation.sequential_unknown_inference &&
+          certifiedFreeBirthConflictsWithUnknownHistory(packet))
+      {
+        quarantined_violation_packets.push_back(std::move(packet));
+        ++result->diagnostics.certified_free_birth_quarantines;
+      }
+      else
+        eligible_violation_packets.push_back(std::move(packet));
+    }
+    birth_eligible_measurements = eligible_violation_packets.size() +
         (config_.ablation.epistemic_unknown_birth
              ? unresolved_packets.size() : 0U);
     maintenance_packets.reserve(
         violation_measurements + unresolved_packets.size() +
         epoch_commit->track_explained_packets.size());
-    for (Event packet : epoch_commit->violation_packets)
-    {
-      packet.scan_id = scan_id;
-      result->events.push_back(packet);
-      maintenance_packets.push_back(std::move(packet));
-    }
+    maintenance_packets.insert(
+        maintenance_packets.end(), eligible_violation_packets.begin(),
+        eligible_violation_packets.end());
     maintenance_packets.insert(
         maintenance_packets.end(), unresolved_packets.begin(),
         unresolved_packets.end());
+    maintenance_packets.insert(
+        maintenance_packets.end(), quarantined_violation_packets.begin(),
+        quarantined_violation_packets.end());
     maintenance_packets.insert(
         maintenance_packets.end(),
         epoch_commit->track_explained_packets.begin(),

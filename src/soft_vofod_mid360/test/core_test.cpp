@@ -722,6 +722,26 @@ TEST(Birth, SequentialUnknownInferenceDoesNotFallBackToOneShotGate)
   EXPECT_FALSE(core.tryBirthForTest(1.0).has_value());
 }
 
+TEST(Birth, PriorUnknownHistoryQuarantinesLaterCertifiedFreeBirth)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.sequential_unknown_inference = true;
+  soft_vofod::SoftVofodCore core(config);
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    std::vector<soft_vofod::Event> packets = {event(
+        0.2 * group, soft_vofod::Vec3(2.0, 0.0, 0.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion)};
+    core.classifyUnknownPacketsForTest(&packets);
+  }
+  const soft_vofod::Event near = event(
+      0.8, soft_vofod::Vec3(2.1, 0.0, 0.0), 4U);
+  const soft_vofod::Event far = event(
+      0.8, soft_vofod::Vec3(8.0, 0.0, 0.0), 4U);
+  EXPECT_TRUE(core.certifiedFreeBirthConflictsWithUnknownHistoryForTest(near));
+  EXPECT_FALSE(core.certifiedFreeBirthConflictsWithUnknownHistoryForTest(far));
+}
+
 TEST(EpistemicMap, UnresolvedDefersBackgroundUntilStaticDecision)
 {
   soft_vofod::Config config = testConfig();
@@ -805,6 +825,19 @@ TEST(Birth, ExtendedUnknownSurfaceCannotMasqueradeAsCompactTarget)
     core.addBirthEventForTest(sample);
   }
   EXPECT_FALSE(core.tryBirthForTest(0.9).has_value());
+}
+
+TEST(Birth, UnknownMotionAtMapBoundaryRemainsUnresolved)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::SoftVofodCore core(config);
+  for (uint64_t group = 0U; group < 3U; ++group)
+  {
+    core.addBirthEventForTest(event(
+        0.1 * group, soft_vofod::Vec3(2.0 + 0.5 * group, 2.9, 0.0),
+        group, soft_vofod::BirthEvidenceType::unknown_independent_motion));
+  }
+  EXPECT_FALSE(core.tryBirthForTest(0.2).has_value());
 }
 
 TEST(Birth, UnknownMotionMustExceedTheConfiguredSignificanceLevel)

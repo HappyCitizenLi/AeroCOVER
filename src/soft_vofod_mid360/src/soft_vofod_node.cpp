@@ -887,6 +887,9 @@ private:
           "sequential_background_decisions",
           number(diagnostics->sequential_background_decisions)));
       status.values.push_back(diagnosticValue(
+          "certified_free_birth_quarantines",
+          number(diagnostics->certified_free_birth_quarantines)));
+      status.values.push_back(diagnosticValue(
           "max_motion_log_odds", number(diagnostics->max_motion_log_odds)));
       status.values.push_back(diagnosticValue(
           "track_conditioned_split_count",

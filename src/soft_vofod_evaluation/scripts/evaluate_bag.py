@@ -1192,6 +1192,7 @@ def diagnostics_metrics(diagnostics):
         "observed_free_voxels", "certified_free_voxels",
         "certified_free_violation_packets", "unknown_motion_packets",
         "unknown_motion_rejections", "track_conditioned_split_count",
+        "certified_free_birth_quarantines",
         "track_conditioned_split_packets", "split_points_assigned",
         "split_points_unassigned", "association_gate_rejections",
         "occlusion_association_rejections",
