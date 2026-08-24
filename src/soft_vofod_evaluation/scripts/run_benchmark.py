@@ -29,7 +29,7 @@ ALGORITHMS = (
     "B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3",
     "V3-A", "V3-B", "V3-C", "C0", "C1", "C2", "C3",
     "O0", "O1", "O2", "O3",
-    "U0", "U1", "R0", "R1",
+    "U0", "U1", "R0", "R1", "M0", "M1",
     "S04-base", "S04-split", "S04-IMM", "S04-split-IMM",
     "S05_base", "S05_IMM", "S05_dormant", "S05_IMM+dormant")
 DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
@@ -37,7 +37,7 @@ SCENES = DEFAULT_SCENES + (
     "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04",
     "NEG05", "NEG06", "CAL01", "CAL02", "CAL03", "CAL04", "CAL05",
     "CAL06", "CAL07", "CAL08", "CAL09", "CAL10", "CAL11", "CAL12",
-    "CAL13", "CAL14", "IT10", "IT11", "IT12",
+    "CAL13", "CAL14", "CAL16", "IT10", "IT11", "IT12",
     "IT13", "IT14", "IT15")
 INTEGRATION_SCENE_ALIASES = {
     "IT10": "NEG05",  # moving observer at a wall edge
@@ -233,11 +233,12 @@ def aggregate_results(output_root):
                      "comparator_value", "proposed_minus_comparator")
     delta_rows = []
     for scene, noise, seed, algorithm in sorted(paired):
-        if algorithm not in ("A3", "B4", "O1", "O2", "O3"):
+        if algorithm not in ("A3", "B4", "O1", "O2", "O3", "M1"):
             continue
         proposed = paired[(scene, noise, seed, algorithm)]
         comparators = ("B0", "A1", "A2") if algorithm == "A3" else \
-            ("B0", "B1", "B2", "B3") if algorithm == "B4" else ("O0",)
+            ("B0", "B1", "B2", "B3") if algorithm == "B4" else \
+            ("O0",) if algorithm.startswith("O") else ("M0",)
         for comparator in comparators:
             baseline = paired.get((scene, noise, seed, comparator))
             if baseline is None:
@@ -849,6 +850,7 @@ class BenchmarkRunner:
             "imm": "true", "survival": "true", "reportability": "true",
             "dormant": "true", "certified": "true", "epistemic": "true",
             "sequential_unknown": "true", "two_stage_reactivation": "false",
+            "anisotropic_los": "false",
         }
         overrides = {
             "A1": {"groups": "2", "opportunity": "false",
@@ -894,6 +896,8 @@ class BenchmarkRunner:
                    "two_stage_reactivation": "false"},
             "R1": {"opportunity": "true", "effective_opportunity": "true",
                    "two_stage_reactivation": "true"},
+            "M0": {"anisotropic_los": "false"},
+            "M1": {"anisotropic_los": "true"},
         }
         values = dict(defaults)
         values.update(overrides[algorithm])
@@ -926,6 +930,7 @@ class BenchmarkRunner:
             "sequential_unknown_inference:=" + values["sequential_unknown"],
             "effective_opportunity_cells:=" + values["effective_opportunity"],
             "range_conditioned_opportunity_return:=" + values["range_return"],
+            "anisotropic_los_covariance:=" + values["anisotropic_los"],
         ]
 
     def replay(self, algorithm, scene, noise, seed, source_bag, source_manifest):

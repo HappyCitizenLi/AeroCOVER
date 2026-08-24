@@ -102,6 +102,7 @@ struct MapConfig
   double packet_sensor_variance_m2 = 0.1;
   double packet_shape_sigma_m = 0.35;
   double packet_sampling_variance_floor_m2 = 0.04;
+  bool packet_anisotropic_los_covariance = false;
   double valid_free_weight = 1.0;
   double no_return_free_weight = 0.5;
   double background_weight = 1.0;

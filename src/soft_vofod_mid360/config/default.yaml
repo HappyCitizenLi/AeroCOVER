@@ -51,6 +51,7 @@ event:
   packet_sensor_variance_m2: 0.1
   packet_shape_sigma_m: 0.35
   packet_sampling_variance_floor_m2: 0.04
+  packet_anisotropic_los_covariance: false
 
 birth:
   buffer_duration_s: 2.0

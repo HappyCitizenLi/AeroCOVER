@@ -25,6 +25,7 @@
   <arg name="sequential_unknown_inference" default="true"/>
   <arg name="effective_opportunity_cells" default="true"/>
   <arg name="range_conditioned_opportunity_return" default="true"/>
+  <arg name="anisotropic_los_covariance" default="false"/>
   <arg name="output" default="screen"/>
 
   <node pkg="soft_vofod_mid360" type="soft_vofod_node"
@@ -63,5 +64,7 @@
            value="$(arg effective_opportunity_cells)"/>
     <param name="ablation/range_conditioned_opportunity_return"
            value="$(arg range_conditioned_opportunity_return)"/>
+    <param name="event/packet_anisotropic_los_covariance"
+           value="$(arg anisotropic_los_covariance)"/>
   </node>
 </launch>

@@ -259,6 +259,8 @@ private:
               &config->map.packet_shape_sigma_m);
     parameter("event/packet_sampling_variance_floor_m2",
               &config->map.packet_sampling_variance_floor_m2);
+    parameter("event/packet_anisotropic_los_covariance",
+              &config->map.packet_anisotropic_los_covariance);
 
     parameter("birth/buffer_duration_s", &config->birth.buffer_duration_s);
     int maximum_events = static_cast<int>(config->birth.max_buffer_events);

@@ -19,6 +19,21 @@ def target(identifier, x, velocity=(0.0, 0.0, 0.0)):
 
 
 class EvaluationTest(unittest.TestCase):
+    def test_packet_surface_bias_is_resolved_in_los_coordinates(self):
+        result = METRICS.packet_surface_bias_metrics(
+            [(1.0, [{"position": (4.5, 0.3, 0.0),
+                     "ray_direction": (1.0, 0.0, 0.0),
+                     "points": [(4.5, 0.2, 0.0), (4.5, 0.4, 0.0)],
+                     "point_count": 2}])],
+            [(1.0, [{"id": "uav2", "position": (5.0, 0.0, 0.0),
+                    "present": True, "actual_returns": 2}])],
+            [(1.0, (0.0, 0.0, 0.0))])
+        self.assertEqual(result["sample_count"], 1)
+        self.assertAlmostEqual(result["parallel_signed_m"]["mean"], -0.5)
+        self.assertAlmostEqual(result["perpendicular_m"]["mean"], 0.3)
+        self.assertEqual(result["by_range_m"]["0-15"]["count"], 1)
+        self.assertEqual(result["by_point_count"]["2-4"]["count"], 1)
+
     def test_hungarian_metrics_are_one_to_one_and_report_identity_switch(self):
         frames = [
             {"time": 0.0, "observer": (0.0, 0.0, 0.0),

@@ -504,6 +504,9 @@ def load_run(path, algorithm, score_start, score_end):
                     score_start <= stamp <= score_end:
                 packets = [{
                     "position": (item.position.x, item.position.y, item.position.z),
+                    "ray_direction": (item.ray_direction.x,
+                                      item.ray_direction.y,
+                                      item.ray_direction.z),
                     "points": [(point.x, point.y, point.z)
                                for point in getattr(item, "points", [])],
                     "point_count": int(getattr(item, "point_count", 1)),
@@ -714,6 +717,75 @@ def packet_continuity_metrics(packets, truth_frames, track_frames):
         "target_acceleration_mps2": distribution(accelerations),
         "turning_segment_count": turning_segments,
         "predicted_truth_innovation_m": distribution(innovations),
+    }
+
+
+def packet_surface_bias_metrics(packets, truth_frames, observers):
+    """Measure target-packet center error in LOS coordinates for CAL16."""
+    samples = []
+    for stamp, frame_packets in packets:
+        targets = [target for target in (nearest(truth_frames, stamp) or [])
+                   if target.get("present", True) and
+                   target.get("actual_returns", 0) > 0]
+        observer = np.asarray(nearest(observers, stamp) or (0.0, 0.0, 0.0))
+        for packet in frame_packets:
+            if not targets:
+                continue
+            position = np.asarray(packet["position"])
+            distances = [np.linalg.norm(position - np.asarray(target["position"]))
+                         for target in targets]
+            target = targets[int(np.argmin(distances))]
+            if min(distances) > MAIN_THRESHOLD_M:
+                continue
+            ray = np.asarray(packet.get("ray_direction", (0.0, 0.0, 0.0)))
+            if np.linalg.norm(ray) <= 1.0e-9:
+                ray = np.asarray(target["position"]) - observer
+            if np.linalg.norm(ray) <= 1.0e-9:
+                continue
+            ray /= np.linalg.norm(ray)
+            residual = position - np.asarray(target["position"])
+            parallel = float(np.dot(residual, ray))
+            perpendicular = float(np.linalg.norm(residual - parallel * ray))
+            points = np.asarray(packet.get("points") or [packet["position"]])
+            spread = float(np.sqrt(np.mean(np.sum(
+                np.square(points - position), axis=1))))
+            target_range = float(np.linalg.norm(
+                np.asarray(target["position"]) - observer))
+            samples.append({"parallel": parallel, "perpendicular": perpendicular,
+                            "range": target_range,
+                            "point_count": packet.get("point_count", 1),
+                            "spread": spread})
+
+    def grouped(field, bins):
+        return {label: {
+            "count": len(group),
+            "parallel_signed_m": distribution(
+                [sample["parallel"] for sample in group]),
+            "perpendicular_m": distribution(
+                [sample["perpendicular"] for sample in group]),
+        } for label, predicate in bins for group in [[
+            sample for sample in samples if predicate(sample[field])]]}
+
+    return {
+        "sample_count": len(samples),
+        "parallel_signed_m": distribution(
+            [sample["parallel"] for sample in samples]),
+        "parallel_absolute_m": distribution(
+            [abs(sample["parallel"]) for sample in samples]),
+        "perpendicular_m": distribution(
+            [sample["perpendicular"] for sample in samples]),
+        "by_range_m": grouped("range", (
+            ("0-15", lambda value: value < 15.0),
+            ("15-25", lambda value: 15.0 <= value < 25.0),
+            ("25+", lambda value: value >= 25.0))),
+        "by_point_count": grouped("point_count", (
+            ("1", lambda value: value == 1),
+            ("2-4", lambda value: 2 <= value <= 4),
+            ("5+", lambda value: value >= 5))),
+        "by_spread_m": grouped("spread", (
+            ("0-0.1", lambda value: value < 0.1),
+            ("0.1-0.3", lambda value: 0.1 <= value < 0.3),
+            ("0.3+", lambda value: value >= 0.3))),
     }
 
 
@@ -1248,6 +1320,9 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
         "event": event_metrics(events, truth_frames, duration) if algorithm != "B0" else {},
         "packet_continuity": packet_continuity_metrics(
             maintenance_packets, truth_frames, track_frames)
+        if algorithm != "B0" else {},
+        "packet_surface_bias": packet_surface_bias_metrics(
+            maintenance_packets, truth_frames, observers)
         if algorithm != "B0" else {},
         "epistemic": epistemic_metrics(
             scenario["scenario_id"], all_tracks, diagnostics, duration)

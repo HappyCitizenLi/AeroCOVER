@@ -511,6 +511,31 @@ TEST(Packetizer, AggregatesReturnsAndKeepsSingleton)
   EXPECT_EQ(counts, (std::vector<uint32_t>{1U, 10U}));
 }
 
+TEST(Packetizer, AnisotropicCovarianceUsesLineOfSightAsHighVarianceAxis)
+{
+  soft_vofod::Config config = testConfig();
+  config.map.packet_anisotropic_los_covariance = true;
+  soft_vofod::BackgroundMap map(config.map);
+  certifyFreeAlongX(&map, 5.0);
+  map.accumulateReturn(
+      soft_vofod::Vec3(2.0, 0.0, 0.0), 0.41, false, true, 1U,
+      soft_vofod::Vec3::UnitX(), 1.0, 2.0, 1.0);
+  const auto commit = map.advanceEpoch(0.6);
+  ASSERT_TRUE(commit.has_value());
+  ASSERT_EQ(commit->violation_packets.size(), 1U);
+  const soft_vofod::Mat3& covariance =
+      commit->violation_packets.front().covariance;
+  const double perpendicular_variance =
+      config.map.packet_sensor_variance_m2 +
+      config.map.packet_sampling_variance_floor_m2;
+  EXPECT_NEAR(covariance(1, 1), perpendicular_variance, 1.0e-12);
+  EXPECT_NEAR(covariance(2, 2), perpendicular_variance, 1.0e-12);
+  EXPECT_NEAR(covariance(0, 0), perpendicular_variance +
+      config.map.packet_shape_sigma_m * config.map.packet_shape_sigma_m,
+      1.0e-12);
+  EXPECT_GT(covariance(0, 0), covariance(1, 1));
+}
+
 TEST(Packetizer, DoesNotMergeTargetsBeyondPacketGate)
 {
   soft_vofod::Config config = testConfig();

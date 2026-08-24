@@ -789,10 +789,22 @@ std::vector<Event> BackgroundMap::packetizeViolationComponent(
       }
       if (packet.point_count > 1U)
         spread /= static_cast<double>(packet.point_count - 1U);
-      packet.covariance = spread +
-          (config_.packet_sensor_variance_m2 +
-           config_.packet_shape_sigma_m * config_.packet_shape_sigma_m +
-           config_.packet_sampling_variance_floor_m2) * Mat3::Identity();
+      const double perpendicular_variance =
+          config_.packet_sensor_variance_m2 +
+          config_.packet_sampling_variance_floor_m2;
+      const double shape_variance =
+          config_.packet_shape_sigma_m * config_.packet_shape_sigma_m;
+      Mat3 measurement_covariance =
+          (perpendicular_variance + shape_variance) * Mat3::Identity();
+      if (config_.packet_anisotropic_los_covariance &&
+          packet.ray_direction.norm() > kProbabilityEpsilon)
+      {
+        const Vec3 line_of_sight = packet.ray_direction.normalized();
+        measurement_covariance =
+            perpendicular_variance * Mat3::Identity() +
+            shape_variance * line_of_sight * line_of_sight.transpose();
+      }
+      packet.covariance = spread + measurement_covariance;
       output.push_back(std::move(packet));
     }
   }
