@@ -19,6 +19,10 @@ from sensor_msgs import point_cloud2
 
 MAIN_THRESHOLD_M = 1.0
 THRESHOLDS_M = (0.5, 1.0, 2.0)
+OPPORTUNITY_COLUMNS = (
+    "stamp", "track_id", "pd", "effective", "matched", "occlusion",
+    "angular_coverage", "effective_cells", "p_illum",
+    "p_return_given_illum")
 
 
 def file_sha256(path):
@@ -505,15 +509,29 @@ def load_run(path, algorithm, score_start, score_end):
                 (events if topic == event_topic else maintenance_packets).append(
                     (stamp, packets))
             elif soft and topic == opportunity_topic and score_start <= stamp <= score_end:
+                count = len(message.track_ids)
+
+                def value(name, index, default=0.0):
+                    values = getattr(message, name, [])
+                    return values[index] if index < len(values) else default
+
                 opportunities.append((stamp, [{
-                    "track_id": int(track_id), "pd": float(pd),
-                    "effective": float(effective), "matched": bool(matched),
-                    "occlusion": float(occlusion)}
-                    for track_id, pd, effective, matched, occlusion in zip(
-                        message.track_ids, message.detection_probabilities,
-                        message.effective_opportunities, message.matched,
-                        getattr(message, "occlusion_probabilities",
-                                [0.0] * len(message.track_ids)))]))
+                    "track_id": int(message.track_ids[index]),
+                    "pd": float(message.detection_probabilities[index]),
+                    "effective": float(message.effective_opportunities[index]),
+                    "matched": bool(message.matched[index]),
+                    "occlusion": float(value(
+                        "occlusion_probabilities", index)),
+                    "angular_coverage": float(value(
+                        "angular_coverages", index,
+                        message.effective_opportunities[index])),
+                    "effective_cells": float(value(
+                        "effective_cell_counts", index)),
+                    "p_illum": float(value(
+                        "illumination_probabilities", index)),
+                    "p_return_given_illum": float(value(
+                        "return_probabilities_given_illumination", index)),
+                } for index in range(count)]))
             elif topic == background_topic and score_start <= stamp <= score_end:
                 background.append((stamp, read_cloud_keys(message)))
             elif soft and topic == candidate_topic and score_start <= stamp <= score_end:
@@ -769,6 +787,28 @@ def lifecycle_metrics(tracks, truth_frames, scenario_events):
     }
 
 
+def calibration_reliability(samples, bin_count=10):
+    bins = []
+    for index in range(bin_count):
+        lower = index / float(bin_count)
+        upper = (index + 1) / float(bin_count)
+        selected = [item for item in samples
+                    if lower <= item[0] < upper or
+                    (index + 1 == bin_count and item[0] == 1.0)]
+        confidence = finite_mean([item[0] for item in selected])
+        frequency = finite_mean([item[1] for item in selected])
+        bins.append({
+            "lower": lower, "upper": upper, "count": len(selected),
+            "mean_PD": confidence, "target_return_frequency": frequency,
+            "absolute_gap": abs(confidence - frequency)
+            if selected else None,
+        })
+    total = float(len(samples))
+    ece = sum(item["count"] * item["absolute_gap"]
+              for item in bins if item["count"]) / total if total else None
+    return bins, ece
+
+
 def opportunity_metrics(opportunities, detector_stamps=None):
     detector_stamps = ({round(stamp, 9) for stamp in detector_stamps}
                        if detector_stamps is not None else None)
@@ -776,32 +816,95 @@ def opportunity_metrics(opportunities, detector_stamps=None):
                if detector_stamps is None or round(stamp, 9) in detector_stamps]
     if not samples:
         return {}
-    brier = np.mean([(item["pd"] - float(item["matched"])) ** 2 for item in samples])
-    nll = np.mean([-math.log(max(1.0e-9, item["pd"] if item["matched"]
-                                      else 1.0 - item["pd"])) for item in samples])
+    labels = [bool(item.get("target_return", item["matched"])) for item in samples]
+    brier = np.mean([(item["pd"] - float(label)) ** 2
+                     for item, label in zip(samples, labels)])
+    nll = np.mean([-math.log(max(1.0e-9, item["pd"] if label
+                                      else 1.0 - item["pd"]))
+                   for item, label in zip(samples, labels)])
+    reliability, ece = calibration_reliability(
+        [(item["pd"], float(label)) for item, label in zip(samples, labels)])
     bins = {"0": [], "0-1": [], "1-3": [], "3-10": [], "gt10": []}
+    cell_bins = {"0": [], "1": [], "2-3": [], "4-10": [], "gt10": []}
+    angular_bins = {"0": [], "0-1": [], "1-3": [], "3-10": [], "gt10": []}
+    range_bins = {"0-10": [], "10-20": [], "20-30": [], "30+": []}
     pd_bins = {"0-0.25": [], "0.25-0.5": [], "0.5-0.75": [], "0.75-1": []}
-    for item in samples:
+    for item, label in zip(samples, labels):
         effective = item["effective"]
         key = "0" if effective == 0.0 else "0-1" if effective <= 1.0 \
             else "1-3" if effective <= 3.0 else "3-10" if effective <= 10.0 \
             else "gt10"
-        bins[key].append(float(item["matched"]))
+        bins[key].append(float(label))
+        cells = item.get("effective_cells", 0.0)
+        key = "0" if cells == 0.0 else "1" if cells <= 1.0 \
+            else "2-3" if cells <= 3.0 else "4-10" if cells <= 10.0 \
+            else "gt10"
+        cell_bins[key].append(float(label))
+        coverage = item.get("angular_coverage", effective)
+        key = "0" if coverage == 0.0 else "0-1" if coverage <= 1.0 \
+            else "1-3" if coverage <= 3.0 else "3-10" if coverage <= 10.0 \
+            else "gt10"
+        angular_bins[key].append(float(label))
+        target_range = item.get("range_m")
+        if target_range is not None:
+            key = "0-10" if target_range < 10.0 else \
+                "10-20" if target_range < 20.0 else \
+                "20-30" if target_range < 30.0 else "30+"
+            range_bins[key].append(float(label))
         pd = item["pd"]
         key = "0-0.25" if pd < 0.25 else "0.25-0.5" if pd < 0.5 \
             else "0.5-0.75" if pd < 0.75 else "0.75-1"
-        pd_bins[key].append(float(item["matched"]))
+        pd_bins[key].append(float(label))
     return {
-        "Brier": float(brier), "NLL": float(nll),
+        "Brier": float(brier), "NLL": float(nll), "ECE": float(ece),
+        "PD_reliability": reliability,
         "recall_by_effective_opportunity": {
             key: finite_mean(values) for key, values in bins.items()},
+        "hit_rate_by_effective_cells": {
+            key: finite_mean(values) for key, values in cell_bins.items()},
+        "hit_rate_by_angular_coverage": {
+            key: finite_mean(values) for key, values in angular_bins.items()},
+        "hit_rate_by_range_m": {
+            key: finite_mean(values) for key, values in range_bins.items()},
         "miss_rate_by_PD": {
             key: 1.0 - finite_mean(values) if values else None
             for key, values in pd_bins.items()},
         "no_opportunity_samples": len(bins["0"]),
         "high_opportunity_misses": sum(
-            1 for item in samples if item["effective"] > 3.0 and not item["matched"]),
+            1 for item, label in zip(samples, labels)
+            if item["effective"] > 3.0 and not label),
     }
+
+
+def target_return_opportunities(opportunities, tracks, truth_frames, observers):
+    histories = defaultdict(list)
+    for track in tracks:
+        histories[track["id"]].append((track["stamp"], track))
+    for history in histories.values():
+        history.sort(key=lambda item: item[0])
+    output = []
+    for stamp, frame in opportunities:
+        truth = nearest(truth_frames, stamp) or []
+        observer = np.asarray(nearest(observers, stamp) or (0.0, 0.0, 0.0))
+        calibrated = []
+        for item in frame:
+            track = nearest(histories.get(item["track_id"], []), stamp)
+            if track is None or not truth:
+                continue
+            target = min(truth, key=lambda candidate: np.linalg.norm(
+                np.asarray(track["position"]) -
+                np.asarray(candidate["position"])))
+            if np.linalg.norm(np.asarray(track["position"]) -
+                              np.asarray(target["position"])) > MAIN_THRESHOLD_M:
+                continue
+            sample = dict(item)
+            sample["target_return"] = target.get("actual_returns", 0) > 0
+            sample["range_m"] = float(np.linalg.norm(
+                np.asarray(target["position"]) - observer))
+            calibrated.append(sample)
+        if calibrated:
+            output.append((stamp, calibrated))
+    return output
 
 
 def return_probability_metrics(frames):
@@ -1041,6 +1144,12 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
             [stamp for stamp, values in diagnostics
              if values.get("map_epochs_committed", 0.0) > 0.0]
             if algorithm != "B0" else None),
+        "opportunity_target_return_calibration": opportunity_metrics(
+            target_return_opportunities(
+                opportunities, all_tracks, truth_frames, observers),
+            [stamp for stamp, values in diagnostics
+             if values.get("map_epochs_committed", 0.0) > 0.0]
+            if algorithm != "B0" else None),
         "sensor_return_probability": return_probability_metrics(frames),
         "map": map_metrics(
             background, candidate_background, free, observed_free,
@@ -1102,9 +1211,7 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
         writer.writerows(all_tracks)
     with open(os.path.join(output_dir, "opportunity_timeseries.csv"), "w",
               newline="", encoding="utf-8") as stream:
-        writer = csv.DictWriter(
-            stream, fieldnames=("stamp", "track_id", "pd", "effective",
-                                "matched", "occlusion"))
+        writer = csv.DictWriter(stream, fieldnames=OPPORTUNITY_COLUMNS)
         writer.writeheader()
         for stamp, items in opportunities:
             for item in items:
@@ -1132,6 +1239,7 @@ def main():
                         choices=("B0", "B1", "B2", "B3", "B4",
                                  "A1", "A2", "A3", "V3-A", "V3-B",
                                  "V3-C", "C0", "C1", "C2", "C3",
+                                 "O0", "O1", "O2", "O3",
                                  "S04-base", "S04-split", "S04-IMM",
                                  "S04-split-IMM", "S05_base", "S05_IMM",
                                  "S05_dormant", "S05_IMM+dormant"))

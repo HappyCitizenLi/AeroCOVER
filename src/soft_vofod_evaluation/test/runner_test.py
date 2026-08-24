@@ -218,6 +218,21 @@ class RunnerTest(unittest.TestCase):
                 self.assertEqual(values["birth_min_groups"], "5")
                 self.assertEqual(actual, wanted)
 
+            opportunity = {
+                "O0": ("false", "false", "true"),
+                "O1": ("true", "false", "true"),
+                "O2": ("true", "true", "false"),
+                "O3": ("true", "true", "true"),
+            }
+            for algorithm, wanted in opportunity.items():
+                values = launch_values(runner.algorithm_command(
+                    algorithm, os.path.join(directory, "resource.txt")))
+                actual = (values["opportunity_aware_existence"],
+                          values["effective_opportunity_cells"],
+                          values["range_conditioned_opportunity_return"])
+                self.assertEqual(values["birth_min_groups"], "5")
+                self.assertEqual(actual, wanted)
+
 
 if __name__ == "__main__":
     unittest.main()

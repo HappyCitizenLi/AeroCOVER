@@ -175,6 +175,10 @@ struct OpportunityConfig
   double max_ray_range_m = 60.0;
   double occlusion_margin_m = 0.15;
   double sigma_point_scale = 1.0;
+  double angular_cell_chord = 0.05;
+  double geometry_sigma_scale = 1.0;
+  double target_fill_factor = 0.35;
+  double illumination_rate_per_cell = 1.0;
 };
 
 struct AblationConfig
@@ -188,6 +192,8 @@ struct AblationConfig
   bool reportability_filtering = true;
   bool dormant_reacquisition = true;
   bool epistemic_unknown_birth = true;
+  bool effective_opportunity_cells = false;
+  bool range_conditioned_opportunity_return = true;
 };
 
 struct Config
@@ -277,6 +283,10 @@ struct OpportunityResult
   double occlusion_probability = 0.0;
   double occlusion_evidence = 0.0;
   double intersection_evidence = 0.0;
+  double illumination_probability = 0.0;
+  double return_probability_given_illumination = 0.0;
+  double angular_coverage = 0.0;
+  uint32_t effective_cell_count = 0U;
 };
 
 struct VoxelQuery
@@ -339,6 +349,8 @@ struct ProcessDiagnostics
   bool dormant_reacquisition = true;
   bool require_certified_free_for_events = true;
   bool epistemic_unknown_birth = true;
+  bool effective_opportunity_cells = false;
+  bool range_conditioned_opportunity_return = true;
   double processing_ms = 0.0;
   double classification_ms = 0.0;
   double tracking_ms = 0.0;
@@ -371,6 +383,7 @@ struct ProcessDiagnostics
   size_t track_explained_maintenance_packets = 0;
   size_t opportunity_full_scan_rays = 0;
   size_t opportunity_candidate_rays = 0;
+  size_t opportunity_effective_cells = 0;
   size_t unresolved_candidate_returns = 0;
 };
 

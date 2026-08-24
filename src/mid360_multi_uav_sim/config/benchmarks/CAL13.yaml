@@ -1,0 +1,26 @@
+schema_version: 1
+scenario_id: CAL13_opportunity_fill_factor
+world: E0_open
+seed: 2013
+start_delay_s: 4.0
+duration_s: 48.0
+score_start_s: 10.5
+score_end_s: 47.5
+purpose: calibrate target angular fill factor over controlled range and elevation changes
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: 0.0, z: 2.0}
+    - {t: 48.0, x: 0.0, y: 0.0, z: 2.0}
+targets:
+  - id: uav2
+    spawn_time_s: 10.5
+    waypoints:
+      - {t: 0.0, x: 5.0, y: 0.0, z: 2.25}
+      - {t: 18.0, x: 5.0, y: 0.0, z: 2.25}
+      - {t: 28.0, x: 14.0, y: 4.0, z: 4.0}
+      - {t: 38.0, x: 26.0, y: -7.0, z: 7.0}
+      - {t: 48.0, x: 5.0, y: 0.0, z: 2.25}
+events:
+  - {t: 18.0, id: large_fill_end}
+  - {t: 28.0, id: medium_fill_end}
+  - {t: 38.0, id: small_fill_end}

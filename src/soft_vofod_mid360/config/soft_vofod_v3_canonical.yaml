@@ -126,9 +126,15 @@ opportunity:
   max_ray_range_m: 60.0
   occlusion_margin_m: 0.15
   sigma_point_scale: 1.0
+  # V4 effective-cell candidates selected on CAL10-CAL14.  Strict R5 kept
+  # their probabilities diagnostics-only because HOTA fell in 10/10 pairs.
+  angular_cell_chord: 0.05
+  geometry_sigma_scale: 1.0
+  target_fill_factor: 0.35
+  illumination_rate_per_cell: 1.0
 
 ablation:
-  opportunity_aware_existence: true
+  opportunity_aware_existence: false
   target_feedback: true
   hungarian_association: true
   track_conditioned_packet_split: true
@@ -137,6 +143,8 @@ ablation:
   reportability_filtering: true
   dormant_reacquisition: true
   epistemic_unknown_birth: true
+  effective_opportunity_cells: true
+  range_conditioned_opportunity_return: true
 
 safety:
   max_time_jump_s: 1.0

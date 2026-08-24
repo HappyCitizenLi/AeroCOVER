@@ -1,0 +1,26 @@
+schema_version: 1
+scenario_id: CAL11_opportunity_correlation
+world: E0_open
+seed: 2011
+start_delay_s: 4.0
+duration_s: 46.0
+score_start_s: 10.5
+score_end_s: 45.5
+purpose: calibrate correlated raw rays under changing observer-target relative motion
+ray_time_geometry_mode: per_ray_pose
+observer:
+  waypoints:
+    - {t: 0.0, x: 0.0, y: -3.0, z: 2.0, yaw: 0.0}
+    - {t: 23.0, x: 5.0, y: 3.0, z: 2.5, yaw: 0.8}
+    - {t: 46.0, x: 10.0, y: -3.0, z: 2.0, yaw: -0.8}
+targets:
+  - id: uav2
+    spawn_time_s: 10.5
+    waypoints:
+      - {t: 0.0, x: 5.0, y: 0.0, z: 2.25}
+      - {t: 16.0, x: 5.0, y: 0.0, z: 2.25}
+      - {t: 30.0, x: 20.0, y: 2.0, z: 3.0}
+      - {t: 46.0, x: 14.0, y: -2.0, z: 2.0}
+events:
+  - {t: 23.0, id: relative_motion_leg_1_end}
+  - {t: 30.0, id: relative_motion_leg_2_end}

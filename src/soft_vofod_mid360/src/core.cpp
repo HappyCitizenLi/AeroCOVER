@@ -21,7 +21,6 @@ namespace
 
 constexpr double kProbabilityEpsilon = 1.0e-9;
 constexpr double kTwoPi = 6.28318530717958647692;
-constexpr double kRayDirectionBinChord = 0.05;
 
 double clampProbability(const double value)
 {
@@ -31,6 +30,22 @@ double clampProbability(const double value)
 bool finitePositive(const double value)
 {
   return std::isfinite(value) && value > 0.0;
+}
+
+size_t directionCellKey(
+    const Vec3& direction, const double bin_chord,
+    const size_t bins_per_axis)
+{
+  size_t coordinate[3] = {0U, 0U, 0U};
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    const double value = std::max(-1.0, std::min(1.0, direction[axis]));
+    coordinate[axis] = std::min(
+        bins_per_axis - 1U,
+        static_cast<size_t>(std::floor((value + 1.0) / bin_chord)));
+  }
+  return coordinate[0] + bins_per_axis *
+      (coordinate[1] + bins_per_axis * coordinate[2]);
 }
 
 double median(std::vector<double> values)
@@ -179,6 +194,12 @@ void validateConfig(const Config& config)
       !finitePositive(config.opportunity.max_ray_range_m) ||
       config.opportunity.occlusion_margin_m < 0.0 ||
       config.opportunity.sigma_point_scale < 0.0 ||
+      !finitePositive(config.opportunity.angular_cell_chord) ||
+      config.opportunity.angular_cell_chord > 2.0 ||
+      !finitePositive(config.opportunity.geometry_sigma_scale) ||
+      !finitePositive(config.opportunity.target_fill_factor) ||
+      config.opportunity.target_fill_factor > 1.0 ||
+      !finitePositive(config.opportunity.illumination_rate_per_cell) ||
       !finitePositive(config.micro_batch_dt_s))
     throw std::invalid_argument("invalid SOFT-VoFOD algorithm configuration");
 }
@@ -2275,7 +2296,7 @@ SoftVofodCore::RayAngularIndex SoftVofodCore::indexRays(
     const std::vector<RaySample>& rays) const
 {
   RayAngularIndex index;
-  index.bin_chord = kRayDirectionBinChord;
+  index.bin_chord = config_.opportunity.angular_cell_chord;
   index.bins_per_axis = static_cast<size_t>(
       std::ceil(2.0 / index.bin_chord)) + 1U;
   if (rays.empty())
@@ -2283,20 +2304,6 @@ SoftVofodCore::RayAngularIndex SoftVofodCore::indexRays(
   index.reference_origin_m = rays.front().origin_m;
   index.reference_time_s = rays.front().time_s;
   index.eligible_rays.reserve(rays.size());
-
-  const auto direction_cell = [&index](const Vec3& direction)
-  {
-    size_t coordinate[3] = {0U, 0U, 0U};
-    for (int axis = 0; axis < 3; ++axis)
-    {
-      const double value = std::max(-1.0, std::min(1.0, direction[axis]));
-      coordinate[axis] = std::min(
-          index.bins_per_axis - 1U,
-          static_cast<size_t>(std::floor((value + 1.0) / index.bin_chord)));
-    }
-    return coordinate[0] + index.bins_per_axis *
-        (coordinate[1] + index.bins_per_axis * coordinate[2]);
-  };
 
   for (size_t ray_index = 0U; ray_index < rays.size(); ++ray_index)
   {
@@ -2309,8 +2316,9 @@ SoftVofodCore::RayAngularIndex SoftVofodCore::indexRays(
         std::abs(direction_norm - 1.0) >= 1.0e-4)
       continue;
     index.eligible_rays.push_back(ray_index);
-    index.by_direction_cell[direction_cell(ray.direction_unit)].push_back(
-        ray_index);
+    index.by_direction_cell[directionCellKey(
+        ray.direction_unit, index.bin_chord, index.bins_per_axis)].push_back(
+            ray_index);
     index.max_origin_offset_m = std::max(
         index.max_origin_offset_m,
         (ray.origin_m - index.reference_origin_m).norm());
@@ -2433,6 +2441,12 @@ OpportunityResult SoftVofodCore::opportunity(
   std::vector<double> effective_return_probabilities;
   effective_opportunities.reserve(candidate_rays.size());
   effective_return_probabilities.reserve(candidate_rays.size());
+  struct CellOpportunity
+  {
+    double coverage = 0.0;
+    double return_probability = 0.0;
+  };
+  std::unordered_map<size_t, CellOpportunity> cells;
   for (const size_t ray_index : candidate_rays)
   {
     const RaySample& ray = rays[ray_index];
@@ -2482,24 +2496,92 @@ OpportunityResult SoftVofodCore::opportunity(
       }
       if (!front_track)
       {
-        effective += weight;
-        effective_return_probability += weight * returnProbability(*near);
+        double geometry_weight = 1.0;
+        if (config_.ablation.effective_opportunity_cells)
+        {
+          const Vec3 relative = center - ray.origin_m;
+          const double along = relative.dot(ray.direction_unit);
+          const Vec3 perpendicular =
+              relative - along * ray.direction_unit;
+          const double geometry_sigma =
+              config_.opportunity.geometry_sigma_scale *
+              config_.tracker.target_radius_m;
+          geometry_weight = std::exp(
+              -0.5 * perpendicular.squaredNorm() /
+              (geometry_sigma * geometry_sigma));
+        }
+        const double covered_weight = weight * geometry_weight;
+        effective += covered_weight;
+        effective_return_probability +=
+            covered_weight * returnProbability(*near);
       }
       else
         output.occlusion_evidence += weight;
     }
     if (effective > 0.0)
     {
-      effective_opportunities.push_back(effective);
-      effective_return_probabilities.push_back(
-          effective_return_probability);
+      if (config_.ablation.effective_opportunity_cells)
+      {
+        const size_t key = directionCellKey(
+            ray.direction_unit, index.bin_chord, index.bins_per_axis);
+        CellOpportunity& cell = cells[key];
+        if (effective > cell.coverage)
+        {
+          cell.coverage = effective;
+          cell.return_probability = clampProbability(
+              effective_return_probability / effective);
+        }
+      }
+      else
+      {
+        effective_opportunities.push_back(effective);
+        effective_return_probabilities.push_back(
+            effective_return_probability);
+      }
     }
   }
-  output.effective_opportunity = std::accumulate(
-      effective_opportunities.begin(), effective_opportunities.end(), 0.0);
-  output.detection_probability = detectionProbability(
-      effective_return_probabilities, 1.0,
-      config_.opportunity.detection_probability_cap);
+  if (config_.ablation.effective_opportunity_cells)
+  {
+    double angular_coverage = 0.0;
+    double weighted_return_probability = 0.0;
+    for (const auto& [key, cell] : cells)
+    {
+      (void)key;
+      angular_coverage += cell.coverage;
+      weighted_return_probability +=
+          cell.coverage * cell.return_probability;
+    }
+    output.angular_coverage = angular_coverage;
+    output.effective_cell_count = static_cast<uint32_t>(cells.size());
+    output.effective_opportunity =
+        config_.opportunity.target_fill_factor * angular_coverage;
+    output.illumination_probability = clampProbability(
+        -std::expm1(-config_.opportunity.illumination_rate_per_cell *
+                    output.effective_opportunity));
+    output.return_probability_given_illumination = angular_coverage > 0.0
+        ? clampProbability(weighted_return_probability / angular_coverage)
+        : 0.0;
+    output.detection_probability = std::min(
+        config_.opportunity.detection_probability_cap,
+        output.illumination_probability *
+            output.return_probability_given_illumination);
+  }
+  else
+  {
+    output.effective_opportunity = std::accumulate(
+        effective_opportunities.begin(), effective_opportunities.end(), 0.0);
+    output.angular_coverage = output.effective_opportunity;
+    output.effective_cell_count = static_cast<uint32_t>(
+        effective_opportunities.size());
+    output.detection_probability = detectionProbability(
+        effective_return_probabilities, 1.0,
+        config_.opportunity.detection_probability_cap);
+    output.illumination_probability = output.effective_opportunity > 0.0
+        ? 1.0 : 0.0;
+    output.return_probability_given_illumination =
+        output.illumination_probability > 0.0
+            ? output.detection_probability : 0.0;
+  }
   output.occlusion_probability = output.intersection_evidence > 0.0
       ? clampProbability(
           output.occlusion_evidence / output.intersection_evidence)
@@ -2509,6 +2591,8 @@ OpportunityResult SoftVofodCore::opportunity(
 
 double SoftVofodCore::returnProbability(const double range_m) const
 {
+  if (!config_.ablation.range_conditioned_opportunity_return)
+    return config_.opportunity.return_probability;
   const auto& edges = config_.opportunity.return_probability_range_edges_m;
   const auto& bins = config_.opportunity.return_probability_bins;
   if (bins.empty())
@@ -3116,7 +3200,8 @@ void SoftVofodCore::processBatch(
     const bool has_match = is_new ||
         (track_index < matched.size() && matched[track_index]);
     OpportunityResult opportunity_result;
-    if (config_.ablation.opportunity_aware_existence)
+    if (config_.ablation.opportunity_aware_existence &&
+        !config_.ablation.effective_opportunity_cells)
     {
       size_t candidate_count = 0U;
       opportunity_result = opportunity(
@@ -3125,6 +3210,14 @@ void SoftVofodCore::processBatch(
       result->diagnostics.opportunity_full_scan_rays +=
           angular_index.eligible_rays.size();
       result->diagnostics.opportunity_candidate_rays += candidate_count;
+    }
+    else if (config_.ablation.opportunity_aware_existence)
+    {
+      // Effective cells are a scan-level statistic.  Keep only association
+      // evidence here; processScan computes one correlated opportunity from
+      // the full emitted pattern.
+      opportunity_result.track_id = tracks_[track_index].id;
+      opportunity_result.matched = has_match;
     }
     else
     {
@@ -3136,8 +3229,11 @@ void SoftVofodCore::processBatch(
     }
     if (has_match && !is_new)
       opportunity_result.measurement_likelihood = likelihoods[track_index];
-    tracks_[track_index].cumulative_effective_opportunity +=
-        opportunity_result.effective_opportunity;
+    if (!config_.ablation.effective_opportunity_cells)
+    {
+      tracks_[track_index].cumulative_effective_opportunity +=
+          opportunity_result.effective_opportunity;
+    }
 
     auto existing = std::find_if(
         result->opportunities.begin(), result->opportunities.end(),
@@ -3161,6 +3257,9 @@ void SoftVofodCore::processBatch(
             opportunity_result.detection_probability);
       }
       existing->effective_opportunity += opportunity_result.effective_opportunity;
+      existing->angular_coverage += opportunity_result.angular_coverage;
+      existing->effective_cell_count +=
+          opportunity_result.effective_cell_count;
       existing->occlusion_evidence += opportunity_result.occlusion_evidence;
       existing->intersection_evidence +=
           opportunity_result.intersection_evidence;
@@ -3299,6 +3398,10 @@ ScanResult SoftVofodCore::processScan(
       config_.map.require_certified_free_for_events;
   result.diagnostics.epistemic_unknown_birth =
       config_.ablation.epistemic_unknown_birth;
+  result.diagnostics.effective_opportunity_cells =
+      config_.ablation.effective_opportunity_cells;
+  result.diagnostics.range_conditioned_opportunity_return =
+      config_.ablation.range_conditioned_opportunity_return;
 
   // DELETING is observable for the scan that made the decision. Retire it at
   // the next scan boundary; its quarantine support remains independently.
@@ -3367,6 +3470,40 @@ ScanResult SoftVofodCore::processScan(
   {
     prune(scan_stamp_s);
     predictTracks(scan_stamp_s);
+  }
+
+  if (config_.ablation.effective_opportunity_cells && !rays.empty())
+  {
+    const RayAngularIndex scan_index = indexRays(rays);
+    for (Track& track : tracks_)
+    {
+      if (track.state == TrackState::deleting ||
+          track.state == TrackState::dormant)
+        continue;
+      auto existing = std::find_if(
+          result.opportunities.begin(), result.opportunities.end(),
+          [&track](const OpportunityResult& item)
+          { return item.track_id == track.id; });
+      const bool matched = existing != result.opportunities.end() &&
+          existing->matched;
+      const double likelihood = existing != result.opportunities.end()
+          ? existing->measurement_likelihood : 0.0;
+      size_t candidate_count = 0U;
+      OpportunityResult scan_opportunity = opportunity(
+          track, rays, tracks_, matched, scan_index, &candidate_count);
+      scan_opportunity.measurement_likelihood = likelihood;
+      track.cumulative_effective_opportunity +=
+          scan_opportunity.effective_opportunity;
+      result.diagnostics.opportunity_full_scan_rays +=
+          scan_index.eligible_rays.size();
+      result.diagnostics.opportunity_candidate_rays += candidate_count;
+      result.diagnostics.opportunity_effective_cells +=
+          scan_opportunity.effective_cell_count;
+      if (existing == result.opportunities.end())
+        result.opportunities.push_back(scan_opportunity);
+      else
+        *existing = scan_opportunity;
+    }
   }
 
   for (const OpportunityResult& scan_opportunity : scan_occlusion_results)
@@ -3456,10 +3593,12 @@ ScanResult SoftVofodCore::processScan(
     }
     if (has_match)
     {
-      const double observed_pd = std::max(
-          evidence->detection_probability,
-          std::min(config_.opportunity.return_probability,
-                   config_.opportunity.detection_probability_cap));
+      const double fallback_pd = std::min(
+          config_.opportunity.return_probability,
+          config_.opportunity.detection_probability_cap);
+      const double observed_pd = config_.ablation.opportunity_aware_existence
+          ? std::max(evidence->detection_probability, fallback_pd)
+          : fallback_pd;
       track.existence_probability = hitExistence(
           track.existence_probability, observed_pd,
           std::max(kProbabilityEpsilon, evidence->measurement_likelihood),

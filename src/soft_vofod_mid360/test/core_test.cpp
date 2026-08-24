@@ -931,6 +931,58 @@ TEST(Opportunity, AngularIndexKeepsExactNearbyRayAndRejectsOffAxisRays)
   EXPECT_EQ(result.diagnostics.opportunity_candidate_rays, 1U);
 }
 
+TEST(Opportunity, EffectiveCellsBoundCorrelatedRaysAndUseSoftGeometry)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.effective_opportunity_cells = true;
+  config.opportunity.target_fill_factor = 1.0;
+  config.opportunity.illumination_rate_per_cell = 1.0;
+  config.opportunity.geometry_sigma_scale = 1.0;
+  config.opportunity.angular_cell_chord = 0.05;
+  config.opportunity.return_probability_range_edges_m.clear();
+  config.opportunity.return_probability_bins.clear();
+  config.opportunity.return_probability = 0.8;
+  config.tracker.target_radius_m = 0.5;
+  soft_vofod::SoftVofodCore core(config);
+  const soft_vofod::Track track = trackAt(
+      soft_vofod::Vec3(5.0, 0.0, 0.0));
+
+  const soft_vofod::RaySample center = ray(
+      0.0, soft_vofod::ReturnStatus::no_return);
+  const auto one = core.opportunityForTest(track, {center}, {track});
+  const auto correlated = core.opportunityForTest(
+      track, std::vector<soft_vofod::RaySample>(100U, center), {track});
+  EXPECT_DOUBLE_EQ(correlated.detection_probability,
+                   one.detection_probability);
+  EXPECT_EQ(correlated.effective_cell_count, 1U);
+  EXPECT_GT(one.illumination_probability, 0.0);
+  EXPECT_NEAR(one.return_probability_given_illumination, 0.8, 1.0e-12);
+
+  soft_vofod::RaySample grazing = center;
+  grazing.direction_unit = soft_vofod::Vec3(5.0, 0.45, 0.0).normalized();
+  const auto grazing_result = core.opportunityForTest(
+      track, {grazing}, {track});
+  EXPECT_GT(grazing_result.detection_probability, 0.0);
+  EXPECT_LT(grazing_result.detection_probability,
+            one.detection_probability);
+
+  soft_vofod::RaySample second_cell = center;
+  second_cell.direction_unit = soft_vofod::Vec3(5.0, -0.35, 0.0).normalized();
+  const auto wider = core.opportunityForTest(
+      track, {center, second_cell}, {track});
+  EXPECT_EQ(wider.effective_cell_count, 2U);
+  EXPECT_GT(wider.angular_coverage, one.angular_coverage);
+  EXPECT_GT(wider.detection_probability, one.detection_probability);
+  EXPECT_LE(wider.detection_probability,
+            config.opportunity.detection_probability_cap);
+
+  const auto occluded = core.opportunityForTest(
+      track,
+      {ray(0.0, soft_vofod::ReturnStatus::valid_return, 2.0)},
+      {track});
+  EXPECT_DOUBLE_EQ(occluded.detection_probability, 0.0);
+}
+
 TEST(Existence, SurvivalDecaysWithoutInventingAnObservationMiss)
 {
   EXPECT_DOUBLE_EQ(
@@ -973,6 +1025,31 @@ TEST(Existence, UpdatesOncePerScanAcrossMicroBatches)
   const double expected = soft_vofod::SoftVofodCore::missedExistence(
       survived, result.opportunities.front().detection_probability);
   EXPECT_NEAR(result.tracks.front().existence_probability, expected, 1.0e-12);
+}
+
+TEST(Existence, EffectiveOpportunityCanRemainDiagnosticsOnly)
+{
+  soft_vofod::Config config = testConfig();
+  config.ablation.opportunity_aware_existence = false;
+  config.ablation.effective_opportunity_cells = true;
+  config.ablation.survival_prediction = false;
+  config.ablation.reportability_filtering = false;
+  soft_vofod::SoftVofodCore core(config);
+  soft_vofod::Track track = trackAt(soft_vofod::Vec3(5.0, 0.0, 0.0));
+  track.id = 1U;
+  track.existence_probability = 0.9;
+  track.last_prediction_time_s = 0.0;
+  track.last_existence_time_s = 0.0;
+  track.last_measurement_time_s = 0.0;
+  core.addTrackForTest(track);
+
+  const soft_vofod::ScanResult result = core.processScan(
+      1U, 0.1, {ray(0.1, soft_vofod::ReturnStatus::no_return)});
+  ASSERT_EQ(result.opportunities.size(), 1U);
+  ASSERT_EQ(result.tracks.size(), 1U);
+  EXPECT_GT(result.opportunities.front().detection_probability, 0.0);
+  EXPECT_GT(result.opportunities.front().effective_cell_count, 0U);
+  EXPECT_DOUBLE_EQ(result.tracks.front().existence_probability, 0.9);
 }
 
 TEST(TrackManagement, DisabledReportabilityPreservesV2LiveTrackOutput)

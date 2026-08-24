@@ -61,7 +61,25 @@ class EvaluationTest(unittest.TestCase):
             (0.1, [{"track_id": 1, "pd": 0.8, "effective": 4.0,
                     "matched": False}])], detector_stamps=[0.0])
         self.assertLess(opportunity["Brier"], 0.03)
+        self.assertIn("PD_reliability", opportunity)
+        self.assertLess(opportunity["ECE"], 0.21)
         self.assertEqual(opportunity["no_opportunity_samples"], 1)
+
+        physical = METRICS.target_return_opportunities(
+            [(0.0, [{"track_id": 1, "pd": 0.8, "effective": 1.0,
+                     "matched": False, "effective_cells": 1.0,
+                     "angular_coverage": 1.0}])],
+            [{"stamp": 0.0, "id": 1, "position": (5.0, 0.0, 0.0)}],
+            [(0.0, [{"position": (5.0, 0.0, 0.0),
+                     "actual_returns": 2}])],
+            [(0.0, (0.0, 0.0, 0.0))])
+        calibrated = METRICS.opportunity_metrics(physical)
+        self.assertAlmostEqual(calibrated["Brier"], 0.04)
+        self.assertEqual(calibrated["hit_rate_by_effective_cells"]["1"], 1.0)
+        self.assertEqual(calibrated["hit_rate_by_range_m"]["0-10"], 1.0)
+        self.assertTrue({"angular_coverage", "effective_cells", "p_illum",
+                         "p_return_given_illum"}.issubset(
+                            METRICS.OPPORTUNITY_COLUMNS))
 
         sensor = METRICS.return_probability_metrics([{
             "observer": (0.0, 0.0, 0.0),

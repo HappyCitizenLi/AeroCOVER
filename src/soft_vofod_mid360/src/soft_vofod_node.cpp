@@ -377,6 +377,14 @@ private:
               &config->opportunity.occlusion_margin_m);
     parameter("opportunity/sigma_point_scale",
               &config->opportunity.sigma_point_scale);
+    parameter("opportunity/angular_cell_chord",
+              &config->opportunity.angular_cell_chord);
+    parameter("opportunity/geometry_sigma_scale",
+              &config->opportunity.geometry_sigma_scale);
+    parameter("opportunity/target_fill_factor",
+              &config->opportunity.target_fill_factor);
+    parameter("opportunity/illumination_rate_per_cell",
+              &config->opportunity.illumination_rate_per_cell);
     parameter("ablation/opportunity_aware_existence",
               &config->ablation.opportunity_aware_existence);
     parameter("ablation/target_feedback", &config->ablation.target_feedback);
@@ -393,6 +401,10 @@ private:
               &config->ablation.dormant_reacquisition);
     parameter("ablation/epistemic_unknown_birth",
               &config->ablation.epistemic_unknown_birth);
+    parameter("ablation/effective_opportunity_cells",
+              &config->ablation.effective_opportunity_cells);
+    parameter("ablation/range_conditioned_opportunity_return",
+              &config->ablation.range_conditioned_opportunity_return);
   }
 
   bool convertInput(
@@ -716,6 +728,13 @@ private:
           static_cast<float>(item.detection_probability));
       opportunity.effective_opportunities.push_back(
           static_cast<float>(item.effective_opportunity));
+      opportunity.angular_coverages.push_back(
+          static_cast<float>(item.angular_coverage));
+      opportunity.effective_cell_counts.push_back(item.effective_cell_count);
+      opportunity.illumination_probabilities.push_back(
+          static_cast<float>(item.illumination_probability));
+      opportunity.return_probabilities_given_illumination.push_back(
+          static_cast<float>(item.return_probability_given_illumination));
       opportunity.matched.push_back(item.matched);
       opportunity.occlusion_probabilities.push_back(
           static_cast<float>(item.occlusion_probability));
@@ -802,6 +821,9 @@ private:
       status.values.push_back(diagnosticValue(
           "opportunity_candidate_rays",
           number(diagnostics->opportunity_candidate_rays)));
+      status.values.push_back(diagnosticValue(
+          "opportunity_effective_cells",
+          number(diagnostics->opportunity_effective_cells)));
       status.values.push_back(diagnosticValue("matches", number(diagnostics->matches)));
       status.values.push_back(diagnosticValue(
           "free_voxel_updates", number(diagnostics->free_voxel_updates)));
@@ -883,6 +905,13 @@ private:
       status.values.push_back(diagnosticValue(
           "epistemic_unknown_birth",
           diagnostics->epistemic_unknown_birth ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "effective_opportunity_cells",
+          diagnostics->effective_opportunity_cells ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "range_conditioned_opportunity_return",
+          diagnostics->range_conditioned_opportunity_return
+              ? "true" : "false"));
       status.values.push_back(diagnosticValue(
           "processing_ms", number(diagnostics->processing_ms)));
       status.values.push_back(diagnosticValue(

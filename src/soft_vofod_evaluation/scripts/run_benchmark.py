@@ -28,13 +28,15 @@ import yaml
 ALGORITHMS = (
     "B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3",
     "V3-A", "V3-B", "V3-C", "C0", "C1", "C2", "C3",
+    "O0", "O1", "O2", "O3",
     "S04-base", "S04-split", "S04-IMM", "S04-split-IMM",
     "S05_base", "S05_IMM", "S05_dormant", "S05_IMM+dormant")
 DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
 SCENES = DEFAULT_SCENES + (
     "S08A", "S08B", "S08C", "NEG01", "NEG02", "NEG03", "NEG04",
     "NEG05", "NEG06", "CAL01", "CAL02", "CAL03", "CAL04", "CAL05",
-    "CAL06", "CAL07", "CAL08", "CAL09", "IT10", "IT11", "IT12",
+    "CAL06", "CAL07", "CAL08", "CAL09", "CAL10", "CAL11", "CAL12",
+    "CAL13", "CAL14", "IT10", "IT11", "IT12",
     "IT13", "IT14", "IT15")
 INTEGRATION_SCENE_ALIASES = {
     "IT10": "NEG05",  # moving observer at a wall edge
@@ -99,6 +101,12 @@ SUMMARY_METRICS = {
     "multi_truth_packet_ratio": (
         "packet_continuity", "multi_truth_packet_ratio"),
     "opportunity_Brier": ("opportunity", "Brier"),
+    "opportunity_target_return_Brier": (
+        "opportunity_target_return_calibration", "Brier"),
+    "opportunity_target_return_NLL": (
+        "opportunity_target_return_calibration", "NLL"),
+    "opportunity_target_return_ECE": (
+        "opportunity_target_return_calibration", "ECE"),
     "target_contamination_ratio": ("map", "target_contamination_ratio"),
     "map_contamination_ratio": ("map", "map_contamination_ratio"),
     "background_recovery_cost_mean_s": (
@@ -224,11 +232,11 @@ def aggregate_results(output_root):
                      "comparator_value", "proposed_minus_comparator")
     delta_rows = []
     for scene, noise, seed, algorithm in sorted(paired):
-        if algorithm not in ("A3", "B4"):
+        if algorithm not in ("A3", "B4", "O1", "O2", "O3"):
             continue
         proposed = paired[(scene, noise, seed, algorithm)]
-        comparators = ("B0", "A1", "A2") if algorithm == "A3" \
-            else ("B0", "B1", "B2", "B3")
+        comparators = ("B0", "A1", "A2") if algorithm == "A3" else \
+            ("B0", "B1", "B2", "B3") if algorithm == "B4" else ("O0",)
         for comparator in comparators:
             baseline = paired.get((scene, noise, seed, comparator))
             if baseline is None:
@@ -834,6 +842,7 @@ class BenchmarkRunner:
             calibrated_paths, "tracker", "survival_lambda_per_s"))
         defaults = {
             "groups": calibrated_groups, "opportunity": "true",
+            "effective_opportunity": "false", "range_return": "true",
             "feedback": "true", "hungarian": "true",
             "survival_lambda": calibrated_survival, "split": "true",
             "imm": "true", "survival": "true", "reportability": "true",
@@ -870,6 +879,11 @@ class BenchmarkRunner:
                    "dormant": "false"},
             "C2": {"dormant": "false"},
             "C3": {},
+            "O0": {"opportunity": "false",
+                   "effective_opportunity": "false", "range_return": "true"},
+            "O1": {"effective_opportunity": "false", "range_return": "true"},
+            "O2": {"effective_opportunity": "true", "range_return": "false"},
+            "O3": {"effective_opportunity": "true", "range_return": "true"},
         }
         values = dict(defaults)
         values.update(overrides[algorithm])
@@ -895,6 +909,8 @@ class BenchmarkRunner:
             "dormant_reacquisition:=" + values["dormant"],
             "certified_free_detection:=" + values["certified"],
             "epistemic_unknown_birth:=" + values["epistemic"],
+            "effective_opportunity_cells:=" + values["effective_opportunity"],
+            "range_conditioned_opportunity_return:=" + values["range_return"],
         ]
 
     def replay(self, algorithm, scene, noise, seed, source_bag, source_manifest):

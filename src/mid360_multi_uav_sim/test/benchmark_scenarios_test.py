@@ -89,6 +89,11 @@ class BenchmarkScenariosTest(unittest.TestCase):
             "CAL03": ("birth_sparse", 1),
             "CAL04": ("opportunity_return", 1),
             "CAL05": ("track_survival", 1),
+            "CAL10": ("opportunity_geometry", 1),
+            "CAL11": ("opportunity_correlation", 1),
+            "CAL12": ("opportunity_range_angle", 1),
+            "CAL13": ("opportunity_fill_factor", 1),
+            "CAL14": ("opportunity_miss_likelihood", 1),
         }
         for scene, (suffix, targets) in expected.items():
             config = self.load(scene)
