@@ -534,6 +534,9 @@ TEST(Packetizer, AnisotropicCovarianceUsesLineOfSightAsHighVarianceAxis)
       config.map.packet_shape_sigma_m * config.map.packet_shape_sigma_m,
       1.0e-12);
   EXPECT_GT(covariance(0, 0), covariance(1, 1));
+  EXPECT_TRUE(covariance.allFinite());
+  EXPECT_GE(Eigen::SelfAdjointEigenSolver<soft_vofod::Mat3>(
+                covariance).eigenvalues().minCoeff(), 0.0);
 }
 
 TEST(Packetizer, DoesNotMergeTargetsBeyondPacketGate)

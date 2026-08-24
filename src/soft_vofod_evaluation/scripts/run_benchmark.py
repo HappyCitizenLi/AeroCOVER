@@ -38,7 +38,7 @@ SCENES = DEFAULT_SCENES + (
     "NEG05", "NEG06", "CAL01", "CAL02", "CAL03", "CAL04", "CAL05",
     "CAL06", "CAL07", "CAL08", "CAL09", "CAL10", "CAL11", "CAL12",
     "CAL13", "CAL14", "CAL16", "IT10", "IT11", "IT12",
-    "IT13", "IT14", "IT15")
+    "IT13", "IT14", "IT15", "CS01", "CS02", "CS03", "CS04", "CS05")
 INTEGRATION_SCENE_ALIASES = {
     "IT10": "NEG05",  # moving observer at a wall edge
     "IT12": "S08C",   # stationary unknown
@@ -397,6 +397,12 @@ def validate_run_timing(algorithm, evidence, source_manifest):
             "INVALID_INPUT_HANDSHAKE",
             "first input ack {} missed source input {}".format(
                 first_ack, first_source))
+    if source_manifest.get("cold_start", False):
+        if algorithm != "B0" and \
+                evidence.get("first_scored_warmup_active") is not False:
+            raise RunContractError(
+                "INVALID_WARMUP", "cold-start method suppressed its first scored frame")
+        return
     complete = evidence.get("background_warmup_complete_stamp")
     gate = source_manifest.get("first_target_spawn_stamp")
     if gate is None:
@@ -620,14 +626,16 @@ class BenchmarkRunner:
                 "first_scored_input_stamp" not in manifest:
             timing = self.source_timing_contract(
                 os.path.join(os.path.dirname(manifest_path), "source.bag"),
-                expect_targets=not manifest.get("no_target_control", False))
+                expect_targets=not manifest.get("no_target_control", False),
+                cold_start=manifest.get("cold_start", False))
             manifest.update(timing)
             changed = True
         if changed:
             write_json(manifest_path, manifest)
         return manifest
 
-    def source_timing_contract(self, bag_path, expect_targets=True):
+    def source_timing_contract(self, bag_path, expect_targets=True,
+                               cold_start=False):
         first_input = None
         first_spawn = None
         scoring_start = None
@@ -657,8 +665,9 @@ class BenchmarkRunner:
             raise RuntimeError("source bag has no input at or after scoring start")
         target_free_gate = first_spawn if first_spawn is not None else scoring_start
         target_free = target_free_gate - first_input
-        if (first_spawn is not None and first_spawn != scoring_start) or \
-                target_free <= self.required_warmup_s:
+        if not cold_start and ((first_spawn is not None and
+                               first_spawn != scoring_start) or
+                              target_free <= self.required_warmup_s):
             raise RuntimeError(
                 "source target-free input is {:.3f}s; must exceed {:.3f}s and "
                 "spawn exactly at scoring start".format(
@@ -670,6 +679,7 @@ class BenchmarkRunner:
             "first_scored_input_stamp": first_scored,
             "target_free_input_duration_s": target_free,
             "required_target_free_duration_s": self.required_warmup_s,
+            "cold_start": cold_start,
         }
 
     @staticmethod
@@ -806,7 +816,8 @@ class BenchmarkRunner:
         if not os.path.exists(bag_path) or os.path.getsize(bag_path) == 0:
             raise RuntimeError("source recorder produced no bag")
         timing_contract = self.source_timing_contract(
-            bag_path, expect_targets=bool(scenario["targets"]))
+            bag_path, expect_targets=bool(scenario["targets"]),
+            cold_start=scene.startswith("CS"))
         manifest = {
             "schema_version": 1, "scenario": scene,
             "scenario_id": scenario["scenario_id"], "noise_mode": noise,
@@ -827,7 +838,7 @@ class BenchmarkRunner:
         write_json(manifest_path, manifest)
         return bag_path, manifest
 
-    def algorithm_command(self, algorithm, resource_path):
+    def algorithm_command(self, algorithm, resource_path, scene=""):
         time_prefix = ["/usr/bin/time", "-v", "-o", resource_path]
         if algorithm == "B0":
             return time_prefix + ["roslaunch", "tclv_evaluation", "b0_canonical.launch",
@@ -931,6 +942,7 @@ class BenchmarkRunner:
             "effective_opportunity_cells:=" + values["effective_opportunity"],
             "range_conditioned_opportunity_return:=" + values["range_return"],
             "anisotropic_los_covariance:=" + values["anisotropic_los"],
+            "cold_start:=" + ("true" if scene.startswith("CS") else "false"),
         ]
 
     def replay(self, algorithm, scene, noise, seed, source_bag, source_manifest):
@@ -967,7 +979,7 @@ class BenchmarkRunner:
             with master(os.path.join(run_dir, "roscore.log")):
                 subprocess.run(["rosparam", "set", "/use_sim_time", "true"], check=True)
                 algorithm_process = start(
-                    self.algorithm_command(algorithm, resource_path),
+                    self.algorithm_command(algorithm, resource_path, scene),
                     os.path.join(run_dir, "algorithm.log"))
                 processes.append(algorithm_process)
                 # The legacy tracker blocks its constructor in

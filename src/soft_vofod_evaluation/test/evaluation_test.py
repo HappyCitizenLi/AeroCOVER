@@ -34,6 +34,20 @@ class EvaluationTest(unittest.TestCase):
         self.assertEqual(result["by_range_m"]["0-15"]["count"], 1)
         self.assertEqual(result["by_point_count"]["2-4"]["count"], 1)
 
+    def test_known_to_unknown_continuity_preserves_identity(self):
+        frames = [
+            {"time": 9.0, "truth": [target("uav2", 5.0)],
+             "predictions": [target(7, 5.1)]},
+            {"time": 10.0, "truth": [target("uav2", 6.0)],
+             "predictions": [target(7, 6.1)]},
+            {"time": 11.0, "truth": [target("uav2", 7.0)],
+             "predictions": [target(7, 7.1)]},
+        ]
+        result = METRICS.known_to_unknown_continuity(
+            frames, [{"event": "enter_unknown_region", "sim_time": 10.0}])
+        self.assertTrue(result["identity_preserved"])
+        self.assertEqual(result["post_transition_recall"], 1.0)
+
     def test_hungarian_metrics_are_one_to_one_and_report_identity_switch(self):
         frames = [
             {"time": 0.0, "observer": (0.0, 0.0, 0.0),

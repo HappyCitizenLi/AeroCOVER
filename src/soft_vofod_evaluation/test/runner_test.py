@@ -121,6 +121,17 @@ class RunnerTest(unittest.TestCase):
             RUNNER.validate_run_timing("B0", evidence, source)
         self.assertEqual(raised.exception.status, "INVALID_INPUT_HANDSHAKE")
 
+        cold_source = dict(source, cold_start=True,
+                           first_target_spawn_stamp=0.0,
+                           first_scored_input_stamp=4.2)
+        cold_evidence = dict(evidence, first_input_ack_stamp=4.2,
+                             background_warmup_complete_stamp=4.2,
+                             first_scored_warmup_active=False)
+        RUNNER.validate_run_timing("M0", cold_evidence, cold_source)
+        cold_evidence["first_scored_warmup_active"] = True
+        with self.assertRaises(RUNNER.RunContractError):
+            RUNNER.validate_run_timing("M0", cold_evidence, cold_source)
+
     def test_aggregate_results_writes_group_and_paired_delta(self):
         def metrics(hota):
             return {
@@ -250,6 +261,10 @@ class RunnerTest(unittest.TestCase):
                 self.assertEqual(values["opportunity_aware_existence"], "true")
                 self.assertEqual(
                     values["two_stage_dormant_reactivation"], enabled)
+
+            cold = launch_values(runner.algorithm_command(
+                "M0", os.path.join(directory, "resource.txt"), "CS02"))
+            self.assertEqual(cold["cold_start"], "true")
 
 
 if __name__ == "__main__":

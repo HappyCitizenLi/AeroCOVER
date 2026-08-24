@@ -805,8 +805,10 @@ def epistemic_metrics(scenario_id, tracks, diagnostics, duration):
                             for values in diagnostic_samples)
     valid_returns = sum(values.get("valid_returns", 0.0)
                         for values in diagnostic_samples)
-    stationary = "S08C" in scenario_id or "unknown_stationary" in scenario_id
-    moving = "S08B" in scenario_id or "unknown_moving" in scenario_id
+    stationary = "S08C" in scenario_id or "unknown_stationary" in scenario_id \
+        or "stationary_unknown" in scenario_id
+    moving = "S08B" in scenario_id or "unknown_moving" in scenario_id \
+        or "moving_unknown" in scenario_id
     hover = "hover" in scenario_id.lower()
     return {
         "false_unknown_static_confirmation": len(confirmed_target_ids)
@@ -1282,6 +1284,39 @@ def map_metrics(background, candidate_background, free, observed_free,
     }
 
 
+def known_to_unknown_continuity(frames, scenario_events):
+    transition = next((item.get("sim_time") for item in scenario_events
+                       if item.get("event") == "enter_unknown_region"), None)
+    if transition is None:
+        return {"transition_time_s": None, "post_transition_recall": None,
+                "identity_preserved": None}
+    before_ids = []
+    after_ids = []
+    after_truth = 0
+    for frame in frames:
+        if not frame["truth"]:
+            continue
+        target_position = np.asarray(frame["truth"][0]["position"])
+        predictions = frame["predictions"]
+        distances = [np.linalg.norm(np.asarray(item["position"]) - target_position)
+                     for item in predictions]
+        matched_id = predictions[int(np.argmin(distances))]["id"] \
+            if distances and min(distances) <= MAIN_THRESHOLD_M else None
+        if transition - 2.0 <= frame["time"] < transition and matched_id is not None:
+            before_ids.append(matched_id)
+        elif frame["time"] >= transition:
+            after_truth += 1
+            if matched_id is not None:
+                after_ids.append(matched_id)
+    before_id = max(set(before_ids), key=before_ids.count) if before_ids else None
+    return {
+        "transition_time_s": transition,
+        "post_transition_recall": len(after_ids) / float(after_truth)
+        if after_truth else None,
+        "identity_preserved": before_id is not None and before_id in after_ids,
+    }
+
+
 def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
              resource_file=None):
     with open(scenario_file, encoding="utf-8") as stream:
@@ -1381,6 +1416,25 @@ def evaluate(source_bag, run_bag, algorithm, scenario_file, output_dir,
         },
         "scenario_events": scenario_events,
     }
+    if scenario["scenario_id"].startswith("CS"):
+        false_confirmation = metrics["epistemic"].get(
+            "false_unknown_static_confirmation")
+        if no_target:
+            false_confirmation = metrics["track_health"].get(
+                "unique_confirmed_tracks", 0)
+        metrics["cold_start"] = {
+            "no_target_free_warmup": True,
+            "TTFT_s": metrics["track_set"].get("TTFT_mean_s"),
+            "false_confirmation_count": false_confirmation,
+            "background_assimilation_latency_s": metrics["map"].get(
+                "candidate_to_stable_latency_s"),
+            "certified_free_build_latency_s": metrics["map"].get(
+                "observed_to_certified_latency_s"),
+            "known_to_unknown": known_to_unknown_continuity(
+                frames, scenario_events),
+            "false_packets_per_min": metrics["event"].get(
+                "false_events_per_min"),
+        }
     os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(output_dir, "metrics.json"), "w", encoding="utf-8") as stream:
         json.dump(metrics, stream, indent=2, sort_keys=True)
