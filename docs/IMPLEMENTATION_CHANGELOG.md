@@ -433,3 +433,22 @@
 - Phase 15 未改变可执行代码。最终 `catkin build` 再次为 11/11 packages、无 warning/failure；
   逐包串行全测后 `catkin_test_results build` 仍为 386 tests、0 error/failure/skipped；九份文档
   均非空且 `git diff --check` 通过。
+
+## 2026-08-24 — SOFT-VoFOD V4 physical evidence gates
+
+- 审计并冻结 V3 observation/evidence contracts；实现 effective angular opportunity cells、soft geometry、
+  `P_D=P_illum P_return|illum`、CAL10–14 reliability evaluator 和 O0–O3 strict replay。O3 calibration
+  最佳，但 R5 HOTA/FN 显著劣于 O0，因此 production miss update 保持关闭。
+- unknown birth 改为 static-vs-CV sequential log likelihood，无旧 χ² fallback；S08B TTFT 18.2→5.2 s，
+  S08C false confirmation=0、mapped-free hover recall=1。真正 cold-start 又增加 map-boundary guard 和
+  persistent static-unknown voxel provenance，同一 CS03 source false confirmation 4→1→0。
+- 显式实现 DORMANT→PRE_REACTIVATED→ACTIVE。S05 R1 wrong reactivation=0，但无 HOTA/FN 收益且
+  增加0.20 s latency，production 开关关闭。truth-only occlusion evaluator 得到 recall=0，OCCLUDED
+  不列核心贡献。
+- 实现 CAL16 packet surface-bias evaluator 与 M0/M1 LOS covariance。CAL16 支持 LOS variance 大于
+  transverse variance；S04 单 seed 仅 FN -2/HOTA +0.00115，收益不足，production 关闭。
+- 新增 CS01–CS05 真正零预热协议、cold-start metrics 和显式仿真场景守卫例外。五场景可运行，但
+  p95 超100 ms，CS05 unknown-region recall偏低，故未冻结 final。
+- 新增 Mid360 HW-CAL record-only launch；没有真实硬件 bags/truth，BL1/BL2 也不存在。严格停止
+  Phase 12–15，不伪造 final matrix、real calibration、external-baseline 或 flight 结果。
+- 生成十份 V4 文档，逐条回答20项 final-report 问题，并明确当前证据不足以支持 T-RO/IJRR 定稿。
