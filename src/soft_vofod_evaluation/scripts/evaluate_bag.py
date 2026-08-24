@@ -505,6 +505,14 @@ def load_run(path, algorithm, score_start, score_end):
                     "point_count": int(getattr(item, "point_count", 1)),
                     "birth_evidence_type": int(getattr(
                         item, "birth_evidence_type", 0)),
+                    "unknown_chain_id": int(getattr(
+                        item, "unknown_chain_id", 0)),
+                    "motion_log_odds": float(getattr(
+                        item, "motion_log_odds", 0.0)),
+                    "epistemic_state": int(getattr(
+                        item, "epistemic_state", 0)),
+                    "sequential_motion_confirmed": bool(getattr(
+                        item, "sequential_motion_confirmed", False)),
                 } for item in message.events]
                 (events if topic == event_topic else maintenance_packets).append(
                     (stamp, packets))
@@ -1240,6 +1248,7 @@ def main():
                                  "A1", "A2", "A3", "V3-A", "V3-B",
                                  "V3-C", "C0", "C1", "C2", "C3",
                                  "O0", "O1", "O2", "O3",
+                                 "U0", "U1",
                                  "S04-base", "S04-split", "S04-IMM",
                                  "S04-split-IMM", "S05_base", "S05_IMM",
                                  "S05_dormant", "S05_IMM+dormant"))

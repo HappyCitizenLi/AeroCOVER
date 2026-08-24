@@ -50,6 +50,13 @@ enum class BirthEvidenceType : uint8_t
   track_reactivation = 3,
 };
 
+enum class EpistemicState : uint8_t
+{
+  unresolved = 0,
+  static_background = 1,
+  independent_motion = 2,
+};
+
 enum class TrackState : uint8_t
 {
   tentative = 1,
@@ -123,6 +130,12 @@ struct BirthConfig
   double birth_spatial_cell_m = 1.0;
   uint32_t max_births_per_spatial_cell_per_epoch = 1U;
   double unknown_motion_gate_d2 = 16.266;
+  uint32_t sequential_unknown_min_groups = 3U;
+  double sequential_target_log_odds = 6.0;
+  double sequential_background_log_odds = 6.0;
+  double sequential_max_unresolved_s = 5.0;
+  double sequential_acceleration_sigma_mps2 = 1.0;
+  double sequential_initial_velocity_variance_m2ps2 = 1.0;
 };
 
 struct TrackerConfig
@@ -192,6 +205,7 @@ struct AblationConfig
   bool reportability_filtering = true;
   bool dormant_reacquisition = true;
   bool epistemic_unknown_birth = true;
+  bool sequential_unknown_inference = true;
   bool effective_opportunity_cells = false;
   bool range_conditioned_opportunity_return = true;
 };
@@ -238,6 +252,10 @@ struct Event
   std::vector<Vec3> points_m;
   Mat3 covariance = Mat3::Identity();
   BirthEvidenceType birth_evidence_type = BirthEvidenceType::none;
+  uint64_t unknown_chain_id = 0U;
+  double motion_log_odds = 0.0;
+  EpistemicState epistemic_state = EpistemicState::unresolved;
+  bool sequential_motion_confirmed = false;
 };
 
 struct Track
@@ -326,6 +344,9 @@ struct ProcessDiagnostics
   size_t certified_free_births = 0;
   size_t unknown_motion_births = 0;
   size_t unknown_motion_rejections = 0;
+  size_t unresolved_hypotheses = 0;
+  size_t sequential_motion_decisions = 0;
+  size_t sequential_background_decisions = 0;
   size_t track_conditioned_split_count = 0;
   size_t track_conditioned_split_packets = 0;
   size_t split_points_assigned = 0;
@@ -349,6 +370,7 @@ struct ProcessDiagnostics
   bool dormant_reacquisition = true;
   bool require_certified_free_for_events = true;
   bool epistemic_unknown_birth = true;
+  bool sequential_unknown_inference = true;
   bool effective_opportunity_cells = false;
   bool range_conditioned_opportunity_return = true;
   double processing_ms = 0.0;
@@ -385,6 +407,7 @@ struct ProcessDiagnostics
   size_t opportunity_candidate_rays = 0;
   size_t opportunity_effective_cells = 0;
   size_t unresolved_candidate_returns = 0;
+  double max_motion_log_odds = 0.0;
 };
 
 struct ScanResult
@@ -453,7 +476,9 @@ public:
       const std::vector<RaySample>& rays,
       const std::vector<double>& lengths_m,
       const std::vector<double>& weights);
-  std::optional<MapEpochCommit> advanceEpoch(double time_s);
+  std::optional<MapEpochCommit> advanceEpoch(
+      double time_s, bool defer_unknown_background = false);
+  bool assimilateStaticUnknown(const Event& packet);
   void accumulateReturn(
       const Vec3& point_m, double time_s, bool track_explained,
       bool allow_background);
@@ -574,6 +599,8 @@ public:
 
   void addBirthEventForTest(const Event& event);
   void addTrackForTest(const Track& track);
+  void classifyUnknownPacketsForTest(
+      std::vector<Event>* packets, ProcessDiagnostics* diagnostics = nullptr);
   std::optional<Track> tryBirthForTest(double time_s);
   OpportunityResult opportunityForTest(
       const Track& track, const std::vector<RaySample>& rays,
@@ -651,6 +678,8 @@ private:
       double time_s, ProcessDiagnostics* diagnostics = nullptr) const;
   std::optional<Track> createBirth(
       double time_s, ProcessDiagnostics* diagnostics = nullptr);
+  void classifyUnknownPackets(
+      std::vector<Event>* packets, ProcessDiagnostics* diagnostics);
   bool birthCellAvailable(const Vec3& position_m, double time_s) const;
   void recordBirthCell(const Vec3& position_m, double time_s);
   std::vector<Support> supports(double time_s) const;
@@ -687,6 +716,22 @@ private:
     uint32_t births = 0U;
   };
   std::vector<BirthCellRecord> birth_cells_;
+  struct UnresolvedMotionHypothesis
+  {
+    uint64_t id = 0U;
+    double first_time_s = 0.0;
+    double last_time_s = 0.0;
+    uint64_t last_group_id = 0U;
+    uint32_t groups = 0U;
+    Vec3 static_mean_m = Vec3::Zero();
+    Mat3 static_covariance = Mat3::Identity();
+    Vec6 moving_x = Vec6::Zero();
+    Mat6 moving_covariance = Mat6::Identity();
+    double motion_log_odds = 0.0;
+    EpistemicState decision = EpistemicState::unresolved;
+  };
+  std::vector<UnresolvedMotionHypothesis> unresolved_hypotheses_;
+  uint64_t next_unknown_chain_id_ = 1U;
   std::vector<Support> quarantines_;
   uint32_t next_track_id_ = 1;
 };

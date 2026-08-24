@@ -32,6 +32,22 @@ bool finitePositive(const double value)
   return std::isfinite(value) && value > 0.0;
 }
 
+double logGaussianInnovation(const Vec3& innovation, const Mat3& covariance)
+{
+  const Mat3 symmetric = 0.5 * (covariance + covariance.transpose());
+  const Eigen::LDLT<Mat3> decomposition(symmetric);
+  if (decomposition.info() != Eigen::Success)
+    return -std::numeric_limits<double>::infinity();
+  const auto diagonal = decomposition.vectorD();
+  if ((diagonal.array() <= kProbabilityEpsilon).any())
+    return -std::numeric_limits<double>::infinity();
+  const double distance_d2 = innovation.dot(decomposition.solve(innovation));
+  if (!std::isfinite(distance_d2))
+    return -std::numeric_limits<double>::infinity();
+  return -0.5 * (distance_d2 + diagonal.array().log().sum() +
+                 3.0 * std::log(kTwoPi));
+}
+
 size_t directionCellKey(
     const Vec3& direction, const double bin_chord,
     const size_t bins_per_axis)
@@ -151,6 +167,13 @@ void validateConfig(const Config& config)
       !finitePositive(config.birth.birth_spatial_cell_m) ||
       config.birth.max_births_per_spatial_cell_per_epoch == 0U ||
       !finitePositive(config.birth.unknown_motion_gate_d2) ||
+      config.birth.sequential_unknown_min_groups < 2U ||
+      !finitePositive(config.birth.sequential_target_log_odds) ||
+      !finitePositive(config.birth.sequential_background_log_odds) ||
+      !finitePositive(config.birth.sequential_max_unresolved_s) ||
+      !finitePositive(config.birth.sequential_acceleration_sigma_mps2) ||
+      !finitePositive(
+          config.birth.sequential_initial_velocity_variance_m2ps2) ||
       !finitePositive(config.tracker.acceleration_sigma_mps2) ||
       !finitePositive(config.tracker.measurement_variance_m2) ||
       config.tracker.shape_sigma_m < 0.0 ||
@@ -776,7 +799,7 @@ std::vector<Event> BackgroundMap::packetizeViolationComponent(
 }
 
 std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
-    const double time_s)
+    const double time_s, const bool defer_unknown_background)
 {
   if (!std::isfinite(time_s))
     throw std::invalid_argument("invalid map epoch time");
@@ -925,7 +948,7 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
       free_violation = false;
       unknown_component = true;
     }
-    else if (unknown_component)
+    else if (unknown_component && !defer_unknown_background)
     {
       updateUnknownCandidate(
           candidate_voxels, commit_time_s, true, &output);
@@ -1033,6 +1056,30 @@ std::optional<MapEpochCommit> BackgroundMap::advanceEpoch(
   ++epoch_id_;
   epoch_start_time_s_ = std::floor(time_s / duration_s) * duration_s;
   return output;
+}
+
+bool BackgroundMap::assimilateStaticUnknown(const Event& packet)
+{
+  std::vector<size_t> component;
+  const std::vector<Vec3> points = packet.points_m.empty()
+      ? std::vector<Vec3>{packet.position_m} : packet.points_m;
+  component.reserve(points.size());
+  for (const Vec3& point_m : points)
+  {
+    size_t linear_index = 0U;
+    if (point_m.allFinite() && geometry_.tryLinearIndex(
+            geometry_.coordToIdx(point_m.cast<float>()), &linear_index))
+      component.push_back(linear_index);
+  }
+  std::sort(component.begin(), component.end());
+  component.erase(std::unique(component.begin(), component.end()),
+                  component.end());
+  if (component.empty())
+    return false;
+  MapEpochCommit output;
+  updateUnknownCandidate(component, packet.time_s, true, &output);
+  rebuildCandidateBackgroundIndex();
+  return output.promoted_unknown_candidates > 0U;
 }
 
 void BackgroundMap::accumulateReturn(
@@ -1744,11 +1791,215 @@ void SoftVofodCore::addTrackForTest(const Track& track)
   next_track_id_ = std::max(next_track_id_, track.id + 1U);
 }
 
+void SoftVofodCore::classifyUnknownPacketsForTest(
+    std::vector<Event>* const packets, ProcessDiagnostics* const diagnostics)
+{
+  classifyUnknownPackets(packets, diagnostics);
+}
+
+void SoftVofodCore::classifyUnknownPackets(
+    std::vector<Event>* const packets, ProcessDiagnostics* const diagnostics)
+{
+  if (!packets)
+    throw std::invalid_argument("unknown classification requires packets");
+  if (!config_.ablation.sequential_unknown_inference)
+    return;
+
+  const Mat3 identity3 = Mat3::Identity();
+  const Mat6 identity6 = Mat6::Identity();
+  for (Event& packet : *packets)
+  {
+    unresolved_hypotheses_.erase(
+        std::remove_if(
+            unresolved_hypotheses_.begin(), unresolved_hypotheses_.end(),
+            [this, &packet](const UnresolvedMotionHypothesis& hypothesis)
+            {
+              return packet.time_s - hypothesis.last_time_s >
+                  config_.birth.sequential_max_unresolved_s;
+            }),
+        unresolved_hypotheses_.end());
+
+    size_t best = unresolved_hypotheses_.size();
+    double best_distance_m = std::max(
+        config_.map.unknown_match_distance_m,
+        config_.tracker.target_radius_m + config_.birth.max_residual_m);
+    for (size_t index = 0U; index < unresolved_hypotheses_.size(); ++index)
+    {
+      const UnresolvedMotionHypothesis& hypothesis =
+          unresolved_hypotheses_[index];
+      if (hypothesis.last_group_id == packet.group_id ||
+          packet.time_s <= hypothesis.last_time_s)
+        continue;
+      const double dt = packet.time_s - hypothesis.last_time_s;
+      const Vec3 moving_prediction =
+          hypothesis.moving_x.head<3>() +
+          hypothesis.moving_x.tail<3>() * dt;
+      const double distance_m = std::min(
+          (packet.position_m - hypothesis.static_mean_m).norm(),
+          (packet.position_m - moving_prediction).norm());
+      if (distance_m <= best_distance_m)
+      {
+        best = index;
+        best_distance_m = distance_m;
+      }
+    }
+
+    const Mat3 measurement_covariance =
+        0.5 * (packet.covariance + packet.covariance.transpose()) +
+        kProbabilityEpsilon * identity3;
+    if (best == unresolved_hypotheses_.size())
+    {
+      UnresolvedMotionHypothesis hypothesis;
+      hypothesis.id = next_unknown_chain_id_++;
+      hypothesis.first_time_s = packet.time_s;
+      hypothesis.last_time_s = packet.time_s;
+      hypothesis.last_group_id = packet.group_id;
+      hypothesis.groups = 1U;
+      hypothesis.static_mean_m = packet.position_m;
+      hypothesis.static_covariance = measurement_covariance;
+      hypothesis.moving_x.head<3>() = packet.position_m;
+      hypothesis.moving_covariance.setZero();
+      hypothesis.moving_covariance.block<3, 3>(0, 0) =
+          measurement_covariance;
+      hypothesis.moving_covariance.block<3, 3>(3, 3) =
+          config_.birth.sequential_initial_velocity_variance_m2ps2 * identity3;
+      unresolved_hypotheses_.push_back(hypothesis);
+      best = unresolved_hypotheses_.size() - 1U;
+    }
+    else
+    {
+      UnresolvedMotionHypothesis& hypothesis = unresolved_hypotheses_[best];
+      const double dt = packet.time_s - hypothesis.last_time_s;
+      const Mat6 transition_matrix = transition(dt);
+      const Vec6 moving_prediction = transition_matrix * hypothesis.moving_x;
+      const Mat6 moving_prediction_covariance =
+          transition_matrix * hypothesis.moving_covariance *
+              transition_matrix.transpose() +
+          processNoise(dt, config_.birth.sequential_acceleration_sigma_mps2);
+      const Vec3 moving_innovation =
+          packet.position_m - moving_prediction.head<3>();
+      const Mat3 moving_innovation_covariance =
+          moving_prediction_covariance.block<3, 3>(0, 0) +
+          measurement_covariance;
+      const Vec3 static_innovation =
+          packet.position_m - hypothesis.static_mean_m;
+      const Mat3 static_innovation_covariance =
+          hypothesis.static_covariance + measurement_covariance;
+      const double moving_log_likelihood = logGaussianInnovation(
+          moving_innovation, moving_innovation_covariance);
+      const double static_log_likelihood = logGaussianInnovation(
+          static_innovation, static_innovation_covariance);
+      if (std::isfinite(moving_log_likelihood) &&
+          std::isfinite(static_log_likelihood) &&
+          hypothesis.decision == EpistemicState::unresolved)
+      {
+        hypothesis.motion_log_odds += std::max(
+            -20.0, std::min(20.0,
+                moving_log_likelihood - static_log_likelihood));
+      }
+
+      const Eigen::LDLT<Mat3> static_decomposition(
+          static_innovation_covariance);
+      if (static_decomposition.info() == Eigen::Success)
+      {
+        const Mat3 static_gain = hypothesis.static_covariance *
+            static_decomposition.solve(identity3);
+        hypothesis.static_mean_m += static_gain * static_innovation;
+        const Mat3 residual = identity3 - static_gain;
+        hypothesis.static_covariance = residual *
+            hypothesis.static_covariance * residual.transpose() +
+            static_gain * measurement_covariance * static_gain.transpose();
+      }
+
+      const Eigen::LDLT<Mat3> moving_decomposition(
+          moving_innovation_covariance);
+      if (moving_decomposition.info() == Eigen::Success)
+      {
+        const Eigen::Matrix<double, 6, 3> moving_gain =
+            moving_prediction_covariance.block<6, 3>(0, 0) *
+            moving_decomposition.solve(identity3);
+        hypothesis.moving_x =
+            moving_prediction + moving_gain * moving_innovation;
+        Mat6 residual = identity6;
+        residual.block<6, 3>(0, 0) -= moving_gain;
+        hypothesis.moving_covariance = residual *
+            moving_prediction_covariance * residual.transpose() +
+            moving_gain * measurement_covariance * moving_gain.transpose();
+      }
+      else
+      {
+        hypothesis.moving_x = moving_prediction;
+        hypothesis.moving_covariance = moving_prediction_covariance;
+      }
+      hypothesis.last_time_s = packet.time_s;
+      hypothesis.last_group_id = packet.group_id;
+      ++hypothesis.groups;
+
+      if (hypothesis.decision == EpistemicState::unresolved &&
+          hypothesis.motion_log_odds >=
+              config_.birth.sequential_target_log_odds)
+      {
+        hypothesis.decision = EpistemicState::independent_motion;
+        if (diagnostics)
+          ++diagnostics->sequential_motion_decisions;
+      }
+      else if (hypothesis.decision == EpistemicState::unresolved &&
+               (hypothesis.motion_log_odds <=
+                    -config_.birth.sequential_background_log_odds ||
+                packet.time_s - hypothesis.first_time_s >=
+                    config_.birth.sequential_max_unresolved_s))
+      {
+        hypothesis.decision = EpistemicState::static_background;
+        if (diagnostics)
+          ++diagnostics->sequential_background_decisions;
+      }
+    }
+
+    UnresolvedMotionHypothesis& hypothesis = unresolved_hypotheses_[best];
+    packet.unknown_chain_id = hypothesis.id;
+    packet.motion_log_odds = hypothesis.motion_log_odds;
+    packet.epistemic_state = hypothesis.decision;
+    packet.sequential_motion_confirmed =
+        hypothesis.decision == EpistemicState::independent_motion;
+    if (packet.sequential_motion_confirmed)
+    {
+      for (Event& prior : birth_buffer_)
+      {
+        if (prior.unknown_chain_id == hypothesis.id)
+        {
+          prior.motion_log_odds = hypothesis.motion_log_odds;
+          prior.epistemic_state = EpistemicState::independent_motion;
+          prior.sequential_motion_confirmed = true;
+        }
+      }
+    }
+    else if (hypothesis.decision == EpistemicState::static_background)
+    {
+      birth_buffer_.erase(
+          std::remove_if(
+              birth_buffer_.begin(), birth_buffer_.end(),
+              [&hypothesis](const Event& prior)
+              { return prior.unknown_chain_id == hypothesis.id; }),
+          birth_buffer_.end());
+    }
+    if (diagnostics)
+      diagnostics->max_motion_log_odds = std::max(
+          diagnostics->max_motion_log_odds, hypothesis.motion_log_odds);
+  }
+  if (diagnostics)
+    diagnostics->unresolved_hypotheses = unresolved_hypotheses_.size();
+}
+
 std::optional<SoftVofodCore::BirthCandidate>
 SoftVofodCore::bestBirthCandidate(
     const double time_s, ProcessDiagnostics* const diagnostics) const
 {
-  if (birth_buffer_.size() < config_.birth.min_groups)
+  const uint32_t minimum_buffer_groups =
+      config_.ablation.sequential_unknown_inference
+          ? std::min(config_.birth.min_groups,
+                     config_.birth.sequential_unknown_min_groups)
+          : config_.birth.min_groups;
+  if (birth_buffer_.size() < minimum_buffer_groups)
     return std::nullopt;
 
   std::optional<BirthCandidate> best;
@@ -1788,7 +2039,26 @@ SoftVofodCore::bestBirthCandidate(
         if (found == group_inliers.end() || residual < found->second.first)
           group_inliers[event.group_id] = {residual, index};
       }
-      if (group_inliers.size() < config_.birth.min_groups)
+      const bool sequential_motion_confirmed =
+          config_.ablation.sequential_unknown_inference &&
+          a.birth_evidence_type ==
+              BirthEvidenceType::unknown_independent_motion &&
+          std::any_of(
+              group_inliers.begin(), group_inliers.end(),
+              [this](const auto& item)
+              {
+                return birth_buffer_[item.second.second]
+                    .sequential_motion_confirmed;
+              });
+      if (config_.ablation.sequential_unknown_inference &&
+          a.birth_evidence_type ==
+              BirthEvidenceType::unknown_independent_motion &&
+          !sequential_motion_confirmed)
+        continue;
+      const uint32_t required_groups = sequential_motion_confirmed
+          ? config_.birth.sequential_unknown_min_groups
+          : config_.birth.min_groups;
+      if (group_inliers.size() < required_groups)
         continue;
 
       double total_weight = 0.0;
@@ -1940,6 +2210,7 @@ SoftVofodCore::bestBirthCandidate(
           : 0.0;
       if (a.birth_evidence_type ==
               BirthEvidenceType::unknown_independent_motion &&
+          !sequential_motion_confirmed &&
           (!std::isfinite(motion_d2) ||
            motion_d2 <= config_.birth.unknown_motion_gate_d2))
       {
@@ -2153,6 +2424,15 @@ void SoftVofodCore::prune(const double time_s)
           [epoch](const BirthCellRecord& record)
           { return record.epoch + 1U < epoch; }),
       birth_cells_.end());
+  unresolved_hypotheses_.erase(
+      std::remove_if(
+          unresolved_hypotheses_.begin(), unresolved_hypotheses_.end(),
+          [this, time_s](const UnresolvedMotionHypothesis& hypothesis)
+          {
+            return time_s - hypothesis.last_time_s >
+                config_.birth.sequential_max_unresolved_s;
+          }),
+      unresolved_hypotheses_.end());
 }
 
 std::vector<SoftVofodCore::Support> SoftVofodCore::supports(
@@ -2771,10 +3051,28 @@ void SoftVofodCore::processBatch(
   std::vector<Event> maintenance_packets;
   size_t violation_measurements = 0U;
   size_t birth_eligible_measurements = 0U;
+  std::vector<Event> unresolved_packets;
   const std::optional<MapEpochCommit> epoch_commit =
-      background_map_.advanceEpoch(rays.front().time_s);
+      background_map_.advanceEpoch(
+          rays.front().time_s,
+          config_.ablation.epistemic_unknown_birth &&
+              config_.ablation.sequential_unknown_inference);
   if (epoch_commit)
   {
+    unresolved_packets = epoch_commit->unresolved_packets;
+    if (config_.ablation.epistemic_unknown_birth)
+      classifyUnknownPackets(&unresolved_packets, &result->diagnostics);
+    if (config_.ablation.sequential_unknown_inference)
+    {
+      std::unordered_set<uint64_t> assimilated_chains;
+      for (auto packet = unresolved_packets.rbegin();
+           packet != unresolved_packets.rend(); ++packet)
+      {
+        if (packet->epistemic_state == EpistemicState::static_background &&
+            assimilated_chains.insert(packet->unknown_chain_id).second)
+          background_map_.assimilateStaticUnknown(*packet);
+      }
+    }
     ++result->diagnostics.map_epochs_committed;
     result->diagnostics.map_epoch_free_voxels += epoch_commit->free_voxels;
     result->diagnostics.observed_free_voxels +=
@@ -2805,14 +3103,14 @@ void SoftVofodCore::processBatch(
     result->diagnostics.certified_free_violation_packets +=
         epoch_commit->violation_packets.size();
     result->diagnostics.unknown_motion_packets +=
-        epoch_commit->unresolved_packets.size();
+        unresolved_packets.size();
     result->diagnostics.events += epoch_commit->violation_packets.size();
     violation_measurements = epoch_commit->violation_packets.size();
     birth_eligible_measurements = violation_measurements +
         (config_.ablation.epistemic_unknown_birth
-             ? epoch_commit->unresolved_packets.size() : 0U);
+             ? unresolved_packets.size() : 0U);
     maintenance_packets.reserve(
-        violation_measurements + epoch_commit->unresolved_packets.size() +
+        violation_measurements + unresolved_packets.size() +
         epoch_commit->track_explained_packets.size());
     for (Event packet : epoch_commit->violation_packets)
     {
@@ -2821,15 +3119,15 @@ void SoftVofodCore::processBatch(
       maintenance_packets.push_back(std::move(packet));
     }
     maintenance_packets.insert(
-        maintenance_packets.end(), epoch_commit->unresolved_packets.begin(),
-        epoch_commit->unresolved_packets.end());
+        maintenance_packets.end(), unresolved_packets.begin(),
+        unresolved_packets.end());
     maintenance_packets.insert(
         maintenance_packets.end(),
         epoch_commit->track_explained_packets.begin(),
         epoch_commit->track_explained_packets.end());
     result->diagnostics.maintenance_packets += maintenance_packets.size();
     result->diagnostics.unresolved_maintenance_packets +=
-        epoch_commit->unresolved_packets.size();
+        unresolved_packets.size();
     result->diagnostics.track_explained_maintenance_packets +=
         epoch_commit->track_explained_packets.size();
     for (Event& packet : maintenance_packets)
@@ -3398,6 +3696,8 @@ ScanResult SoftVofodCore::processScan(
       config_.map.require_certified_free_for_events;
   result.diagnostics.epistemic_unknown_birth =
       config_.ablation.epistemic_unknown_birth;
+  result.diagnostics.sequential_unknown_inference =
+      config_.ablation.sequential_unknown_inference;
   result.diagnostics.effective_opportunity_cells =
       config_.ablation.effective_opportunity_cells;
   result.diagnostics.range_conditioned_opportunity_return =
@@ -3471,6 +3771,7 @@ ScanResult SoftVofodCore::processScan(
     prune(scan_stamp_s);
     predictTracks(scan_stamp_s);
   }
+  result.diagnostics.unresolved_hypotheses = unresolved_hypotheses_.size();
 
   if (config_.ablation.effective_opportunity_cells && !rays.empty())
   {

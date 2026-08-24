@@ -17,3 +17,10 @@ uint8 CERTIFIED_FREE_VIOLATION=1
 uint8 UNKNOWN_INDEPENDENT_MOTION=2
 uint8 TRACK_REACTIVATION=3
 uint8 birth_evidence_type
+uint64 unknown_chain_id
+float64 motion_log_odds
+uint8 EPISTEMIC_UNRESOLVED=0
+uint8 EPISTEMIC_STATIC_BACKGROUND=1
+uint8 EPISTEMIC_INDEPENDENT_MOTION=2
+uint8 epistemic_state
+bool sequential_motion_confirmed

@@ -35,6 +35,7 @@ soft_vofod::Config testConfig()
   config.tracker.shape_sigma_m = 0.1;
   config.tracker.target_radius_m = 0.5;
   config.tracker.map_support_uncertainty_cap_m = 0.5;
+  config.ablation.sequential_unknown_inference = false;
   config.micro_batch_dt_s = 0.01;
   return config;
 }
@@ -624,6 +625,87 @@ TEST(Birth, StationaryUnknownNeverBecomesTarget)
         soft_vofod::BirthEvidenceType::unknown_independent_motion));
   }
   EXPECT_FALSE(core.tryBirthForTest(0.2).has_value());
+}
+
+TEST(Birth, SequentialUnknownInferenceSeparatesStaticAndMovingChains)
+{
+  soft_vofod::Config config = testConfig();
+  config.birth.min_groups = 5U;
+  config.birth.sequential_unknown_min_groups = 3U;
+  config.birth.sequential_target_log_odds = 2.0;
+  config.birth.sequential_background_log_odds = 2.0;
+  config.birth.unknown_motion_gate_d2 = 1.0e9;
+  config.ablation.sequential_unknown_inference = true;
+
+  soft_vofod::SoftVofodCore static_core(config);
+  soft_vofod::ProcessDiagnostics static_diagnostics;
+  for (uint64_t group = 0U; group < 8U; ++group)
+  {
+    std::vector<soft_vofod::Event> packets = {event(
+        0.2 * group, soft_vofod::Vec3(5.0, 0.0, 1.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion)};
+    static_core.classifyUnknownPacketsForTest(
+        &packets, &static_diagnostics);
+    EXPECT_FALSE(packets.front().sequential_motion_confirmed);
+    static_core.addBirthEventForTest(packets.front());
+  }
+  EXPECT_EQ(static_diagnostics.sequential_motion_decisions, 0U);
+  EXPECT_GT(static_diagnostics.sequential_background_decisions, 0U);
+  EXPECT_FALSE(static_core.tryBirthForTest(1.4).has_value());
+
+  soft_vofod::SoftVofodCore moving_core(config);
+  soft_vofod::ProcessDiagnostics moving_diagnostics;
+  bool decided = false;
+  for (uint64_t group = 0U; group < 8U; ++group)
+  {
+    std::vector<soft_vofod::Event> packets = {event(
+        0.2 * group, soft_vofod::Vec3(0.4 * group, 0.0, 0.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion)};
+    moving_core.classifyUnknownPacketsForTest(
+        &packets, &moving_diagnostics);
+    decided = decided || packets.front().sequential_motion_confirmed;
+    moving_core.addBirthEventForTest(packets.front());
+  }
+  EXPECT_TRUE(decided);
+  EXPECT_EQ(moving_diagnostics.sequential_motion_decisions, 1U);
+  const auto birth = moving_core.tryBirthForTest(1.4);
+  ASSERT_TRUE(birth.has_value());
+  EXPECT_EQ(birth->birth_evidence_type,
+            soft_vofod::BirthEvidenceType::unknown_independent_motion);
+}
+
+TEST(Birth, SequentialUnknownInferenceDoesNotFallBackToOneShotGate)
+{
+  soft_vofod::Config config = testConfig();
+  config.birth.sequential_target_log_odds = 1.0e6;
+  config.birth.unknown_motion_gate_d2 = 0.01;
+  config.ablation.sequential_unknown_inference = true;
+  soft_vofod::SoftVofodCore core(config);
+  for (uint64_t group = 0U; group < 6U; ++group)
+  {
+    std::vector<soft_vofod::Event> packets = {event(
+        0.2 * group, soft_vofod::Vec3(0.5 * group, 0.0, 0.0), group,
+        soft_vofod::BirthEvidenceType::unknown_independent_motion)};
+    core.classifyUnknownPacketsForTest(&packets);
+    EXPECT_FALSE(packets.front().sequential_motion_confirmed);
+    core.addBirthEventForTest(packets.front());
+  }
+  EXPECT_FALSE(core.tryBirthForTest(1.0).has_value());
+}
+
+TEST(EpistemicMap, UnresolvedDefersBackgroundUntilStaticDecision)
+{
+  soft_vofod::Config config = testConfig();
+  soft_vofod::BackgroundMap map(config.map);
+  const soft_vofod::Vec3 point(2.0, 0.0, 0.0);
+  ASSERT_FALSE(map.advanceEpoch(0.0, true).has_value());
+  map.accumulateReturn(point, 0.1, false, true);
+  const auto commit = map.advanceEpoch(0.2, true);
+  ASSERT_TRUE(commit.has_value());
+  ASSERT_FALSE(commit->unresolved_packets.empty());
+  EXPECT_EQ(map.candidateBackgroundCount(), 0U);
+  EXPECT_FALSE(map.assimilateStaticUnknown(commit->unresolved_packets.front()));
+  EXPECT_EQ(map.candidateBackgroundCount(), 1U);
 }
 
 TEST(Birth, SignificantUnknownMotionCanBecomeTarget)

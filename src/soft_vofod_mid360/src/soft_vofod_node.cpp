@@ -294,6 +294,25 @@ private:
         static_cast<uint32_t>(max_births_per_cell);
     parameter("birth/unknown_motion_gate_d2",
               &config->birth.unknown_motion_gate_d2);
+    int sequential_unknown_min_groups = static_cast<int>(
+        config->birth.sequential_unknown_min_groups);
+    parameter("birth/sequential_unknown_min_groups",
+              &sequential_unknown_min_groups);
+    if (sequential_unknown_min_groups < 2)
+      throw std::invalid_argument(
+          "sequential unknown min groups must be at least two");
+    config->birth.sequential_unknown_min_groups =
+        static_cast<uint32_t>(sequential_unknown_min_groups);
+    parameter("birth/sequential_target_log_odds",
+              &config->birth.sequential_target_log_odds);
+    parameter("birth/sequential_background_log_odds",
+              &config->birth.sequential_background_log_odds);
+    parameter("birth/sequential_max_unresolved_s",
+              &config->birth.sequential_max_unresolved_s);
+    parameter("birth/sequential_acceleration_sigma_mps2",
+              &config->birth.sequential_acceleration_sigma_mps2);
+    parameter("birth/sequential_initial_velocity_variance_m2ps2",
+              &config->birth.sequential_initial_velocity_variance_m2ps2);
 
     parameter("tracker/acceleration_sigma_mps2",
               &config->tracker.acceleration_sigma_mps2);
@@ -401,6 +420,8 @@ private:
               &config->ablation.dormant_reacquisition);
     parameter("ablation/epistemic_unknown_birth",
               &config->ablation.epistemic_unknown_birth);
+    parameter("ablation/sequential_unknown_inference",
+              &config->ablation.sequential_unknown_inference);
     parameter("ablation/effective_opportunity_cells",
               &config->ablation.effective_opportunity_cells);
     parameter("ablation/range_conditioned_opportunity_return",
@@ -638,6 +659,11 @@ private:
     }
     output.birth_evidence_type =
         static_cast<uint8_t>(event.birth_evidence_type);
+    output.unknown_chain_id = event.unknown_chain_id;
+    output.motion_log_odds = event.motion_log_odds;
+    output.epistemic_state = static_cast<uint8_t>(event.epistemic_state);
+    output.sequential_motion_confirmed =
+        event.sequential_motion_confirmed;
     return output;
   }
 
@@ -844,6 +870,17 @@ private:
           "unknown_motion_rejections",
           number(diagnostics->unknown_motion_rejections)));
       status.values.push_back(diagnosticValue(
+          "unresolved_hypotheses",
+          number(diagnostics->unresolved_hypotheses)));
+      status.values.push_back(diagnosticValue(
+          "sequential_motion_decisions",
+          number(diagnostics->sequential_motion_decisions)));
+      status.values.push_back(diagnosticValue(
+          "sequential_background_decisions",
+          number(diagnostics->sequential_background_decisions)));
+      status.values.push_back(diagnosticValue(
+          "max_motion_log_odds", number(diagnostics->max_motion_log_odds)));
+      status.values.push_back(diagnosticValue(
           "track_conditioned_split_count",
           number(diagnostics->track_conditioned_split_count)));
       status.values.push_back(diagnosticValue(
@@ -905,6 +942,9 @@ private:
       status.values.push_back(diagnosticValue(
           "epistemic_unknown_birth",
           diagnostics->epistemic_unknown_birth ? "true" : "false"));
+      status.values.push_back(diagnosticValue(
+          "sequential_unknown_inference",
+          diagnostics->sequential_unknown_inference ? "true" : "false"));
       status.values.push_back(diagnosticValue(
           "effective_opportunity_cells",
           diagnostics->effective_opportunity_cells ? "true" : "false"));

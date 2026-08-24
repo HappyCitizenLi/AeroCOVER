@@ -29,6 +29,7 @@ ALGORITHMS = (
     "B0", "B1", "B2", "B3", "B4", "A1", "A2", "A3",
     "V3-A", "V3-B", "V3-C", "C0", "C1", "C2", "C3",
     "O0", "O1", "O2", "O3",
+    "U0", "U1",
     "S04-base", "S04-split", "S04-IMM", "S04-split-IMM",
     "S05_base", "S05_IMM", "S05_dormant", "S05_IMM+dormant")
 DEFAULT_SCENES = tuple("S{:02d}".format(index) for index in range(1, 8))
@@ -847,6 +848,7 @@ class BenchmarkRunner:
             "survival_lambda": calibrated_survival, "split": "true",
             "imm": "true", "survival": "true", "reportability": "true",
             "dormant": "true", "certified": "true", "epistemic": "true",
+            "sequential_unknown": "true",
         }
         overrides = {
             "A1": {"groups": "2", "opportunity": "false",
@@ -884,13 +886,18 @@ class BenchmarkRunner:
             "O1": {"effective_opportunity": "false", "range_return": "true"},
             "O2": {"effective_opportunity": "true", "range_return": "false"},
             "O3": {"effective_opportunity": "true", "range_return": "true"},
+            "U0": {"opportunity": "false", "effective_opportunity": "true",
+                   "sequential_unknown": "false"},
+            "U1": {"opportunity": "false", "effective_opportunity": "true",
+                   "sequential_unknown": "true"},
         }
         values = dict(defaults)
         values.update(overrides[algorithm])
         if legacy:
             values.update({"split": "false", "imm": "false",
                            "reportability": "false", "dormant": "false",
-                           "certified": "false", "epistemic": "false"})
+                           "certified": "false", "epistemic": "false",
+                           "sequential_unknown": "false"})
             values["survival"] = "false" if algorithm in ("A1", "A2", "B1", "B2") \
                 else "true"
         return time_prefix + [
@@ -909,6 +916,7 @@ class BenchmarkRunner:
             "dormant_reacquisition:=" + values["dormant"],
             "certified_free_detection:=" + values["certified"],
             "epistemic_unknown_birth:=" + values["epistemic"],
+            "sequential_unknown_inference:=" + values["sequential_unknown"],
             "effective_opportunity_cells:=" + values["effective_opportunity"],
             "range_conditioned_opportunity_return:=" + values["range_return"],
         ]

@@ -21,6 +21,7 @@
   <arg name="dormant_reacquisition" default="true"/>
   <arg name="certified_free_detection" default="true"/>
   <arg name="epistemic_unknown_birth" default="true"/>
+  <arg name="sequential_unknown_inference" default="true"/>
   <arg name="effective_opportunity_cells" default="true"/>
   <arg name="range_conditioned_opportunity_return" default="true"/>
   <arg name="output" default="screen"/>
@@ -53,6 +54,8 @@
            value="$(arg certified_free_detection)"/>
     <param name="ablation/epistemic_unknown_birth"
            value="$(arg epistemic_unknown_birth)"/>
+    <param name="ablation/sequential_unknown_inference"
+           value="$(arg sequential_unknown_inference)"/>
     <param name="ablation/effective_opportunity_cells"
            value="$(arg effective_opportunity_cells)"/>
     <param name="ablation/range_conditioned_opportunity_return"

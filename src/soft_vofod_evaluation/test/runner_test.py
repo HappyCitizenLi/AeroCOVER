@@ -233,6 +233,14 @@ class RunnerTest(unittest.TestCase):
                 self.assertEqual(values["birth_min_groups"], "5")
                 self.assertEqual(actual, wanted)
 
+            for algorithm, enabled in (("U0", "false"), ("U1", "true")):
+                values = launch_values(runner.algorithm_command(
+                    algorithm, os.path.join(directory, "resource.txt")))
+                self.assertEqual(values["birth_min_groups"], "5")
+                self.assertEqual(values["opportunity_aware_existence"], "false")
+                self.assertEqual(values["effective_opportunity_cells"], "true")
+                self.assertEqual(values["sequential_unknown_inference"], enabled)
+
 
 if __name__ == "__main__":
     unittest.main()

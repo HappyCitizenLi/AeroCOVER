@@ -75,6 +75,14 @@ birth:
   # 3-D chi-square 99.9% gate: UNKNOWN needs stronger evidence than a
   # background surface footprint drifting with exploration.
   unknown_motion_gate_d2: 16.266
+  sequential_unknown_min_groups: 3
+  sequential_target_log_odds: 6.0
+  sequential_background_log_odds: 6.0
+  sequential_max_unresolved_s: 5.0
+  # Pre-track dynamics are deliberately narrower than the maneuvering IMM:
+  # this likelihood compares constant-world-point against ordinary CV motion.
+  sequential_acceleration_sigma_mps2: 1.0
+  sequential_initial_velocity_variance_m2ps2: 1.0
 
 tracker:
   acceleration_sigma_mps2: 3.0
@@ -143,6 +151,7 @@ ablation:
   reportability_filtering: true
   dormant_reacquisition: true
   epistemic_unknown_birth: true
+  sequential_unknown_inference: true
   effective_opportunity_cells: true
   range_conditioned_opportunity_return: true
 
