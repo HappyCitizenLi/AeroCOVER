@@ -559,6 +559,30 @@ bool BackgroundMap::nearCandidateBackground(const Vec3& point_m) const
   return false;
 }
 
+bool BackgroundMap::nearStaticUnknownHistory(const Vec3& point_m) const
+{
+  if (!point_m.allFinite() || !geometry_.inLimits(
+          static_cast<float>(point_m.x()), static_cast<float>(point_m.y()),
+          static_cast<float>(point_m.z())))
+    return false;
+  const vofod::VoxelMap::vec3i_t center =
+      geometry_.coordToIdx(point_m.cast<float>());
+  const int radius = static_cast<int>(std::ceil(
+      config_.unknown_match_distance_m / config_.voxel_size_m));
+  for (int dx = -radius; dx <= radius; ++dx)
+    for (int dy = -radius; dy <= radius; ++dy)
+      for (int dz = -radius; dz <= radius; ++dz)
+      {
+        size_t linear_index = 0U;
+        if (geometry_.tryLinearIndex(
+                center + vofod::VoxelMap::vec3i_t(dx, dy, dz),
+                &linear_index) &&
+            static_unknown_history_voxels_.count(linear_index) > 0U)
+          return true;
+      }
+  return false;
+}
+
 void BackgroundMap::rebuildCandidateBackgroundIndex()
 {
   candidate_background_voxels_.clear();
@@ -1089,6 +1113,7 @@ bool BackgroundMap::assimilateStaticUnknown(const Event& packet)
                   component.end());
   if (component.empty())
     return false;
+  static_unknown_history_voxels_.insert(component.begin(), component.end());
   MapEpochCommit output;
   updateUnknownCandidate(component, packet.time_s, true, &output);
   rebuildCandidateBackgroundIndex();
@@ -1819,6 +1844,8 @@ bool SoftVofodCore::certifiedFreeBirthConflictsWithUnknownHistoryForTest(
 bool SoftVofodCore::certifiedFreeBirthConflictsWithUnknownHistory(
     const Event& packet) const
 {
+  if (background_map_.nearStaticUnknownHistory(packet.position_m))
+    return true;
   const double gate_m = std::max(
       config_.map.unknown_match_distance_m,
       config_.tracker.target_radius_m + config_.birth.max_residual_m);

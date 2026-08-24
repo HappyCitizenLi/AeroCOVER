@@ -755,6 +755,9 @@ TEST(EpistemicMap, UnresolvedDefersBackgroundUntilStaticDecision)
   EXPECT_EQ(map.candidateBackgroundCount(), 0U);
   EXPECT_FALSE(map.assimilateStaticUnknown(commit->unresolved_packets.front()));
   EXPECT_EQ(map.candidateBackgroundCount(), 1U);
+  EXPECT_TRUE(map.nearStaticUnknownHistory(point));
+  EXPECT_FALSE(map.nearStaticUnknownHistory(
+      point + soft_vofod::Vec3(3.0, 0.0, 0.0)));
 }
 
 TEST(Birth, SignificantUnknownMotionCanBecomeTarget)

@@ -507,6 +507,7 @@ public:
   std::vector<MapPoint> points(VoxelState state) const;
   size_t candidateBackgroundCount() const noexcept;
   bool nearCandidateBackground(const Vec3& point_m) const;
+  bool nearStaticUnknownHistory(const Vec3& point_m) const;
 
 private:
   void updateState(BackgroundVoxel* voxel, double time_s, bool allow_promotion);
@@ -569,6 +570,7 @@ private:
   };
   uint64_t next_candidate_background_id_ = 1U;
   std::vector<CandidateBackground> candidate_backgrounds_;
+  std::unordered_set<size_t> static_unknown_history_voxels_;
   std::unordered_set<size_t> candidate_background_voxels_;
 };
 
