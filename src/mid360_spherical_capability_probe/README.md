@@ -146,3 +146,11 @@ capability remains **UNVERIFIED** and `hw_spherical_exact` must not be claimed.
 statistical coverage model/generator has not been implemented; fallback does
 not manufacture exact no-return directions and must not be presented as an
 equivalent hardware visibility opportunity stream.
+# HW-CAL record-only entry point
+
+`hw_record_only.launch` records the raw/checked rays, raw/world points,
+observer pose, optional target truth, time-sync diagnostics and TF without
+starting a detector or tracker.  Select `trial_id:=HW-CAL01` through
+`HW-CAL05`, provide an explicit `bag_path`, and override the observer/truth
+topics for the measurement system in use.  A missing target-truth publisher
+is acceptable only for HW-CAL01/02; it is not sufficient for target trials.
