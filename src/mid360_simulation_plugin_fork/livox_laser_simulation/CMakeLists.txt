@@ -6,12 +6,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
+  gazebo_plugins
   diagnostic_msgs
+  geometry_msgs
   roscpp
   roslib
   tf
   sensor_msgs
   std_msgs
+  tf2_ros
+  tf2_msgs
+  tf2
   message_generation
   mid360_ray_msgs
 )
@@ -41,38 +46,58 @@ include_directories(
 
 catkin_package(
         INCLUDE_DIRS include
-        LIBRARIES livox_laser_simulation
-        CATKIN_DEPENDS diagnostic_msgs message_runtime mid360_ray_msgs roscpp roslib sensor_msgs std_msgs tf
+        LIBRARIES mrs_livox_mid360_adapter
+        CATKIN_DEPENDS diagnostic_msgs geometry_msgs message_runtime mid360_ray_msgs roscpp roslib sensor_msgs std_msgs tf tf2 tf2_ros
 )
 
-add_library(livox_laser_simulation SHARED
+catkin_add_env_hooks(50.mid360_gazebo_plugin
+  SHELLS sh
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/env-hooks
+)
+
+# The MRS X500 Jinja model loads this exact library name.  Build the same
+# Mid360 ray/identity adapter under that name so the rest of the vehicle stays
+# entirely on the stock MRS simulation chain.
+add_library(mrs_livox_mid360_adapter SHARED
   src/livox_points_plugin.cpp
   src/livox_ode_multiray_shape.cpp
   src/per_ray_geometry.cpp
 )
-add_dependencies(livox_laser_simulation
+set_target_properties(mrs_livox_mid360_adapter PROPERTIES
+  OUTPUT_NAME MrsGazeboCommonResources_LivoxLaserSimulationPlugin
+)
+add_dependencies(mrs_livox_mid360_adapter
   ${${PROJECT_NAME}_EXPORTED_TARGETS}
   ${catkin_EXPORTED_TARGETS}
 )
-target_link_libraries(livox_laser_simulation ${catkin_LIBRARIES} RayPlugin)
-
-target_link_libraries(livox_laser_simulation libprotobuf.so.9)
-
-catkin_install_python(
-  PROGRAMS
-    scripts/b_t4_per_ray_wall_validator.py
-    scripts/ray_bundle_validator.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+target_link_libraries(mrs_livox_mid360_adapter
+  ${catkin_LIBRARIES} RayPlugin libprotobuf.so.9
 )
 
+# The existing Gazebo env hook puts this workspace library before /opt/ros.
+add_library(mrs_ouster_gpu_adapter SHARED src/mrs_3dlidar_plugin.cpp)
+target_compile_definitions(mrs_ouster_gpu_adapter PRIVATE GAZEBO_GPU_RAY=1)
+set_target_properties(mrs_ouster_gpu_adapter PROPERTIES
+  OUTPUT_NAME MrsGazeboCommonResources_3DLidarGpuPlugin)
+target_link_libraries(mrs_ouster_gpu_adapter ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} GpuRayPlugin)
+
 if(CATKIN_ENABLE_TESTING)
-  find_package(rostest REQUIRED)
-  catkin_add_gtest(per_ray_geometry_test
-    test/per_ray_geometry_test.cpp
-    src/per_ray_geometry.cpp
+  catkin_add_gtest(scan_stamp_gate_test test/scan_stamp_gate_test.cpp)
+  catkin_add_gtest(rolling_scan_schedule_test
+    test/rolling_scan_schedule_test.cpp
   )
-  add_rostest(test/b_t4_per_ray_stationary_wall.test)
-  add_rostest(test/b_t4_per_ray_yaw_wall.test)
-  add_rostest(test/ray_bundle_empty.test)
-  add_rostest(test/ray_bundle_wall.test)
+  if(TARGET rolling_scan_schedule_test)
+    add_dependencies(rolling_scan_schedule_test
+      ${${PROJECT_NAME}_EXPORTED_TARGETS}
+      ${catkin_EXPORTED_TARGETS}
+    )
+    target_link_libraries(rolling_scan_schedule_test ${catkin_LIBRARIES})
+  endif()
 endif()
+
+install(TARGETS mrs_livox_mid360_adapter mrs_ouster_gpu_adapter
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+)

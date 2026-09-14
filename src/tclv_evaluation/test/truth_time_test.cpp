@@ -46,6 +46,13 @@ TEST(TruthTime, SnapshotSelectionIsUnchangedAndUnknownModeFailsClosed) {
           .world_from_body.getOrigin().x(),
       9.0);
 
+  ASSERT_TRUE(te::parseRayTimeGeometryMode("rolling_scene", &parsed));
+  EXPECT_EQ(parsed, te::RayTimeGeometryMode::ROLLING_SCENE);
+  EXPECT_DOUBLE_EQ(
+      te::targetTruthForRay(parsed, snapshot, per_ray)
+          .world_from_body.getOrigin().x(),
+      9.0);
+
   EXPECT_FALSE(te::parseRayTimeGeometryMode("per_ray", &parsed));
   EXPECT_FALSE(te::parseRayTimeGeometryMode("", &parsed));
   EXPECT_FALSE(te::parseRayTimeGeometryMode("snapshot", nullptr));

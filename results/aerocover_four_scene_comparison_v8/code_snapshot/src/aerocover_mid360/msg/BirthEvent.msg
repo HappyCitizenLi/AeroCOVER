@@ -1,0 +1,15 @@
+uint64 track_id
+uint64 candidate_id
+time first_observation_stamp
+time decision_stamp
+float64 ttft_s
+string birth_history
+geometry_msgs/Point position
+geometry_msgs/Vector3 velocity
+geometry_msgs/Vector3 acceleration
+geometry_msgs/Vector3 extent
+float64 shell_coverage
+uint32 distinct_shell_scans
+uint32 point_count
+float64[9] measurement_covariance
+float64[81] initial_covariance

@@ -2,12 +2,13 @@
 <package format="2">
   <name>soft_vofod_evaluation</name>
   <version>0.1.0</version>
-  <description>Record-once/replay-many SOFT-VoFOD benchmark and offline metrics.</description>
+  <description>Record-once/replay-many VoFOD and AeroCOVER evaluation.</description>
   <maintainer email="uav@example.com">UAV Research</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>catkin</buildtool_depend>
   <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <exec_depend>rosbag</exec_depend>
@@ -21,7 +22,6 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>lidar_tracker_mid360</exec_depend>
   <exec_depend>mid360_multi_uav_sim</exec_depend>
-  <exec_depend>soft_vofod_mid360</exec_depend>
   <exec_depend>tclv_evaluation</exec_depend>
   <exec_depend>vofod_mid360</exec_depend>
   <test_depend>python3-nose</test_depend>

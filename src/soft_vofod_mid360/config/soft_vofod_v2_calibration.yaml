@@ -1,3 +1,0 @@
-# CAL-only overlay. Values are selected only from CAL01-CAL05 and are copied
-# into soft_vofod_v2_canonical.yaml only after all calibration gates pass.
-{}

@@ -1,0 +1,118 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 160
+      Enabled: true
+      Name: Ground grid
+      Plane: XY
+      Plane Cell Count: 60
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 180; 180; 180
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Name: Mid360 valid endpoints
+      Position Transformer: XYZ
+      Queue Size: 5
+      Selectable: true
+      Size (Pixels): 3
+      Style: Points
+      Topic: /uav1/mid360/points_world
+      Unreliable: false
+      Use Fixed Frame: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 40; 40
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Name: B0 detection centroids
+      Position Transformer: XYZ
+      Queue Size: 5
+      Selectable: true
+      Size (m): 0.35
+      Style: Spheres
+      Topic: /uav1/vofod_mid360/detections_pc
+      Unreliable: false
+      Use Fixed Frame: true
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /uav1/vofod_mid360/voxel_map
+      Name: B0 voxel map
+      Namespaces: {}
+      Queue Size: 2
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /uav1/vofod_mid360/detections_mks
+      Name: B0 detection markers
+      Namespaces: {}
+      Queue Size: 5
+      Value: true
+    - Alpha: 0.25
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 70; 130; 255
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: false
+      Name: Soft free voxels
+      Position Transformer: XYZ
+      Queue Size: 2
+      Selectable: false
+      Size (Pixels): 2
+      Style: Points
+      Topic: /uav1/vofod_mid360/free_voxels
+      Unreliable: false
+      Use Fixed Frame: true
+      Value: false
+  Enabled: true
+  Global Options:
+    Background Color: 35; 35; 35
+    Default Light: true
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: VoFOD-Mid360 B0
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 28
+      Focal Point:
+        X: 9
+        Y: 0
+        Z: 2
+      Name: Current View
+Window Geometry:
+  Height: 900
+  Width: 1440

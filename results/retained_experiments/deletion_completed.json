@@ -1,0 +1,564 @@
+{
+  "deleted": [
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison",
+      "bytes_allocated": 20480,
+      "file_count": 5,
+      "device": 66310,
+      "inode": 2622058,
+      "mtime_ns": 1789190919636607930
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v2",
+      "bytes_allocated": 16384,
+      "file_count": 2,
+      "device": 66310,
+      "inode": 2622318,
+      "mtime_ns": 1789220385356233262
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v3",
+      "bytes_allocated": 20480,
+      "file_count": 2,
+      "device": 66310,
+      "inode": 2622321,
+      "mtime_ns": 1789265848224879666
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v4",
+      "bytes_allocated": 208896,
+      "file_count": 48,
+      "device": 66310,
+      "inode": 2622327,
+      "mtime_ns": 1789280713207365384
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v5",
+      "bytes_allocated": 49152,
+      "file_count": 11,
+      "device": 66310,
+      "inode": 2623101,
+      "mtime_ns": 1789296457823419567
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v6",
+      "bytes_allocated": 430080,
+      "file_count": 53,
+      "device": 66310,
+      "inode": 2623130,
+      "mtime_ns": 1789305526212897605
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v7",
+      "bytes_allocated": 786432,
+      "file_count": 77,
+      "device": 66310,
+      "inode": 2623200,
+      "mtime_ns": 1789313976522850633
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_open_19m",
+      "bytes_allocated": 4096,
+      "file_count": 3,
+      "device": 66310,
+      "inode": 2622460,
+      "mtime_ns": 1789290536571274191
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_open_19m_strict",
+      "bytes_allocated": 1257472,
+      "file_count": 47,
+      "device": 66310,
+      "inode": 2623043,
+      "mtime_ns": 1789296457835419821
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_paper_main_comparison",
+      "bytes_allocated": 73728,
+      "file_count": 14,
+      "device": 66310,
+      "inode": 2623031,
+      "mtime_ns": 1789179562950600166
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_paper_stinit_native_mapexec",
+      "bytes_allocated": 1457901568,
+      "file_count": 1006,
+      "device": 66310,
+      "inode": 2621569,
+      "mtime_ns": 1789037696004176356
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_after_v10_summary",
+      "bytes_allocated": 1454080,
+      "file_count": 5,
+      "device": 66310,
+      "inode": 2623748,
+      "mtime_ns": 1789391435705425332
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_map_floor_third_layer_v10",
+      "bytes_allocated": 237568,
+      "file_count": 25,
+      "device": 66310,
+      "inode": 2623605,
+      "mtime_ns": 1789365234421125276
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_ready_three_v11",
+      "bytes_allocated": 40960,
+      "file_count": 10,
+      "device": 66310,
+      "inode": 2623657,
+      "mtime_ns": 1789369776033246621
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_ready_three_v12",
+      "bytes_allocated": 40960,
+      "file_count": 10,
+      "device": 66310,
+      "inode": 2623670,
+      "mtime_ns": 1789373632732963916
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_state_time_pair_v9",
+      "bytes_allocated": 331776,
+      "file_count": 26,
+      "device": 66310,
+      "inode": 2623595,
+      "mtime_ns": 1789359959941314773
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_cleanup_20260910",
+      "bytes_allocated": 305659904,
+      "file_count": 547,
+      "device": 2066,
+      "inode": 49913,
+      "mtime_ns": 1789014073870000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_cleanup_20260913",
+      "bytes_allocated": 1951399936,
+      "file_count": 3,
+      "device": 2066,
+      "inode": 109058,
+      "mtime_ns": 1789269126910000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_followup_20260910",
+      "bytes_allocated": 4727504896,
+      "file_count": 1831,
+      "device": 2066,
+      "inode": 50562,
+      "mtime_ns": 1789044896870000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_followup_20260911",
+      "bytes_allocated": 8184135680,
+      "file_count": 3244,
+      "device": 2066,
+      "inode": 80890,
+      "mtime_ns": 1789113582450000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_four_scene_20260912",
+      "bytes_allocated": 22373990400,
+      "file_count": 215,
+      "device": 2066,
+      "inode": 108262,
+      "mtime_ns": 1789192839650000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_four_scene_comparison_v4_20260913",
+      "bytes_allocated": 260571136,
+      "file_count": 218,
+      "device": 2066,
+      "inode": 115208,
+      "mtime_ns": 1789280758550000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_four_scene_v2_20260912",
+      "bytes_allocated": 35894853632,
+      "file_count": 311,
+      "device": 2066,
+      "inode": 108530,
+      "mtime_ns": 1789220534910000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_four_scene_v3_20260913",
+      "bytes_allocated": 24879562752,
+      "file_count": 76,
+      "device": 2066,
+      "inode": 108915,
+      "mtime_ns": 1789239161410000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_gate1p5_mt3_v7",
+      "bytes_allocated": 1451229184,
+      "file_count": 120,
+      "device": 2066,
+      "inode": 115682,
+      "mtime_ns": 1789306614080000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_open_19m_20260913",
+      "bytes_allocated": 3247964160,
+      "file_count": 9,
+      "device": 2066,
+      "inode": 115467,
+      "mtime_ns": 1789290382910000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_original_mid360_retired_20260912",
+      "bytes_allocated": 4718592,
+      "file_count": 5,
+      "device": 2066,
+      "inode": 108255,
+      "mtime_ns": 1789179615090000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_runtime_round3_20260911",
+      "bytes_allocated": 1194328064,
+      "file_count": 2047,
+      "device": 2066,
+      "inode": 103442,
+      "mtime_ns": 1789147617780000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_runtime_round4_20260912",
+      "bytes_allocated": 1015545856,
+      "file_count": 1809,
+      "device": 2066,
+      "inode": 106130,
+      "mtime_ns": 1789175036800000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_time_semantics_v6_20260913",
+      "bytes_allocated": 350224384,
+      "file_count": 83,
+      "device": 2066,
+      "inode": 115582,
+      "mtime_ns": 1789300930210000000
+    },
+    {
+      "path": "/media/uav/SU710/vofod_map_floor_third_layer_v10",
+      "bytes_allocated": 17164664832,
+      "file_count": 112,
+      "device": 2066,
+      "inode": 116369,
+      "mtime_ns": 1789358470060000000
+    },
+    {
+      "path": "/media/uav/SU710/vofod_ready_three_v11",
+      "bytes_allocated": 6209142784,
+      "file_count": 42,
+      "device": 2066,
+      "inode": 116495,
+      "mtime_ns": 1789367499510000000
+    },
+    {
+      "path": "/media/uav/SU710/vofod_ready_three_v12",
+      "bytes_allocated": 2937585664,
+      "file_count": 42,
+      "device": 2066,
+      "inode": 116545,
+      "mtime_ns": 1789371637730000000
+    },
+    {
+      "path": "/media/uav/SU710/vofod_state_time_pair_v9",
+      "bytes_allocated": 18541445120,
+      "file_count": 205,
+      "device": 2066,
+      "inode": 116140,
+      "mtime_ns": 1789350838450000000
+    },
+    {
+      "path": "/media/uav/SU710/lyk_results/detrack_vofod_c15_2m_1seed",
+      "bytes_allocated": 1976565760,
+      "file_count": 6,
+      "device": 2066,
+      "inode": 531,
+      "mtime_ns": 1788325373540000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OPEN",
+      "bytes_allocated": 3220701184,
+      "file_count": 8,
+      "device": 2066,
+      "inode": 109045,
+      "mtime_ns": 1789266509720000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/scenarios",
+      "bytes_allocated": 5242880,
+      "file_count": 4,
+      "device": 2066,
+      "inode": 109022,
+      "mtime_ns": 1789265260760000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN",
+      "bytes_allocated": 2326790144,
+      "file_count": 8,
+      "device": 2066,
+      "inode": 115486,
+      "mtime_ns": 1789292842960000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry",
+      "bytes_allocated": 2483552256,
+      "file_count": 8,
+      "device": 2066,
+      "inode": 115498,
+      "mtime_ns": 1789293590650000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/runs",
+      "bytes_allocated": 30932992,
+      "file_count": 52,
+      "device": 2066,
+      "inode": 115491,
+      "mtime_ns": 1789294243780000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/scenarios",
+      "bytes_allocated": 3145728,
+      "file_count": 3,
+      "device": 2066,
+      "inode": 115483,
+      "mtime_ns": 1789293777740000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/PER_SEQUENCE_ZH.md",
+      "bytes_allocated": 524288,
+      "file_count": 1,
+      "device": 2066,
+      "inode": 115580,
+      "mtime_ns": 1789296457830000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/README_ZH.md",
+      "bytes_allocated": 524288,
+      "file_count": 1,
+      "device": 2066,
+      "inode": 115581,
+      "mtime_ns": 1789296457830000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/VoFOD-Mid360",
+      "bytes_allocated": 11010048,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116084,
+      "mtime_ns": 1789326656810000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/VoFOD-OS1",
+      "bytes_allocated": 8388608,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116098,
+      "mtime_ns": 1789328007180000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/VoFOD-Mid360-V2",
+      "bytes_allocated": 8388608,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116112,
+      "mtime_ns": 1789329248490000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/VoFOD-OS1-V2",
+      "bytes_allocated": 7864320,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116126,
+      "mtime_ns": 1789330575100000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/VoFOD-Mid360",
+      "bytes_allocated": 6815744,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 115951,
+      "mtime_ns": 1789319677640000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/VoFOD-OS1",
+      "bytes_allocated": 6291456,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 115965,
+      "mtime_ns": 1789320092770000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/VoFOD-Mid360",
+      "bytes_allocated": 7340032,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116012,
+      "mtime_ns": 1789322045060000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/VoFOD-OS1",
+      "bytes_allocated": 6815744,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116026,
+      "mtime_ns": 1789323116050000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/VoFOD-Mid360-V2",
+      "bytes_allocated": 6815744,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116040,
+      "mtime_ns": 1789323940390000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/VoFOD-OS1-V2",
+      "bytes_allocated": 6815744,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 116054,
+      "mtime_ns": 1789325012010000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/VoFOD-Mid360",
+      "bytes_allocated": 7864320,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 115890,
+      "mtime_ns": 1789318236300000000
+    },
+    {
+      "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/VoFOD-OS1",
+      "bytes_allocated": 6291456,
+      "file_count": 12,
+      "device": 2066,
+      "inode": 115904,
+      "mtime_ns": 1789318945910000000
+    },
+    {
+      "path": "/home/uav/lyk/.git/objects/pack/tmp_pack_KIl0Lw",
+      "bytes_allocated": 459464704,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 1840311,
+      "mtime_ns": 1789388461602004135
+    },
+    {
+      "path": "/home/uav/lyk/.git/objects/pack/tmp_pack_PGZTE3",
+      "bytes_allocated": 379199488,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 1839792,
+      "mtime_ns": 1789306558566336816
+    },
+    {
+      "path": "/home/uav/lyk/.git/objects/pack/tmp_pack_T2q2Ep",
+      "bytes_allocated": 514154496,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 1840536,
+      "mtime_ns": 1789305300758888854
+    },
+    {
+      "path": "/home/uav/lyk/.git/objects/pack/tmp_pack_cbaogj",
+      "bytes_allocated": 47505408,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 1884866,
+      "mtime_ns": 1789367500620004289
+    },
+    {
+      "path": "/home/uav/lyk/.git/objects/pack/tmp_pack_pMEEeg",
+      "bytes_allocated": 325541888,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 1884902,
+      "mtime_ns": 1789375828958347739
+    },
+    {
+      "path": "/home/uav/lyk/.git/objects/pack/tmp_pack_xMxXVj",
+      "bytes_allocated": 321314816,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 1884901,
+      "mtime_ns": 1789375492913069173
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v8/ERROR_CAUSES_ZH.md",
+      "bytes_allocated": 12288,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 2623593,
+      "mtime_ns": 1789342998293104904
+    },
+    {
+      "path": "/home/uav/lyk/results/aerocover_four_scene_comparison_v8/STATE_TIME_REEVALUATION_PLAN_ZH.md",
+      "bytes_allocated": 4096,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 2623594,
+      "mtime_ns": 1789350261667617194
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_floor_first_all_v15/config_snapshot/OFFICE_mid360_v2.yaml",
+      "bytes_allocated": 4096,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 2623713,
+      "mtime_ns": 1789375827914342955
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_floor_first_all_v15/config_snapshot/FOREST_os1_v2.yaml",
+      "bytes_allocated": 4096,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 2623709,
+      "mtime_ns": 1789375827914342955
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_floor_first_all_v15/config_snapshot/OFFICE_os1_v2.yaml",
+      "bytes_allocated": 4096,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 2623715,
+      "mtime_ns": 1789375827914342955
+    },
+    {
+      "path": "/home/uav/lyk/results/vofod_floor_first_all_v15/config_snapshot/FOREST_mid360_v2.yaml",
+      "bytes_allocated": 4096,
+      "file_count": 1,
+      "device": 66310,
+      "inode": 2623707,
+      "mtime_ns": 1789375827914342955
+    }
+  ],
+  "before": {
+    "/home/uav/lyk": {
+      "total": 98004529152,
+      "used": 91169648640,
+      "free": 1809215488
+    },
+    "/media/uav/SU710": {
+      "total": 2048373293056,
+      "used": 209857282048,
+      "free": 1838516011008
+    }
+  },
+  "after": {
+    "/home/uav/lyk": {
+      "total": 98004529152,
+      "used": 87659110400,
+      "free": 5319753728
+    },
+    "/media/uav/SU710": {
+      "total": 2048373293056,
+      "used": 48388636672,
+      "free": 1999984656384
+    }
+  }
+}

@@ -50,10 +50,15 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <depend>diagnostic_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>roslib</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_msgs</depend>
+  <build_depend>gazebo_plugins</build_depend>
+  <depend>tf2</depend>
   <build_depend>tf</build_depend>
   <build_depend>message_generation</build_depend>
   <depend>mid360_ray_msgs</depend>
@@ -76,7 +81,5 @@
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
-
   </export>
 </package>

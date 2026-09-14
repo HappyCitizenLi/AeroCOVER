@@ -1,0 +1,17 @@
+input_topic: /uav1/os_cloud_nodelet/points
+native_output_topic: /uav1/ouster/native_points
+points_world_topic: /uav1/ouster/points_world
+rays_checked_topic: /uav1/ouster/rays_checked
+output_frame: world
+sensor_parent_frame: uav1/fcu
+sensor_x_m: 0.0
+sensor_y_m: 0.0
+sensor_z_m: 0.1414
+source_mode: ouster_sim_snapshot
+expected_columns: 1024
+expected_rings: 128
+vertical_fov_deg: 45.0
+minimum_range_m: 0.1
+maximum_range_m: 120.0
+transform_timeout_s: 0.5
+queue_size: 32

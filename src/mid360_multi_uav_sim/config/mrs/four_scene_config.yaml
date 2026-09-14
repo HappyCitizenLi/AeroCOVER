@@ -1,0 +1,17 @@
+# Simulation flight control only; no target truth is exposed to the detector.
+# gps_baro drifts several metres over a long run and invalidates wall clearance.
+mrs_uav_managers:
+  estimation_manager:
+    state_estimators: ["ground_truth"]
+    initial_state_estimator: "ground_truth"
+    agl_height_estimator: ""
+  uav_manager:
+    takeoff:
+      during_takeoff: {controller: "MpcController", tracker: "LandoffTracker"}
+      after_takeoff: {controller: "MpcController", tracker: "MpcTracker"}
+mrs_uav_trackers:
+  mpc_tracker:
+    collision_avoidance:
+      enabled: false
+      enabled_passively: false
+      radius: 0.60

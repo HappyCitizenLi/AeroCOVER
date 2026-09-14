@@ -1,0 +1,5 @@
+<library path="lib/libLidarTrackerMid360">
+  <class name="lidar_tracker_mid360/LidarTracker" type="lidar_tracker_mid360::LidarTracker" base_class_type="nodelet::Nodelet">
+    <description>Controlled CTU-MRS LiDAR tracker baseline port for Mid-360.</description>
+  </class>
+</library>

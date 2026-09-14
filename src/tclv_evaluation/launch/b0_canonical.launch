@@ -6,6 +6,8 @@
   <arg name="tracking_frame" default="world"/>
   <arg name="points_world" default="/$(arg uav_name)/mid360/points_world"/>
   <arg name="rays_checked" default="/$(arg uav_name)/mid360/rays_checked"/>
+  <arg name="height_rangefinder"
+       default="/$(arg uav_name)/native_rangefinder"/>
   <arg name="tracks" default="/$(arg uav_name)/batch/b0/tracks"/>
   <arg name="tracker_namespace" default="$(arg uav_name)/batch/b0/lidar_tracker_mid360"/>
   <arg name="map_revision_evidence"
@@ -13,14 +15,23 @@
   <arg name="frame_complete"
        default="/$(arg tracker_namespace)/frame_complete"/>
   <arg name="output" default="screen"/>
+  <arg name="b0_config"
+       default="$(find vofod_mid360)/config/b0_mid360_canonical.yaml"/>
+  <arg name="method_config"
+       default="$(find vofod_mid360)/config/vofod_original.yaml"/>
+  <arg name="tracker_radius_min" default="0.6"/>
+  <arg name="tracker_override_config" default=""/>
 
   <include file="$(find vofod_mid360)/launch/b0.launch">
     <arg name="uav_name" value="$(arg uav_name)"/>
     <arg name="world_frame_id" value="$(arg tracking_frame)"/>
     <arg name="points_world_topic" value="$(arg points_world)"/>
     <arg name="rays_checked_topic" value="$(arg rays_checked)"/>
+    <arg name="height_rangefinder_topic" value="$(arg height_rangefinder)"/>
     <arg name="map_revision_evidence_topic"
          value="$(arg map_revision_evidence)"/>
+    <arg name="b0_config" value="$(arg b0_config)"/>
+    <arg name="method_config" value="$(arg method_config)"/>
     <arg name="output" value="$(arg output)"/>
   </include>
 
@@ -35,6 +46,8 @@
          value="/$(arg uav_name)/vofod_mid360/background_points"/>
     <arg name="tracks_topic" value="$(arg tracks)"/>
     <arg name="frame_complete_topic" value="$(arg frame_complete)"/>
+    <arg name="radius_min" value="$(arg tracker_radius_min)"/>
+    <arg name="override_config" value="$(arg tracker_override_config)"/>
     <arg name="output" value="$(arg output)"/>
   </include>
 </launch>

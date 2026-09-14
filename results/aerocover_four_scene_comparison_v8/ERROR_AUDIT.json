@@ -1,0 +1,252 @@
+{
+  "summary": [
+    {
+      "scene": "FOREST",
+      "method": "AeroCOVER-Mid360",
+      "fn_by_target": {},
+      "fn_initial": 0,
+      "fn_after_first_match": 0,
+      "fn_never_matched": 0,
+      "fp": 0,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": null,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    },
+    {
+      "scene": "FOREST",
+      "method": "AeroCOVER-OS1",
+      "fn_by_target": {},
+      "fn_initial": 0,
+      "fn_after_first_match": 0,
+      "fn_never_matched": 0,
+      "fp": 0,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": null,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    },
+    {
+      "scene": "MT",
+      "method": "AeroCOVER-Mid360",
+      "fn_by_target": {
+        "uav2": 111,
+        "uav3": 38
+      },
+      "fn_initial": 106,
+      "fn_after_first_match": 43,
+      "fn_never_matched": 0,
+      "fp": 8,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": 3.134879617077142,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    },
+    {
+      "scene": "MT",
+      "method": "AeroCOVER-OS1",
+      "fn_by_target": {
+        "uav2": 17,
+        "uav3": 24
+      },
+      "fn_initial": 16,
+      "fn_after_first_match": 25,
+      "fn_never_matched": 0,
+      "fp": 0,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": null,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    },
+    {
+      "scene": "OFFICE",
+      "method": "AeroCOVER-Mid360",
+      "fn_by_target": {},
+      "fn_initial": 0,
+      "fn_after_first_match": 0,
+      "fn_never_matched": 0,
+      "fp": 0,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": null,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    },
+    {
+      "scene": "OFFICE",
+      "method": "AeroCOVER-OS1",
+      "fn_by_target": {},
+      "fn_initial": 0,
+      "fn_after_first_match": 0,
+      "fn_never_matched": 0,
+      "fp": 0,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": null,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    },
+    {
+      "scene": "OPEN",
+      "method": "AeroCOVER-Mid360",
+      "fn_by_target": {},
+      "fn_initial": 0,
+      "fn_after_first_match": 0,
+      "fn_never_matched": 0,
+      "fp": 0,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": null,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    },
+    {
+      "scene": "OPEN",
+      "method": "AeroCOVER-OS1",
+      "fn_by_target": {},
+      "fn_initial": 0,
+      "fn_after_first_match": 0,
+      "fn_never_matched": 0,
+      "fp": 0,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": null,
+      "fn_before_ready": 0,
+      "detection_frames": 0,
+      "detection_total": 0.0
+    }
+  ],
+  "mt_aerocover_fp": [
+    {
+      "stamp": 58.475995,
+      "id": "6",
+      "position": [
+        -3.8738943007350617,
+        -1.448031789942919,
+        3.8409095211517297
+      ],
+      "stale_s": 0.7999999999999972,
+      "distances": {
+        "uav3": 1.628365656615292,
+        "uav2": 7.242217322140838
+      }
+    },
+    {
+      "stamp": 58.575995,
+      "id": "6",
+      "position": [
+        -3.98393065249726,
+        -1.6883802975860338,
+        3.8286621205059386
+      ],
+      "stale_s": 0.8999999999999986,
+      "distances": {
+        "uav3": 1.8921415056265782,
+        "uav2": 7.397907512960409
+      }
+    },
+    {
+      "stamp": 58.675995,
+      "id": "6",
+      "position": [
+        -4.100468942245604,
+        -1.9456949028231982,
+        3.814763422841055
+      ],
+      "stale_s": 1.0,
+      "distances": {
+        "uav3": 2.174192926645801,
+        "uav2": 7.569964268815597
+      }
+    },
+    {
+      "stamp": 65.375995,
+      "id": "7",
+      "position": [
+        3.1287186956753694,
+        1.618250643203645,
+        3.122662436394558
+      ],
+      "stale_s": 1.0,
+      "distances": {
+        "uav3": 6.499796731662594,
+        "uav2": 1.6727660967333473
+      }
+    },
+    {
+      "stamp": 68.775995,
+      "id": "9",
+      "position": [
+        1.6922822966586217,
+        0.44955578076974906,
+        3.02765887524166
+      ],
+      "stale_s": 0.7000000000000028,
+      "distances": {
+        "uav3": 4.904566485792637,
+        "uav2": 1.5416161005716729
+      }
+    },
+    {
+      "stamp": 68.875995,
+      "id": "9",
+      "position": [
+        1.5203822595063847,
+        0.5131271471226228,
+        3.0674715160810098
+      ],
+      "stale_s": 0.7999999999999972,
+      "distances": {
+        "uav3": 4.735732576034116,
+        "uav2": 1.728987370271311
+      }
+    },
+    {
+      "stamp": 68.975995,
+      "id": "9",
+      "position": [
+        1.3484822223540744,
+        0.5766985134755235,
+        3.1072841569203766
+      ],
+      "stale_s": 0.9000000000000057,
+      "distances": {
+        "uav3": 4.5683536042974735,
+        "uav2": 1.916396579412687
+      }
+    },
+    {
+      "stamp": 69.075995,
+      "id": "9",
+      "position": [
+        1.1765821852018374,
+        0.6402698798283972,
+        3.147096797759726
+      ],
+      "stale_s": 1.0,
+      "distances": {
+        "uav3": 4.402605692385463,
+        "uav2": 2.1038285836528408
+      }
+    }
+  ]
+}

@@ -1,32 +1,30 @@
-# soft_vofod_evaluation
+# AeroCOVER / VoFOD paper evaluation
 
-Minimal record-once/replay-many benchmark for B0/A1/A2/A3. Truth is read only
-by the source recorder/evaluator and is never replayed into an algorithm run.
-The executed S01-S07 matrix and its negative result are documented in
-`docs/SOFT_VOFOD_EXPERIMENT_REPORT.md` at the workspace root.
+The current matrix has 70 runs: two methods on eight Mid-360 scenes, three on
+eight Ouster scenes, and five ablations on the six-scene Mid-360 subset.
+Sensor-qualified run names are used where required.
 
-```bash
-python3 $(rospack find soft_vofod_evaluation)/scripts/run_benchmark.py \
-  --algorithms B0,A1,A2 --scenes S01,S02,S03,S04,S05,S06,S07 \
-  --noise N0 --seeds 1001 --record --replay --output artifacts
+| suite | scenes | methods |
+|---|---|---|
+| `ouster-main` | all eight | `AeroCOVER-OS1`, `VoFOD-Original-OS1`, `VoFOD-Mid360-Adapted-OS1` |
+| `mid360-baselines` | all eight | `AeroCOVER-Mid360`, `VoFOD-Mid360-Adapted` |
+| `mid360-core` | `P01`, `S2_new`, `P02`, `S3_new`, `M1`, `M2` | Full and A1–A5 |
 
-python3 $(rospack find soft_vofod_evaluation)/scripts/run_benchmark.py \
-  --algorithms A3 --scenes S01,S02,S03,S04,S05,S06 \
-  --noise N0 --seeds 1001 --replay --output artifacts
-```
-
-Each source and run has a hash manifest. `evaluate_bag.py` writes JSON, flat
-CSV, and per-frame timing CSV. Evaluation fails below 95% source-truth, track,
-or timing coverage. `metrics/summary.csv`, `aggregate.json`, and
-`ablation_deltas.csv` are rebuilt after successful runs.
-
-The executed development matrix is deterministic N0/seed1001. N1/N2 are
-explicitly named simulation-noise modes, not measured Mid-360 noise; they and
-the multi-seed/negative-control campaign remain unexecuted. S07/A3 requires
-offline throttling and must record it explicitly, for example:
+The adapted VoFOD configuration is selected once on P01/P02 and then frozen;
+it has no scene-specific overrides. The same frozen Mid-360 adaptation is
+replayed on Ouster as a control, not retuned for Ouster. Ouster source
+generation uses Gazebo 11's three-camera 360-degree GPU ray path; all eight
+sources are complete.
 
 ```bash
-python3 $(rospack find soft_vofod_evaluation)/scripts/run_benchmark.py \
-  --algorithms A3 --scenes S07 --noise N0 --seeds 1001 --replay \
-  --replay-rate 0.1 --output artifacts --force
+python3 src/soft_vofod_evaluation/scripts/run_paper_minimal.py --suite ouster-main
+python3 src/soft_vofod_evaluation/scripts/run_paper_minimal.py --suite mid360-baselines
+python3 src/soft_vofod_evaluation/scripts/run_paper_minimal.py --suite mid360-core
+python3 src/soft_vofod_evaluation/scripts/run_paper_minimal.py --suite summarize
 ```
+
+Each source bag is reused across every method for that sensor. The evaluator
+uses official TrackEval HOTA with 2 m linear position similarity and 19
+thresholds; separate 1 m counts use maximum-cardinality, minimum-distance
+one-to-one assignment. Manifests retain source/config/code hashes, replay rate,
+timestamps, stable IDs and initialization state.

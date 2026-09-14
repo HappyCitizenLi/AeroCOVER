@@ -394,7 +394,7 @@ class VisibilityGroundTruthEvaluator {
       if (!parseRayTimeGeometryMode(required_ray_time_geometry_mode_,
                                     &required_mode)) {
         throw std::invalid_argument(
-            "~ray_time_geometry_mode must be snapshot or per_ray_pose");
+            "~ray_time_geometry_mode must be snapshot, per_ray_pose, or rolling_scene");
       }
     }
     pending_bundle_limit_ = static_cast<size_t>(pending_limit);
@@ -471,7 +471,7 @@ class VisibilityGroundTruthEvaluator {
       ROS_ERROR_STREAM_THROTTLE(
           2.0, "truth evaluator rejected unknown ray_time_geometry_mode='"
                    << message->ray_time_geometry_mode
-                   << "'; accepted values are snapshot and per_ray_pose");
+                   << "'; accepted values are snapshot, per_ray_pose, and rolling_scene");
       return;
     }
     if (!required_ray_time_geometry_mode_.empty() &&
@@ -637,7 +637,7 @@ class VisibilityGroundTruthEvaluator {
         return;
       }
       std::vector<std::vector<SampledState>> per_ray_states;
-      if (mode == RayTimeGeometryMode::PER_RAY_POSE) {
+      if (mode != RayTimeGeometryMode::SNAPSHOT) {
         std::string rejection_reason;
         const BundleTruthResult result = samplePerRayTargets(
             *pending_.front(), states, &per_ray_states, &rejection_reason);
@@ -645,7 +645,7 @@ class VisibilityGroundTruthEvaluator {
           return;
         }
         if (result == BundleTruthResult::REJECT) {
-          ROS_ERROR_STREAM("truth evaluator rejected per_ray_pose bundle "
+          ROS_ERROR_STREAM("truth evaluator rejected time-resolved bundle "
                            << pending_.front()->scan_id << ": "
                            << rejection_reason);
           pending_.pop_front();
@@ -731,7 +731,7 @@ class VisibilityGroundTruthEvaluator {
       bool eligible_candidate = false;
       for (size_t target_index = 0U; target_index < targets_.size(); ++target_index) {
         const SampledState& per_ray_state =
-            mode == RayTimeGeometryMode::PER_RAY_POSE
+            mode != RayTimeGeometryMode::SNAPSHOT
                 ? per_ray_states.at(input_ray_index).at(target_index)
                 : states.at(targets_[target_index].truth_source);
         const SampledState& target_state = targetTruthForRay(

@@ -1,271 +1,223 @@
 #!/usr/bin/env python3
 
 import importlib.util
-import os
+import json
+import pathlib
 import tempfile
-import types
 import unittest
-
 import yaml
 
 
-ROOT = os.path.dirname(os.path.dirname(__file__))
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
-    "run_benchmark", os.path.join(ROOT, "scripts", "run_benchmark.py"))
+    "run_benchmark", ROOT / "scripts/run_benchmark.py")
 RUNNER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RUNNER)
+PAPER_SPEC = importlib.util.spec_from_file_location(
+    "run_paper_minimal", ROOT / "scripts/run_paper_minimal.py")
+PAPER = importlib.util.module_from_spec(PAPER_SPEC)
+PAPER_SPEC.loader.exec_module(PAPER)
 
 
 class RunnerTest(unittest.TestCase):
-    def test_truth_configuration_is_evaluation_only_and_complete(self):
-        scenario = {
-            "scenario_id": "test", "world": "E2_occlusion_arena",
-            "targets": [{"id": "uav2"}, {"id": "uav3"}],
-        }
-        config = RUNNER.truth_configuration(scenario, "snapshot")
-        self.assertEqual(config["output_topic"], "/evaluation/visibility_ground_truth")
-        self.assertEqual(len(config["truth_sources"]), 3)
-        self.assertEqual(len(config["targets"]), 2)
-        self.assertTrue(config["static_primitives"])
-        for target in config["targets"]:
-            self.assertEqual(len(target["primitives"]), 7)
+    def test_twenty_run_matrix_and_v2_tracker_override(self):
+        import sys
+        sys.path.insert(0,str(ROOT/'scripts'))
+        from run_twenty_scene_suite import matrix
+        rows=matrix()
+        self.assertEqual(len(rows),20)
+        self.assertEqual(len({(s,l) for s,l,*_ in rows}),20)
+        self.assertEqual({s:sum(r[0]==s for r in rows) for s in ('OPEN','MT','OFFICE','FOREST')},
+                         dict(OPEN=4,MT=4,OFFICE=6,FOREST=6))
+        for scene,label,method,config,override in rows:
+            self.assertTrue(config.exists())
+            if label.endswith('-V2'):
+                self.assertTrue(override.exists())
+                detector=yaml.safe_load(config.read_text())
+                self.assertEqual(detector['clustering']['tolerance'],1.5)
+                self.assertEqual(detector['clustering']['max_size'],3.)
 
-    def test_observer_generation_changes_only_requested_sensor_knobs(self):
-        source = """<sdf><stddev>0.0</stddev><ray_time_geometry_mode>per_ray_pose</ray_time_geometry_mode></sdf>"""
+    def test_open_tracker_override_is_explicit(self):
+        command=RUNNER.algorithm_command('VoFOD-Mid360','detector.yaml','open_tracker.yaml')
+        self.assertIn('tracker_override_config:=open_tracker.yaml',command)
+        self.assertFalse(any('tracker_override' in arg for arg in
+            RUNNER.algorithm_command('VoFOD-Mid360','detector.yaml')))
+
+    def test_scene_acceptance_is_bound_to_input_and_audit(self):
+        import sys
+        sys.path.insert(0,str(ROOT/'scripts'))
+        from run_four_scene_suite import require_accepted_source
         with tempfile.TemporaryDirectory() as directory:
-            source_path = os.path.join(directory, "source.sdf")
-            destination = os.path.join(directory, "generated.sdf")
-            with open(source_path, "w", encoding="utf-8") as stream:
-                stream.write(source)
-            RUNNER.generated_observer(source_path, destination, "snapshot", 0.02)
-            with open(destination, encoding="utf-8") as stream:
-                generated = stream.read()
-            self.assertIn("<stddev>0.02</stddev>", generated)
-            self.assertIn("<ray_time_geometry_mode>snapshot</ray_time_geometry_mode>", generated)
+            root=pathlib.Path(directory)
+            source=root/'sources/OPEN';source.mkdir(parents=True)
+            (source/'source_manifest.json').write_text('{}')
+            (source/'flight_audit.json').write_text('{"status":"FAIL"}')
+            with self.assertRaises(RuntimeError):
+                require_accepted_source(root,'OPEN',{'status':'FAIL'})
+            accepted={'OPEN':dict(status='ACCEPTED_BY_USER',
+                source_manifest_sha256=RUNNER.sha256(source/'source_manifest.json'),
+                flight_audit_sha256=RUNNER.sha256(source/'flight_audit.json'))}
+            (root/'accepted_sources.json').write_text(json.dumps(accepted))
+            require_accepted_source(root,'OPEN',{'status':'FAIL'})
+            (source/'flight_audit.json').write_text('{"status":"FAIL","changed":true}')
+            with self.assertRaises(RuntimeError):
+                require_accepted_source(root,'OPEN',{'status':'FAIL'})
 
-    def test_cli_value_validation(self):
-        self.assertEqual(RUNNER.comma_list("A1,A3", RUNNER.ALGORITHMS), ("A1", "A3"))
-        with self.assertRaises(Exception):
-            RUNNER.comma_list("A4", RUNNER.ALGORITHMS)
-
-    def test_integration_scene_names_reuse_the_existing_semantic_cases(self):
-        runner = object.__new__(RUNNER.BenchmarkRunner)
-        runner.scenario_root = os.path.join(
-            os.path.dirname(ROOT), "mid360_multi_uav_sim", "config",
-            "benchmarks")
-        for alias, scene in RUNNER.INTEGRATION_SCENE_ALIASES.items():
-            self.assertIn(alias, RUNNER.SCENES)
-            self.assertTrue(runner.scene_path(alias).endswith(scene + ".yaml"))
-
-    def test_calibration_overlay_selects_the_last_explicit_value(self):
+    def test_recorder_message_loss_invalidates_measurement(self):
         with tempfile.TemporaryDirectory() as directory:
-            canonical = os.path.join(directory, "canonical.yaml")
-            overlay = os.path.join(directory, "overlay.yaml")
-            with open(canonical, "w", encoding="utf-8") as stream:
-                yaml.safe_dump({"birth": {"min_groups": 3}}, stream)
-            with open(overlay, "w", encoding="utf-8") as stream:
-                yaml.safe_dump({"birth": {"min_groups": 5}}, stream)
-            self.assertEqual(RUNNER.overlaid_value(
-                (canonical, overlay), "birth", "min_groups"), 5)
+            log = pathlib.Path(directory)/'recorder.log'
+            log.write_text('Recording to output.bag\n')
+            RUNNER.validate_recorder_log(log)
+            log.write_text('rosbag record buffer exceeded. Dropping oldest queued message.\n')
+            with self.assertRaisesRegex(RuntimeError, 'dropped messages'):
+                RUNNER.validate_recorder_log(log)
 
-    def test_master_port_uses_ros_master_uri(self):
-        previous = os.environ.get("ROS_MASTER_URI")
-        try:
-            os.environ["ROS_MASTER_URI"] = "http://127.0.0.1:11442"
-            self.assertEqual(RUNNER.master_port(), 11442)
-        finally:
-            if previous is None:
-                os.environ.pop("ROS_MASTER_URI", None)
-            else:
-                os.environ["ROS_MASTER_URI"] = previous
+    def test_current_scope(self):
+        self.assertTrue({
+            "AeroCOVER-Mid360", "AeroCOVER-OS1",
+            "VoFOD-Mid360-Adapted",
+            "VoFOD-Original-OS1", "VoFOD-Mid360-Adapted-OS1",
+            "AeroCOVER-A1", "AeroCOVER-A2",
+            "AeroCOVER-A3", "AeroCOVER-A4", "AeroCOVER-A5",
+        }.issubset(RUNNER.ALGORITHMS))
+        self.assertEqual(
+            RUNNER.SCENES,
+            ("S1_near", "S1_far", "P01", "S2_new", "P02", "S3_new",
+             "M1", "M2", "OPEN", "MT", "OFFICE", "FOREST"))
+        self.assertEqual(RUNNER.NOISE_STDDEV_M["N03"], 0.03)
+        self.assertEqual(
+            set(RUNNER.WORLD_FILES),
+            {"PW_open", "PW_office", "PW_forest_seed0", "PW_mt"})
 
-    def test_input_readiness_and_run_level_warmup_gate(self):
-        state = ([], [
-            ("/points", ["/soft_vofod"]),
-            ("/rays", ["/soft_vofod"]),
-        ], [])
-        required = {"/points": "/soft_vofod", "/rays": "/soft_vofod"}
-        self.assertTrue(RUNNER.subscriptions_ready(state, required))
-        self.assertFalse(RUNNER.subscriptions_ready(
-            ([], [("/points", ["/soft_vofod"])], []), required))
-        recorder_state = ([], [
-            ("/tracks", ["/record_123"]),
-            ("/diagnostics", ["/record_123"]),
-        ], [])
-        self.assertTrue(RUNNER.recorder_subscriptions_ready(
-            recorder_state, ("/tracks", "/diagnostics")))
-        self.assertFalse(RUNNER.recorder_subscriptions_ready(
-            recorder_state, ("/tracks", "/missing")))
+    def test_current_assets(self):
+        workspace = ROOT.parents[1]
+        for scenario, world in (
+                ("S1_near.yaml", "PW_open.world"),
+                ("S1_far.yaml", "PW_open.world"),
+                ("P01.yaml", "PW_office.world"),
+                ("S2_new.yaml", "PW_office.world"),
+                ("P02.yaml", "PW_forest_seed0.world"),
+                ("S3_new.yaml", "PW_forest_seed0.world"),
+                ("M1.yaml", "PW_open.world"),
+                ("M2.yaml", "PW_open.world")):
+            self.assertTrue((workspace /
+                "src/mid360_multi_uav_sim/config/benchmarks" /
+                scenario).is_file())
+            self.assertTrue((workspace / "src/mid360_multi_uav_sim/worlds" / world).is_file())
 
-        source = {
-            "first_checked_ray_stamp": 4.2,
-            "first_scored_input_stamp": 14.7,
-            "first_target_spawn_stamp": 14.65,
-        }
-        evidence = {
-            "first_input_ack_stamp": 4.2,
-            "background_warmup_complete_stamp": 14.2,
-            "first_scored_warmup_active": False,
-        }
-        RUNNER.validate_run_timing("B0", evidence, source)
-        RUNNER.validate_run_timing("V3-C", evidence, source)
-        evidence["background_warmup_complete_stamp"] = 15.4
-        with self.assertRaises(RUNNER.RunContractError) as raised:
-            RUNNER.validate_run_timing("B0", evidence, source)
-        self.assertEqual(raised.exception.status, "INVALID_WARMUP")
-        evidence.update({
-            "first_input_ack_stamp": 4.3,
-            "background_warmup_complete_stamp": 14.2,
+    def test_all_paper_trajectories_pass_static_physical_validation(self):
+        directory = ROOT.parents[1] / "src/mid360_multi_uav_sim/config/benchmarks"
+        for name in RUNNER.SCENES:
+            scenario = yaml.safe_load((directory / (name + ".yaml")).read_text())
+            result = RUNNER.validate_physical_scenario(scenario)
+            self.assertEqual(result["status"], "PASS", name)
+
+    def test_ouster_commands_use_native_and_full_adapters(self):
+        config = pathlib.Path("config.yaml")
+        self.assertIn("ouster_original.launch", " ".join(
+            RUNNER.algorithm_command("VoFOD-Original-OS1", config)))
+        self.assertIn("aerocover_os1.launch", " ".join(
+            RUNNER.algorithm_command("AeroCOVER-OS1", config)))
+        self.assertIn("config:=config.yaml", RUNNER.algorithm_command("AeroCOVER-OS1", config))
+        self.assertIn("tracker_radius_min:=0.6", " ".join(
+            RUNNER.algorithm_command("VoFOD-Mid360-Adapted", config)))
+        self.assertNotIn("VoFOD-Original-Mid360", RUNNER.ALGORITHMS)
+        with self.assertRaises(ValueError):
+            RUNNER.algorithm_command("VoFOD-Original-Mid360", config)
+        adapted_os1 = " ".join(RUNNER.algorithm_command(
+            "VoFOD-Mid360-Adapted-OS1", config))
+        self.assertIn("ouster_original.launch", adapted_os1)
+        self.assertIn("tracker_radius_min:=0.6", adapted_os1)
+
+    def test_reduced_paper_matrix_uses_the_fixed_six_mid360_scenes(self):
+        self.assertEqual(
+            PAPER.PAIRED_SCENES,
+            ("P01", "S2_new", "P02", "S3_new", "M1", "M2"))
+        self.assertEqual(len(PAPER.ABLATIONS), 6)
+        self.assertEqual(len(PAPER.OUSTER_SCENES), 8)
+        self.assertEqual(PAPER.EXPECTED_RUNS, 70)
+        self.assertNotIn("VoFOD-Original-Mid360", PAPER.PAPER_METHODS)
+
+    def test_retired_method_is_not_resummarized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            retired = pathlib.Path(directory) / "runs/S1_near/VoFOD-Original-Mid360"
+            retired.mkdir(parents=True)
+            (retired / "metrics.json").write_text("{}")
+            self.assertEqual(PAPER.read_rows(pathlib.Path(directory)), ([], []))
+
+    def test_ouster_keeps_all_rays_and_bounds_only_the_point_domain(self):
+        workspace = ROOT.parents[1]
+        config = yaml.safe_load((workspace /
+            "src/aerocover_mid360/config/aerocover_os1_128.yaml").read_text())
+        self.assertEqual(config["input"]["expected_rays_per_bundle"], 131072)
+        self.assertEqual(config["time"], {
+            "point_window_s": 0.50,
+            "point_max_range_m": 42.0,
+            "ray_fifo_s": 0.50,
         })
-        with self.assertRaises(RUNNER.RunContractError) as raised:
-            RUNNER.validate_run_timing("B0", evidence, source)
-        self.assertEqual(raised.exception.status, "INVALID_INPUT_HANDSHAKE")
+        self.assertEqual(config["performance"], {
+            "connectivity_threads": 1,
+            "shell_prefilter_threads": 8,
+            "ray_insertion_threads": 8,
+        })
+        spawner = (workspace /
+            "src/mid360_multi_uav_sim/scripts/benchmark_scenario.py").read_text()
+        self.assertIn("use_gpu:=True horizontal_samples:=1024", spawner)
 
-        cold_source = dict(source, cold_start=True,
-                           first_target_spawn_stamp=0.0,
-                           first_scored_input_stamp=4.2)
-        cold_evidence = dict(evidence, first_input_ack_stamp=4.2,
-                             background_warmup_complete_stamp=4.2,
-                             first_scored_warmup_active=False)
-        RUNNER.validate_run_timing("M0", cold_evidence, cold_source)
-        cold_evidence["first_scored_warmup_active"] = True
-        with self.assertRaises(RUNNER.RunContractError):
-            RUNNER.validate_run_timing("M0", cold_evidence, cold_source)
+        vofod = yaml.safe_load((workspace /
+            "src/vofod_mid360/config/sensors/ouster_os1_128.yaml").read_text())
+        ranges = vofod["body_mask"]["blocked_pattern_ranges"]
+        self.assertEqual(sum(last - first + 1 for first, last in ranges), 49714)
+        self.assertTrue(all(0 <= first <= last < 262144
+                            for first, last in ranges))
+        self.assertTrue(all(first > previous_last + 1
+                            for (_previous_first, previous_last),
+                                (first, _last) in zip(ranges, ranges[1:])))
 
-    def test_aggregate_results_writes_group_and_paired_delta(self):
-        def metrics(hota):
-            return {
-                "scenario": "test", "track_set": {"HOTA": hota},
-                "coverage": {"track_frame_ratio": 1.0},
-            }
+    def test_mid360_adaptation_is_global_and_original_is_unchanged(self):
+        workspace = ROOT.parents[1]
+        original = yaml.safe_load((workspace /
+            "src/vofod_mid360/config/b0_mid360_canonical.yaml").read_text())
+        adapted = yaml.safe_load((workspace /
+            "src/vofod_mid360/config/b0_mid360_adapted.yaml").read_text())
+        self.assertEqual(original["clustering"], {
+            "tolerance": 1.5, "min_points": 2, "max_size": 3.0,
+            "max_distance": 50.0, "background_distance": 1.5,
+            "max_explore_distance": 3.0})
+        self.assertEqual(adapted["clustering"], {
+            "tolerance": 1.5, "min_points": 2, "max_size": 3.0,
+            "max_distance": 50.0, "background_distance": 1.5,
+            "max_explore_distance": 3.0})
+        self.assertEqual(yaml.safe_load((workspace /
+            "src/vofod_mid360/config/vofod_original.yaml").read_text()),
+            {"background": {"mode": "native_rangefinder"}})
+        self.assertEqual(yaml.safe_load((workspace /
+            "src/vofod_mid360/config/vofod_mid360_adapted.yaml").read_text()),
+            {"background": {"mode": "native_rangefinder",
+                            "sufficient_points_ratio": 0.0001},
+             "separate_background": {"min_sure_voxels": 1}})
+        self.assertFalse((workspace /
+            "src/vofod_mid360/config/vofod_mid360_st_init.yaml").exists())
+
+    def test_ouster_source_does_not_overwrite_a_mid_only_source(self):
         with tempfile.TemporaryDirectory() as directory:
-            for algorithm, hota in (("A2", 0.4), ("A3", 0.7)):
-                run = os.path.join(directory, "runs", algorithm, "S01", "N0",
-                                   "seed_1")
-                os.makedirs(run)
-                with open(os.path.join(run, "metrics.json"), "w",
-                          encoding="utf-8") as stream:
-                    import json
-                    json.dump(metrics(hota), stream)
-            rows = RUNNER.aggregate_results(directory)
-            self.assertEqual(len(rows), 2)
-            with open(os.path.join(directory, "metrics", "aggregate.json"),
-                      encoding="utf-8") as stream:
-                import json
-                aggregate = json.load(stream)
-            self.assertEqual(aggregate["groups"]["A3/S01/N0"]["HOTA"]["mean"], 0.7)
-            with open(os.path.join(directory, "metrics", "ablation_deltas.csv"),
-                      encoding="utf-8") as stream:
-                self.assertIn("0.299999", stream.read())
-
-    def test_algorithm_commands_pin_legacy_and_v3_ablation_contracts(self):
-        def launch_values(command):
-            return dict(argument.split(":=", 1) for argument in command
-                        if ":=" in argument)
-
-        with tempfile.TemporaryDirectory() as directory:
-            config_dir = os.path.join(directory, "config")
-            os.makedirs(config_dir)
-            canonical = {
-                "birth": {"min_groups": 5},
-                "tracker": {"survival_lambda_per_s": 0.1},
-            }
-            for name in ("soft_vofod_v2_canonical.yaml",
-                         "soft_vofod_v3_canonical.yaml", "no_overlay.yaml"):
-                with open(os.path.join(config_dir, name), "w",
-                          encoding="utf-8") as stream:
-                    yaml.safe_dump(canonical if name != "no_overlay.yaml"
-                                   else {}, stream)
-            runner = object.__new__(RUNNER.BenchmarkRunner)
-            runner.soft_root = directory
-            runner.arguments = types.SimpleNamespace(
-                soft_config_overlay=os.path.join(config_dir,
-                                                 "no_overlay.yaml"))
-
-            for algorithm in ("A1", "A2", "A3", "B1", "B2", "B3", "B4"):
-                values = launch_values(runner.algorithm_command(
-                    algorithm, os.path.join(directory, "resource.txt")))
-                self.assertEqual(values["track_conditioned_packet_split"], "false")
-                self.assertEqual(values["cv_ca_imm"], "false")
-                self.assertEqual(values["reportability_filtering"], "false")
-                self.assertEqual(values["dormant_reacquisition"], "false")
-                self.assertEqual(
-                    values["two_stage_dormant_reactivation"], "false")
-                self.assertEqual(values["certified_free_detection"], "false")
-                self.assertEqual(values["epistemic_unknown_birth"], "false")
-
-            expected = {
-                "V3-A": ("false", "false", "false"),
-                "V3-B": ("true", "true", "false"),
-                "V3-C": ("true", "true", "true"),
-                "S04-base": ("false", "false", "false"),
-                "S04-split": ("true", "false", "false"),
-                "S04-IMM": ("false", "true", "false"),
-                "S04-split-IMM": ("true", "true", "false"),
-                "S05_base": ("true", "false", "false"),
-                "S05_IMM": ("true", "true", "false"),
-                "S05_dormant": ("true", "false", "true"),
-                "S05_IMM+dormant": ("true", "true", "true"),
-            }
-            for algorithm, wanted in expected.items():
-                values = launch_values(runner.algorithm_command(
-                    algorithm, os.path.join(directory, "resource.txt")))
-                actual = (values["track_conditioned_packet_split"],
-                          values["cv_ca_imm"],
-                          values["dormant_reacquisition"])
-                self.assertEqual(actual, wanted)
-
-            strict = {
-                "C0": ("false", "false", "false", "false"),
-                "C1": ("true", "false", "false", "false"),
-                "C2": ("true", "true", "true", "false"),
-                "C3": ("true", "true", "true", "true"),
-            }
-            for algorithm, wanted in strict.items():
-                values = launch_values(runner.algorithm_command(
-                    algorithm, os.path.join(directory, "resource.txt")))
-                actual = (values["opportunity_aware_existence"],
-                          values["survival_prediction"],
-                          values["reportability_filtering"],
-                          values["dormant_reacquisition"])
-                self.assertEqual(values["birth_min_groups"], "5")
-                self.assertEqual(actual, wanted)
-
-            opportunity = {
-                "O0": ("false", "false", "true"),
-                "O1": ("true", "false", "true"),
-                "O2": ("true", "true", "false"),
-                "O3": ("true", "true", "true"),
-            }
-            for algorithm, wanted in opportunity.items():
-                values = launch_values(runner.algorithm_command(
-                    algorithm, os.path.join(directory, "resource.txt")))
-                actual = (values["opportunity_aware_existence"],
-                          values["effective_opportunity_cells"],
-                          values["range_conditioned_opportunity_return"])
-                self.assertEqual(values["birth_min_groups"], "5")
-                self.assertEqual(actual, wanted)
-
-            for algorithm, enabled in (("U0", "false"), ("U1", "true")):
-                values = launch_values(runner.algorithm_command(
-                    algorithm, os.path.join(directory, "resource.txt")))
-                self.assertEqual(values["birth_min_groups"], "5")
-                self.assertEqual(values["opportunity_aware_existence"], "false")
-                self.assertEqual(values["effective_opportunity_cells"], "true")
-                self.assertEqual(values["sequential_unknown_inference"], enabled)
-
-            for algorithm, enabled in (("R0", "false"), ("R1", "true")):
-                values = launch_values(runner.algorithm_command(
-                    algorithm, os.path.join(directory, "resource.txt")))
-                self.assertEqual(values["dormant_reacquisition"], "true")
-                self.assertEqual(values["opportunity_aware_existence"], "true")
-                self.assertEqual(
-                    values["two_stage_dormant_reactivation"], enabled)
-
-            cold = launch_values(runner.algorithm_command(
-                "M0", os.path.join(directory, "resource.txt"), "CS02"))
-            self.assertEqual(cold["cold_start"], "true")
-
-
-if __name__ == "__main__":
-    unittest.main()
+            root = pathlib.Path(directory)
+            source = root / "sources/S2_new"
+            source.mkdir(parents=True)
+            (source / "source.bag").touch()
+            manifest = source / "source_manifest.json"
+            manifest.write_text(json.dumps({
+                "recorded_message_counts": {
+                    "/uav1/mid360/rays_checked": 10,
+                }
+            }))
+            self.assertEqual(
+                PAPER.source_paths(root, "S2_new", "ouster")[0],
+                root / "sources_ouster/S2_new")
+            manifest.write_text(json.dumps({
+                "recorded_message_counts": {
+                    "/uav1/os_cloud_nodelet/points": 10,
+                }
+            }))
+            self.assertEqual(
+                PAPER.source_paths(root, "S2_new", "ouster")[0], source)

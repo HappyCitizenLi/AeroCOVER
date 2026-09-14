@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="PW_office">
+    <!-- Adapted from planning_worlds_gazebo/src/office/office.world at
+         49df4795d143d590718f662d47fe7b39a54bb94f (BSD-3-Clause).
+         The upstream file disables physics and exposes Willow Garage as visual
+         geometry only. The stock model include below keeps the same geometry
+         while restoring collision and normal MRS/PX4 physics. -->
+    <plugin name="static_transform_republisher" filename="libMrsGazeboCommonResources_StaticTransformRepublisher.so"/>
+    <gravity>0 0 -9.80665</gravity>
+    <physics name="mrs_ode_250hz" type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.8 0.9 1</background>
+      <shadows>true</shadows>
+      <sky><clouds><speed>0.6</speed></clouds></sky>
+    </scene>
+    <include><uri>model://sun</uri></include>
+    <include><uri>model://mid360_open_ground</uri><name>office_ground</name></include>
+    <include><uri>model://willowgarage</uri></include>
+    <include><uri>model://observer_rangefinder</uri></include>
+    <gui fullscreen="false">
+      <camera name="user_camera">
+        <pose>17 -8 32 0 0.85 1.57</pose>
+        <view_controller>orbit</view_controller>
+      </camera>
+    </gui>
+  </world>
+</sdf>

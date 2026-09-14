@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<launch>
+  <param name="use_sim_time" value="false"/>
+  <node pkg="tf2_ros" type="static_transform_publisher"
+        name="native_seed_tf" args="0 0 0 0 0 0 world test_garmin"/>
+  <include file="$(find vofod_mid360)/launch/b0.launch">
+    <arg name="uav_name" value="uav1"/>
+    <arg name="world_frame_id" value="world"/>
+    <arg name="points_world_topic" value="/test/native/points_world"/>
+    <arg name="rays_checked_topic" value="/test/native/rays_checked"/>
+    <arg name="height_rangefinder_topic" value="/test/native/range"/>
+    <arg name="b0_config"
+         value="$(find vofod_mid360)/test/b0_soft_update.yaml"/>
+    <arg name="method_config"
+         value="$(find vofod_mid360)/config/vofod_mid360_adapted.yaml"/>
+    <arg name="raycast_config"
+         value="$(find vofod_mid360)/test/b0_soft_update_raycast.yaml"/>
+    <arg name="sensor_config"
+         value="$(find vofod_mid360)/test/b0_soft_update_sensor.yaml"/>
+  </include>
+
+  <test test-name="vofod_mid360_native_seed_contract"
+        pkg="vofod_mid360" type="native_init_test.py" time-limit="30">
+    <param name="range_topic" value="/test/native/range"/>
+    <param name="query_service" value="/uav1/vofod_mid360/query_voxels"/>
+  </test>
+</launch>

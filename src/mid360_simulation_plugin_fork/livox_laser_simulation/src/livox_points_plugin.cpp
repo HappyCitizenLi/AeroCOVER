@@ -27,6 +27,7 @@
 #include "livox_laser_simulation/csv_reader.hpp"
 #include "livox_laser_simulation/livox_ode_multiray_shape.h"
 #include "livox_laser_simulation/per_ray_geometry.h"
+#include "livox_laser_simulation/rolling_scan_schedule.h"
 #include "livox_laser_simulation/livox_point_xyzrtl.h"
 
 namespace gazebo {
@@ -108,7 +109,20 @@ void LivoxPointsPlugin::Load(gazebo::sensors::SensorPtr _parent, sdf::ElementPtr
     //}
 
     auto curr_scan_topic = sdf->Get<std::string>("ros_topic");
-    sensor_frame_name_ = sdf->Get<std::string>("frameName");
+    const bool mrs_schema = !sdf->HasElement("frameName") &&
+                            sdf->HasElement("lidarFrameName");
+    sensor_frame_name_ = mrs_schema
+                             ? sdf->Get<std::string>("lidarFrameName")
+                             : sdf->Get<std::string>("frameName");
+    if (mrs_schema) {
+        publishRayBundle = true;
+        const std::string::size_type slash = parent_frame_name_.find('/');
+        const std::string uav = parent_frame_name_.substr(0, slash);
+        const std::string prefix = "/" + uav + "/mid360";
+        rayBundleTopic = prefix + "/rays_raw";
+        scanIdentityTopic = prefix + "/scan_identity";
+        rayDiagnosticsTopic = prefix + "/ray_source_diagnostics";
+    }
     ROS_INFO_STREAM("ros topic name:\t" << curr_scan_topic);
     ROS_INFO_STREAM("ros frame id:\t" << sensor_frame_name_);
 
@@ -138,6 +152,22 @@ void LivoxPointsPlugin::Load(gazebo::sensors::SensorPtr _parent, sdf::ElementPtr
     if (sdf->HasElement("ray_time_geometry_mode")) {
         rayTimeGeometryMode = sdf->Get<std::string>("ray_time_geometry_mode");
     }
+    if (mrs_schema) {
+        nh_.param<std::string>("/mrs_mid360/ray_time_geometry_mode",
+                               rayTimeGeometryMode, "snapshot");
+        double noise_stddev = 0.0;
+        nh_.param("/mrs_mid360/noise_stddev", noise_stddev, 0.0);
+        if (!std::isfinite(noise_stddev) || noise_stddev < 0.0) {
+            ROS_FATAL_STREAM_NAMED("LivoxPointsPlugin",
+                                   "invalid /mrs_mid360/noise_stddev="
+                                       << noise_stddev);
+            return;
+        }
+        auto noise = rayElem->GetElement("noise");
+        if (noise && noise->HasElement("stddev")) {
+            noise->GetElement("stddev")->Set(noise_stddev);
+        }
+    }
     if (sdf->HasElement("per_ray_pose_static_scene_opt_in")) {
         perRayPoseStaticSceneOptIn =
             sdf->Get<bool>("per_ray_pose_static_scene_opt_in");
@@ -164,11 +194,12 @@ void LivoxPointsPlugin::Load(gazebo::sensors::SensorPtr _parent, sdf::ElementPtr
             scanIdentityTopic = rayBundleTopic + "/scan_identity";
         }
     }
-    if (rayTimeGeometryMode != "snapshot" && rayTimeGeometryMode != "per_ray_pose") {
+    if (rayTimeGeometryMode != "snapshot" && rayTimeGeometryMode != "per_ray_pose" &&
+        rayTimeGeometryMode != "rolling_scene") {
         ROS_FATAL_STREAM_NAMED(
             "LivoxPointsPlugin",
             "unsupported ray_time_geometry_mode='" << rayTimeGeometryMode
-            << "'; allowed values are exactly 'snapshot' and 'per_ray_pose'. "
+            << "'; allowed values are snapshot, per_ray_pose, and rolling_scene. "
                "Plugin load is rejected (fail closed).");
         return;
     }
@@ -211,6 +242,15 @@ void LivoxPointsPlugin::Load(gazebo::sensors::SensorPtr _parent, sdf::ElementPtr
     maxPointSize = aviaInfos.size();
 
     RayPlugin::Load(_parent, sdfPtr);
+    if (rayTimeGeometryMode == "rolling_scene") {
+        const double physics_step_sec = world->Physics()->GetMaxStepSize();
+        if (!std::isfinite(physics_step_sec) || physics_step_sec <= 0.0) {
+            ROS_FATAL_STREAM_NAMED(
+                "LivoxPointsPlugin", "rolling_scene requires a finite positive physics step");
+            return;
+        }
+        raySensor->SetUpdateRate(1.0 / physics_step_sec);
+    }
     laserMsg.mutable_scan()->set_frame(_parent->ParentName());
     parentEntity = world->EntityByName(_parent->ParentName());
     auto physics = world->Physics();
@@ -244,6 +284,14 @@ void LivoxPointsPlugin::Load(gazebo::sensors::SensorPtr _parent, sdf::ElementPtr
         default:
             break;
     }
+    if (rayTimeGeometryMode == "rolling_scene" &&
+        (!publishRayBundle ||
+         publishPointCloudType != SENSOR_MSG_POINT_CLOUD2_LIVOXPOINTXYZRTLT)) {
+        ROS_FATAL_STREAM_NAMED(
+            "LivoxPointsPlugin",
+            "rolling_scene requires publish_ray_bundle and PointCloud2 XYZRTLT output");
+        return;
+    }
 
     if (publishRayBundle) {
         rosRayBundlePub = nh_.advertise<mid360_ray_msgs::RayBundle>(rayBundleTopic, 5);
@@ -267,15 +315,32 @@ void LivoxPointsPlugin::Load(gazebo::sensors::SensorPtr _parent, sdf::ElementPtr
 
     visualize = sdfPtr->Get<bool>("visualize");
 
-    rayShape->RayShapes().reserve(samplesStep / downSample);
+    size_t collision_ray_count = static_cast<size_t>(
+        std::ceil(static_cast<double>(samplesStep) / downSample));
+    if (rayTimeGeometryMode == "rolling_scene") {
+        const double update_rate = raySensor->UpdateRate();
+        rollingRayCapacity = std::min(
+            collision_ray_count,
+            static_cast<size_t>(std::ceil(rayPointRate / update_rate)) + 2U);
+        collision_ray_count = rollingRayCapacity;
+        ROS_INFO_STREAM_NAMED(
+            "LivoxPointsPlugin",
+            "rolling_scene enabled: physics_update_rate=" << update_rate
+            << " Hz, collision_rays_per_step=" << rollingRayCapacity
+            << ", output_rays_per_scan="
+            << static_cast<size_t>(std::ceil(
+                   static_cast<double>(samplesStep) / downSample)));
+    }
+    rayShape->RayShapes().reserve(collision_ray_count);
     rayShape->Load(sdfPtr);
     rayShape->Init();
     minDist = rangeElem->Get<double>("min");
     maxDist = rangeElem->Get<double>("max");
     auto offset = laserCollision->RelativePose();
     ignition::math::Vector3d start_point, end_point;
-    for (int j = 0; j < samplesStep; j += downSample) {
-        int index = j % maxPointSize;
+    for (size_t j = 0U; j < collision_ray_count; ++j) {
+        const int64_t pattern_offset = static_cast<int64_t>(j) * downSample;
+        int index = pattern_offset % maxPointSize;
         auto &rotate_info = aviaInfos[index];
         ignition::math::Quaterniond ray;
         ray.Euler(ignition::math::Vector3d(0.0, rotate_info.zenith, rotate_info.azimuth));
@@ -285,8 +350,11 @@ void LivoxPointsPlugin::Load(gazebo::sensors::SensorPtr _parent, sdf::ElementPtr
         rayShape->AddRay(start_point, end_point);
     }
 
-    createStaticTransforms(parentEntity->RelativePose());
+    createStaticTransforms(mrs_schema
+                               ? parentEntity->RelativePose() * _parent->Pose()
+                               : parentEntity->RelativePose());
     tf_pub_ = this->nh_.advertise<tf2_msgs::TFMessage>("/tf_gazebo_static", 10, false);
+    tf_static_pub_ = this->nh_.advertise<tf2_msgs::TFMessage>("/tf_static", 1, true);
     timer_ = this->nh_.createWallTimer(ros::WallDuration(1.0), &LivoxPointsPlugin::publishStaticTransforms, this);
 }
 
@@ -323,11 +391,198 @@ void LivoxPointsPlugin::publishStaticTransforms([[maybe_unused]] const ros::Wall
 {
   /* ROS_INFO("publishing"); */
   this->tf_pub_.publish(this->tf_message_);
+  this->tf_static_pub_.publish(this->tf_message_);
 }
 
 //}
 
+bool LivoxPointsPlugin::StartRollingScan(const ros::Time& stamp) {
+    std::vector<std::pair<int, AviaRotateInfo>> points;
+    const int64_t end_index = currStartIndex + samplesStep;
+    for (int64_t pattern = currStartIndex; pattern < end_index;
+         pattern += downSample) {
+        points.emplace_back(
+            static_cast<int>(points.size()), aviaInfos[pattern % maxPointSize]);
+    }
+    std::vector<double> offsets_sec;
+    if (points.empty() || !ComputeRayOffsets(points, &offsets_sec) ||
+        offsets_sec.size() != points.size()) {
+        ROS_ERROR_STREAM_THROTTLE_NAMED(
+            1.0, "LivoxPointsPlugin", "failed to initialize rolling_scene timing");
+        return false;
+    }
+
+    rollingBundle = mid360_ray_msgs::RayBundle();
+    rollingBundle.header.seq = rayBundleScanId;
+    rollingBundle.header.stamp = stamp;
+    rollingBundle.header.frame_id = rayBundleFrame;
+    rollingBundle.scan_id = rayBundleScanId++;
+    rollingBundle.pattern_start_index = points.front().second.pattern_index;
+    rollingBundle.min_range = static_cast<float>(minDist);
+    rollingBundle.max_range = static_cast<float>(maxDist);
+    rollingBundle.rays.resize(points.size());
+    for (size_t index = 0U; index < points.size(); ++index) {
+        const AviaRotateInfo& info = points[index].second;
+        ignition::math::Quaterniond rotation;
+        rotation.Euler(ignition::math::Vector3d(
+            0.0, info.zenith, info.azimuth));
+        const ignition::math::Vector3d direction =
+            rotation * ignition::math::Vector3d(1.0, 0.0, 0.0);
+        auto& ray = rollingBundle.rays[index];
+        ray.dir_x = static_cast<float>(direction.X());
+        ray.dir_y = static_cast<float>(direction.Y());
+        ray.dir_z = static_cast<float>(direction.Z());
+        ray.offset_time_ns = static_cast<uint32_t>(
+            std::llround(offsets_sec[index] * 1.0e9));
+        ray.pattern_index = info.pattern_index;
+        ray.line = info.line;
+        ray.tag = 0U;
+        ray.return_status = mid360_ray_msgs::Ray::INVALID_RANGE;
+    }
+    rollingScanPeriodSec = static_cast<double>(samplesStep) / rayPointRate;
+    if (csvTimeValid) {
+        rollingScanPeriodSec = std::max(
+            rollingScanPeriodSec,
+            offsets_sec.back() + csvTimeStepSec * downSample);
+    }
+    if (!std::isfinite(rollingScanPeriodSec) || rollingScanPeriodSec <= 0.0) {
+        ROS_ERROR_STREAM_THROTTLE_NAMED(
+            1.0, "LivoxPointsPlugin", "rolling_scene scan period is invalid");
+        return false;
+    }
+    currStartIndex = (currStartIndex + samplesStep) % maxPointSize;
+    rollingNextRay = 0U;
+    rollingScanActive = true;
+    scanStartLinearSpeedMps = parentEntity->WorldLinearVel().Length();
+    scanStartAngularSpeedRadps = parentEntity->WorldAngularVel().Length();
+    return true;
+}
+
+void LivoxPointsPlugin::PublishRollingScan() {
+    pcl::PointCloud<pcl::LivoxPointXyzrtlt> cloud;
+    cloud.points.reserve(rollingBundle.rays.size());
+    const uint64_t base_stamp_ns = rollingBundle.header.stamp.toNSec();
+    for (const auto& ray : rollingBundle.rays) {
+        const double range = ray.return_status == mid360_ray_msgs::Ray::VALID_RETURN
+            ? static_cast<double>(ray.range) : 0.0;
+        pcl::LivoxPointXyzrtlt point;
+        point.x = static_cast<float>(range * ray.dir_x);
+        point.y = static_cast<float>(range * ray.dir_y);
+        point.z = static_cast<float>(range * ray.dir_z);
+        point.intensity = ray.intensity;
+        point.tag = ray.tag;
+        point.line = ray.line;
+        point.timestamp = static_cast<double>(base_stamp_ns + ray.offset_time_ns);
+        cloud.push_back(point);
+    }
+    cloud.width = static_cast<uint32_t>(cloud.size());
+    cloud.height = 1U;
+    cloud.is_dense = true;
+    sensor_msgs::PointCloud2 point_message;
+    pcl::toROSMsg(cloud, point_message);
+    point_message.header = rollingBundle.header;
+    rosPointPub.publish(point_message);
+    rosRayBundlePub.publish(rollingBundle);
+
+    mid360_ray_msgs::ScanIdentity identity;
+    identity.header = rollingBundle.header;
+    identity.scan_id = rollingBundle.scan_id;
+    identity.pattern_start_index = rollingBundle.pattern_start_index;
+    identity.point_count = static_cast<uint32_t>(cloud.size());
+    identity.ray_count = static_cast<uint32_t>(rollingBundle.rays.size());
+    identity.point_source_stamp = rollingBundle.header.stamp;
+    identity.ray_source_stamp = rollingBundle.header.stamp;
+    rosScanIdentityPub.publish(identity);
+    PublishRayDiagnostics(rollingBundle);
+}
+
+void LivoxPointsPlugin::ProcessRollingScan() {
+    const common::Time sim_time = world->SimTime();
+    const ros::Time now(
+        static_cast<uint32_t>(sim_time.sec), static_cast<uint32_t>(sim_time.nsec));
+    if (!rollingScanActive && !StartRollingScan(now)) {
+        return;
+    }
+    double elapsed_sec = (now - rollingBundle.header.stamp).toSec();
+    if (elapsed_sec < 0.0 || elapsed_sec > 2.0 * rollingScanPeriodSec) {
+        ROS_WARN_STREAM_THROTTLE_NAMED(
+            1.0, "LivoxPointsPlugin",
+            "rolling_scene reset after simulation-time discontinuity");
+        rollingScanActive = false;
+        if (!StartRollingScan(now)) {
+            return;
+        }
+        elapsed_sec = 0.0;
+    }
+
+    // At most two scans can meet at one physics timestamp: the final slice of
+    // one scan and the first slice of the next.
+    for (int scan_at_this_step = 0; scan_at_this_step < 2; ++scan_at_this_step) {
+        const uint64_t elapsed_ns = static_cast<uint64_t>(
+            std::max(0.0, std::floor(elapsed_sec * 1.0e9 + 0.5)));
+        const size_t due = livox_laser_simulation::rollingDueRayCount(
+            rollingBundle.rays, rollingNextRay, elapsed_ns);
+
+        for (size_t begin = rollingNextRay; begin < due;
+             begin += rollingRayCapacity) {
+            const size_t count = std::min(rollingRayCapacity, due - begin);
+            boost::recursive_mutex::scoped_lock lock(
+                *world->Physics()->GetPhysicsUpdateMutex());
+            const ignition::math::Pose3d offset = laserCollision->RelativePose();
+            for (size_t slot = 0U; slot < count; ++slot) {
+                const auto& source = rollingBundle.rays[begin + slot];
+                const ignition::math::Vector3d sensor_direction(
+                    source.dir_x, source.dir_y, source.dir_z);
+                const ignition::math::Vector3d axis =
+                    offset.Rot() * sensor_direction;
+                rayShape->RayShapes()[slot]->SetPoints(
+                    offset.Pos(), offset.Pos() + maxDist * axis);
+            }
+            rayShape->Update();
+            for (size_t slot = 0U; slot < count; ++slot) {
+                auto& output = rollingBundle.rays[begin + slot];
+                const double raw_range = rayShape->GetRange(slot);
+                const double raw_intensity = rayShape->GetRetro(slot);
+                if (std::isfinite(raw_range) && raw_range > minDist &&
+                    raw_range < maxDist - 1.0e-6) {
+                    output.return_status = mid360_ray_msgs::Ray::VALID_RETURN;
+                    output.range = static_cast<float>(raw_range);
+                    output.intensity = std::isfinite(raw_intensity)
+                        ? static_cast<float>(raw_intensity) : 0.0F;
+                } else if (std::isfinite(raw_range) &&
+                           raw_range >= maxDist - 1.0e-6) {
+                    output.return_status = mid360_ray_msgs::Ray::NO_RETURN;
+                } else if (std::isfinite(raw_range) && raw_range > 0.0) {
+                    output.return_status = mid360_ray_msgs::Ray::BELOW_MIN_RANGE;
+                } else {
+                    output.return_status = mid360_ray_msgs::Ray::INVALID_RANGE;
+                }
+            }
+        }
+        rollingNextRay = due;
+        if (rollingNextRay < rollingBundle.rays.size()) {
+            return;
+        }
+
+        const ros::Time next_stamp = rollingBundle.header.stamp +
+            ros::Duration(rollingScanPeriodSec);
+        PublishRollingScan();
+        rollingScanActive = false;
+        if (!StartRollingScan(next_stamp)) {
+            return;
+        }
+        elapsed_sec = (now - rollingBundle.header.stamp).toSec();
+        if (elapsed_sec < 0.0) {
+            return;
+        }
+    }
+}
+
 void LivoxPointsPlugin::OnNewLaserScans() {
+    if (rayTimeGeometryMode == "rolling_scene") {
+        ProcessRollingScan();
+        return;
+    }
     if (rayShape) {
         std::vector<std::pair<int, AviaRotateInfo>> points_pair;
         ros::Time first_ray_stamp;
@@ -649,13 +904,17 @@ void LivoxPointsPlugin::PublishRayDiagnostics(const mid360_ray_msgs::RayBundle& 
     add_value("source_mode", "sim_exact");
     add_value("ray_time_geometry_mode", rayTimeGeometryMode);
     add_value("motion_model",
-              rayTimeGeometryMode == "per_ray_pose"
-                  ? "constant_twist_world_velocity"
-                  : "snapshot");
+              rayTimeGeometryMode == "rolling_scene"
+                  ? "physics_step_samples"
+                  : (rayTimeGeometryMode == "per_ray_pose"
+                         ? "constant_twist_world_velocity"
+                         : "snapshot"));
     add_value("scene_assumption",
-              rayTimeGeometryMode == "per_ray_pose"
-                  ? "static_scene_only"
-                  : "instantaneous_snapshot");
+              rayTimeGeometryMode == "rolling_scene"
+                  ? "dynamic_scene"
+                  : (rayTimeGeometryMode == "per_ray_pose"
+                         ? "static_scene_only"
+                         : "instantaneous_snapshot"));
     add_value("linear_speed_mps", std::to_string(scanStartLinearSpeedMps));
     add_value("angular_speed_radps", std::to_string(scanStartAngularSpeedRadps));
     add_value("max_offset_sec",

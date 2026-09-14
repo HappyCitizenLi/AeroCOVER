@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="uav_name" default="uav1"/>
+  <arg name="raw_points" default="/$(arg uav_name)/os_cloud_nodelet/points"/>
+  <arg name="output" default="screen"/>
+  <arg name="config" default="$(find aerocover_mid360)/config/aerocover_os1_128.yaml"/>
+
+  <include file="$(find mid360_ray_preprocessor)/launch/ouster_snapshot_adapter.launch">
+    <arg name="input_topic" value="$(arg raw_points)"/>
+    <arg name="output_frame" value="world"/>
+  </include>
+  <include file="$(find aerocover_mid360)/launch/aerocover_mvp.launch">
+    <arg name="points_world" value="/$(arg uav_name)/ouster/points_world"/>
+    <arg name="rays_checked" value="/$(arg uav_name)/ouster/rays_checked"/>
+    <arg name="config"
+         value="$(arg config)"/>
+    <arg name="output" value="$(arg output)"/>
+  </include>
+</launch>

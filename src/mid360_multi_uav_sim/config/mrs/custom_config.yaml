@@ -1,0 +1,18 @@
+mrs_uav_managers:
+  estimation_manager:
+    state_estimators: ["gps_garmin", "gps_baro"]
+    initial_state_estimator: "gps_garmin"
+    agl_height_estimator: "garmin_agl"
+  uav_manager:
+    takeoff:
+      during_takeoff:
+        controller: "MpcController"
+        tracker: "LandoffTracker"
+      after_takeoff:
+        controller: "MpcController"
+        tracker: "MpcTracker"
+
+mrs_uav_trackers:
+  mpc_tracker:
+    collision_avoidance:
+      radius: 2.0

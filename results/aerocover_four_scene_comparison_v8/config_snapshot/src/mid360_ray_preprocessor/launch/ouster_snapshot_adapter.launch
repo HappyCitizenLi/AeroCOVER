@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="config"
+       default="$(find mid360_ray_preprocessor)/config/ouster_os1_128.yaml"/>
+  <arg name="input_topic" default="/uav1/os_cloud_nodelet/points"/>
+  <arg name="output_frame" default="world"/>
+  <arg name="body_mask_config" default="$(find vofod_mid360)/config/sensors/ouster_os1_128_1024.yaml"/>
+  <node pkg="mid360_ray_preprocessor" type="ouster_snapshot_adapter_node"
+        name="ouster_snapshot_adapter" output="screen">
+    <rosparam file="$(arg config)"/>
+    <rosparam file="$(arg body_mask_config)"/>
+    <param name="input_topic" value="$(arg input_topic)"/>
+    <param name="output_frame" value="$(arg output_frame)"/>
+  </node>
+</launch>

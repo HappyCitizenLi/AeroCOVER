@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="lib/libVoFODMid360">
+    <class name="vofod_mid360/VoFOD" type="vofod::VoFOD" base_class_type="nodelet::Nodelet">
+      <description>Mid-360 actual-ray VoFOD baseline nodelet</description>
+    </class>
+  </library>
+</class_libraries>

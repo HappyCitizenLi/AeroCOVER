@@ -1,0 +1,18 @@
+<launch>
+  <include file="$(find lidar_tracker_mid360)/launch/lidar_tracker.launch">
+    <arg name="uav_name" value="test_uav"/>
+    <arg name="tracker_namespace" value="frame_completion_test"/>
+    <arg name="world_frame_id" value="world"/>
+    <arg name="detections_topic" value="/frame_completion_test/detections"/>
+    <arg name="points_world_topic" value="/frame_completion_test/points"/>
+    <arg name="background_filter_enabled" value="false"/>
+    <arg name="tracks_topic" value="/frame_completion_test/tracks"/>
+    <arg name="frame_complete_topic" value="/frame_completion_test/frame_complete"/>
+    <arg name="output" value="screen"/>
+  </include>
+
+  <test test-name="frame_completion_contract"
+        pkg="lidar_tracker_mid360"
+        type="frame_completion_contract_test.py"
+        time-limit="45"/>
+</launch>

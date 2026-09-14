@@ -1,0 +1,36 @@
+schema_version: 1
+scenario_id: P02_planning_worlds_forest_los_chase
+world: PW_forest_seed0
+world_source: planning_worlds_gazebo/src/forest/density01seed0.world@49df4795d143d590718f662d47fe7b39a54bb94f
+mrs_custom_config: paper_config.yaml
+seed: 0
+trajectory_profile: continuous_cubic
+trajectory_tangent_scale: 0.8
+start_delay_s: 4.0
+duration_s: 14.0
+score_start_s: 1.0
+score_end_s: 13.0
+purpose: target weaves close to trunks through the forest sight corridor while staying above the common -5 degree elevation limit
+observer:
+  waypoints:
+    - {t: 0.0, x: 2.040, y: 19.680, z: 2.2, yaw: 0.245773}
+    - {t: 3.5, x: 8.259, y: 21.240, z: 1.7, yaw: -0.230019}
+    - {t: 7.0, x: 14.084, y: 19.876, z: 2.5, yaw: -0.796806}
+    - {t: 10.5, x: 18.850, y: 15.000, z: 1.8, yaw: 0.0}
+    # Stay north of the target's final southeast turn so tree 150 remains
+    # outside the observer-to-target sight segment under real MPC tracking.
+    - {t: 14.0, x: 25.517, y: 15.800, z: 2.7, yaw: -0.830444}
+targets:
+  - id: uav2
+    preflight_active: true
+    motion_start_s: 0.0
+    waypoints:
+      - {t: 0.0, x: 8.259, y: 21.240, z: 2.3, yaw: -0.230019}
+      - {t: 3.5, x: 14.084, y: 19.876, z: 3.1, yaw: -0.796806}
+      - {t: 7.0, x: 18.850, y: 15.000, z: 2.4, yaw: 0.0}
+      - {t: 10.5, x: 25.517, y: 15.000, z: 3.3, yaw: -0.739356}
+      - {t: 14.0, x: 31.000, y: 10.000, z: 2.5, yaw: -0.739356}
+events:
+  - {t: 1.0, id: forest_tree_corridor_close_pass}
+  - {t: 7.0, id: forest_low_turn}
+  - {t: 10.5, id: forest_climb_and_final_turn}

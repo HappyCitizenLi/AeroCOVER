@@ -1,0 +1,9 @@
+sensor:
+  model: synthetic Mid-360 Gate 6 fixture
+  input_contract: checked_ray_bundle_v1
+  source_mode_required: sim_exact
+  expected_rays_per_bundle: 10
+  organized_cloud_required: false
+
+output:
+  base_detection_probability: 0.5

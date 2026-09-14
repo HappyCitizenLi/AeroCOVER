@@ -2,41 +2,102 @@
 <launch>
   <arg name="world_file"/>
   <arg name="scenario_file"/>
-  <arg name="observer_model_file"
-       default="$(find mid360_multi_uav_sim)/models/observer_uav_dynamic/model.sdf"/>
-  <arg name="target_model_file"
-       default="$(find mid360_multi_uav_sim)/models/simplified_target_uav/model.sdf"/>
-  <arg name="ray_time_geometry_mode" default="snapshot"/>
+  <arg name="vehicle_count" default="1"/>
+  <arg name="sensor_noise_stddev" default="0.0"/>
+  <arg name="sensor_model" default="mid360"/>
+  <arg name="ray_time_geometry_mode" default="rolling_scene"/>
   <arg name="gui" default="false"/>
+  <arg name="rviz" default="false"/>
+  <arg name="wait_for_start" default="false"/>
+  <arg name="rviz_config"
+       default="$(find mid360_multi_uav_sim)/rviz/benchmark.rviz"/>
+  <arg name="mrs_world_config" default="$(find mid360_multi_uav_sim)/config/mrs/world_config.yaml"/>
+  <arg name="mrs_custom_config"
+       default="$(find mid360_multi_uav_sim)/config/mrs/custom_config.yaml"/>
 
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(arg world_file)"/>
+  <env name="GAZEBO_MODEL_PATH"
+       value="$(find mid360_multi_uav_sim)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+
+  <node pkg="tf2_ros" type="static_transform_publisher"
+        name="benchmark_native_rangefinder_tf"
+        args="0 0.0625 -0.009 0.5 0.5 -0.5 0.5 uav1/fcu uav1/native_rangefinder"/>
+  <node pkg="tf2_ros" type="static_transform_publisher"
+        name="benchmark_ouster_tf"
+        args="0 0 0.1414 0 0 0 uav1/fcu uav1/os_sensor"/>
+  <node pkg="mid360_multi_uav_sim" type="rangefinder_follower.py"
+        name="observer_rangefinder_follower" output="screen"/>
+
+  <param name="/mrs_mid360/noise_stddev" value="$(arg sensor_noise_stddev)"/>
+  <param name="/mrs_mid360/ray_time_geometry_mode"
+         value="$(arg ray_time_geometry_mode)"/>
+
+  <include file="$(find mrs_uav_gazebo_simulation)/launch/simulation.launch">
+    <arg name="world_file" value="$(arg world_file)"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="$(arg gui)"/>
-    <arg name="headless" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="verbose" value="false"/>
   </include>
 
-  <node pkg="gazebo_ros" type="spawn_model" name="spawn_benchmark_observer"
-        output="screen"
-        args="-sdf -file $(arg observer_model_file) -model uav1 -robot_namespace /uav1 -x 0 -y 0 -z 2"/>
-  <node pkg="tf2_ros" type="static_transform_publisher"
-        name="benchmark_fcu_to_mid360"
-        args="0 0 0.25 0 0 0 1 uav1/fcu uav1/mid360_link"/>
+  <group if="$(eval int(arg('vehicle_count')) >= 1)">
+    <include file="$(find mid360_multi_uav_sim)/launch/mrs_vehicle.launch">
+      <arg name="uav_name" value="uav1"/>
+      <arg name="custom_config" value="$(arg mrs_custom_config)"/>
+      <arg name="world_config" value="$(arg mrs_world_config)"/>
+    </include>
+  </group>
+  <group if="$(eval int(arg('vehicle_count')) >= 2)">
+    <include file="$(find mid360_multi_uav_sim)/launch/mrs_vehicle.launch">
+      <arg name="uav_name" value="uav2"/>
+      <arg name="custom_config" value="$(arg mrs_custom_config)"/>
+      <arg name="world_config" value="$(arg mrs_world_config)"/>
+    </include>
+  </group>
+  <group if="$(eval int(arg('vehicle_count')) >= 3)">
+    <include file="$(find mid360_multi_uav_sim)/launch/mrs_vehicle.launch">
+      <arg name="uav_name" value="uav3"/>
+      <arg name="custom_config" value="$(arg mrs_custom_config)"/>
+      <arg name="world_config" value="$(arg mrs_world_config)"/>
+    </include>
+  </group>
+  <group if="$(eval int(arg('vehicle_count')) >= 4)">
+    <include file="$(find mid360_multi_uav_sim)/launch/mrs_vehicle.launch">
+      <arg name="uav_name" value="uav4"/>
+      <arg name="custom_config" value="$(arg mrs_custom_config)"/>
+      <arg name="world_config" value="$(arg mrs_world_config)"/>
+    </include>
+  </group>
+
+  <group if="$(eval int(arg('vehicle_count')) >= 5)">
+    <include file="$(find mid360_multi_uav_sim)/launch/mrs_vehicle.launch">
+      <arg name="uav_name" value="uav5"/>
+      <arg name="custom_config" value="$(arg mrs_custom_config)"/>
+      <arg name="world_config" value="$(arg mrs_world_config)"/>
+    </include>
+  </group>
+  <group if="$(eval int(arg('vehicle_count')) >= 6)">
+    <include file="$(find mid360_multi_uav_sim)/launch/mrs_vehicle.launch">
+      <arg name="uav_name" value="uav6"/>
+      <arg name="custom_config" value="$(arg mrs_custom_config)"/>
+      <arg name="world_config" value="$(arg mrs_world_config)"/>
+    </include>
+  </group>
 
   <include file="$(find mid360_ray_preprocessor)/launch/preprocessor.launch">
+    <arg name="config"
+         value="$(find mid360_ray_preprocessor)/config/mrs_sim.yaml"/>
     <arg name="ray_time_geometry_mode" value="$(arg ray_time_geometry_mode)"/>
     <arg name="output_frame" value="world"/>
-    <arg name="tf_source_cadence_observation_enabled" value="true"/>
-    <arg name="tf_source_cadence_topic" value="/tf"/>
-    <arg name="tf_source_cadence_parent_frame" value="world"/>
-    <arg name="tf_source_cadence_child_frame" value="uav1/fcu"/>
   </include>
+
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="benchmark_rviz"
+        args="-d $(arg rviz_config)" output="screen"/>
 
   <node pkg="mid360_multi_uav_sim" type="benchmark_scenario.py"
         name="benchmark_scenario" output="screen" required="true">
     <param name="scenario_file" value="$(arg scenario_file)"/>
-    <param name="target_model_file" value="$(arg target_model_file)"/>
+    <param name="wait_for_start" value="$(arg wait_for_start)"/>
+    <param name="sensor_model" value="$(arg sensor_model)"/>
   </node>
 </launch>
-

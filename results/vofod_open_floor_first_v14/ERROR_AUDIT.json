@@ -1,0 +1,24 @@
+{
+  "summary": [
+    {
+      "scene": "OPEN",
+      "method": "VoFOD-Mid360",
+      "fn_by_target": {
+        "uav2": 79,
+        "uav3": 99
+      },
+      "fn_initial": 172,
+      "fn_after_first_match": 6,
+      "fn_never_matched": 0,
+      "fp": 6,
+      "fp_never_matched_id": 0,
+      "fp_stale_over_1s": 0,
+      "fp_within_0p5m_ground": 0,
+      "fp_z_median": 5.92668560101088,
+      "fn_before_ready": 142,
+      "detection_frames": 728,
+      "detection_total": 1098.0
+    }
+  ],
+  "mt_aerocover_fp": []
+}

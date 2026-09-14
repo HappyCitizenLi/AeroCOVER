@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="PW_mt">
+    <include><uri>model://sun</uri></include>
+    <include><uri>model://ground_plane</uri></include>
+    <include><uri>model://observer_rangefinder</uri></include>
+    <physics name="default_physics" type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <model name="formation_cylinder">
+      <static>true</static>
+      <pose>0 0 7.5 0 0 0</pose>
+      <link name="cylinder">
+        <collision name="collision"><geometry><cylinder><radius>1.2</radius><length>15</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>1.2</radius><length>15</length></cylinder></geometry></visual>
+      </link>
+    </model>
+    <gui><camera name="user_camera"><pose>23 -24 23 0 0.55 2.35</pose></camera></gui>
+  </world>
+</sdf>

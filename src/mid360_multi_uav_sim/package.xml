@@ -2,7 +2,7 @@
 <package format="2">
   <name>mid360_multi_uav_sim</name>
   <version>0.1.0</version>
-  <description>Deterministic lightweight Gazebo scenes for a Mid-360 observer and simplified UAV targets.</description>
+  <description>MRS X500/PX4 benchmark scenes with an adapted Mid-360 ray source.</description>
 
   <maintainer email="uav@todo.todo">uav</maintainer>
   <license>BSD-3-Clause</license>
@@ -10,18 +10,31 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>aerocover_mid360</exec_depend>
   <exec_depend>gazebo_msgs</exec_depend>
   <exec_depend>gazebo_ros</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>livox_laser_simulation</exec_depend>
+  <exec_depend>lidar_tracker_mid360</exec_depend>
   <exec_depend>mid360_ray_msgs</exec_depend>
   <exec_depend>mid360_ray_preprocessor</exec_depend>
+  <exec_depend>mrs_msgs</exec_depend>
+  <exec_depend>mrs_uav_autostart</exec_depend>
+  <exec_depend>mrs_uav_core</exec_depend>
+  <exec_depend>mrs_uav_gazebo_simulation</exec_depend>
+  <exec_depend>mrs_uav_px4_api</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>px4</exec_depend>
   <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>roslaunch</exec_depend>
+  <exec_depend>rospack</exec_depend>
   <exec_depend>rospy</exec_depend>
+  <exec_depend>rviz</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tclv_evaluation</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>rosgraph</test_depend>

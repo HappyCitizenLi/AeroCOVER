@@ -1,0 +1,27 @@
+<launch>
+  <node pkg="mid360_ray_preprocessor"
+        type="mid360_ray_preprocessor_node"
+        name="source_mode_preprocessor"
+        output="screen">
+    <param name="input_points_topic" value="/test/source_mode/points_raw"/>
+    <param name="input_rays_topic" value="/test/source_mode/rays_raw"/>
+    <param name="input_scan_identity_topic" value="/test/source_mode/scan_identity"/>
+    <param name="output_points_topic" value="/test/source_mode/points_valid"/>
+    <param name="output_rays_topic" value="/test/source_mode/rays_checked"/>
+    <param name="diagnostics_topic" value="/test/source_mode/diagnostics"/>
+    <param name="output_frame" value="sensor"/>
+    <param name="ray_time_geometry_mode" value="snapshot"/>
+    <param name="source_mode" value="sim_exact"/>
+    <param name="source_mode_topic" value="/test/source_mode/mode"/>
+    <param name="source_mode_lease_timeout_sec" value="0.5"/>
+    <param name="source_mode_authority_node"
+           value="/preprocessor_source_mode_contract"/>
+    <param name="exact_direction_available" value="true"/>
+    <param name="self_exclusion_enabled" value="false"/>
+  </node>
+
+  <test test-name="preprocessor_source_mode_contract"
+        pkg="mid360_ray_preprocessor"
+        type="preprocessor_source_mode_test.py"
+        time-limit="30"/>
+</launch>

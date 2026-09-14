@@ -1,0 +1,47 @@
+input_points_topic: /livox/lidar
+input_rays_topic: /uav1/mid360/rays_raw
+input_scan_identity_topic: /uav1/mid360/scan_identity
+output_points_topic: /uav1/mid360/points_valid
+output_world_points_topic: /uav1/mid360/points_world
+output_rays_topic: /uav1/mid360/rays_checked
+diagnostics_topic: /uav1/mid360/ray_diagnostics
+
+output_frame: world
+ray_time_geometry_mode: snapshot
+# Hardware always starts fail-closed. The capability probe may promote this
+# latched mode only after two distinct powerup counters satisfy every gate.
+source_mode: calibrated_fallback
+source_mode_topic: /uav1/mid360/ray_source_mode
+source_mode_lease_timeout_sec: 3.0
+allow_dynamic_sim_exact: false
+source_mode_authority_node: /mid360_spherical_capability_probe
+exact_direction_available: false
+
+subscriber_queue_size: 20
+sync_queue_size: 20
+source_stamp_tolerance_sec: 0.000001
+point_range_tolerance_m: 0.01
+point_range_relative_tolerance: 0.001
+tf_lookup_timeout_sec: 0.25
+
+tf_source_cadence_observation_enabled: false
+tf_source_cadence_topic: /tf
+tf_source_cadence_parent_frame: ""
+tf_source_cadence_child_frame: ""
+tf_source_cadence_cache_capacity: 512
+tf_source_cadence_subscriber_queue_size: 200
+
+use_bundle_range_limits: true
+filter_min_range: 0.1
+filter_max_range: 70.0
+zero_epsilon: 1.0e-6
+
+# Placeholder dimensions only: these must be replaced by a measured airframe
+# mask before physical flight evidence is admissible.
+self_exclusion_enabled: true
+self_box_min_x: -0.5
+self_box_min_y: -0.5
+self_box_min_z: -0.5
+self_box_max_x: 0.5
+self_box_max_y: 0.5
+self_box_max_z: 0.5

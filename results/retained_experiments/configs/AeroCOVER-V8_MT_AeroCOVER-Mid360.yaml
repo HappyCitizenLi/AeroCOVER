@@ -1,0 +1,104 @@
+# AeroCOVER-MVP research defaults. These are mechanism-check starting values,
+# not statistically calibrated or claimed optimal parameters.
+world_frame_id: world
+
+input:
+  points_world_topic: /uav1/mid360/points_world
+  rays_checked_topic: /uav1/mid360/rays_checked
+  sync_queue_size: 128
+  expected_rays_per_bundle: 20000
+  geometry_consistency_tolerance_m: 0.01
+
+time:
+  point_window_s: 1.00
+  ray_fifo_s: 1.00
+  unknown_timeout_s: 1.00
+
+rays:
+  # Keep shell evidence away from the occupied VALID_RETURN endpoint.
+  return_endpoint_margin_m: 0.50
+  no_return_trusted_range_m: 20.0
+  valid_return_weight: 1.0
+  no_return_weight: 0.25
+
+cluster:
+  min_points: 1
+  max_extent_m: 3.0
+  measurement_sigma_floor_m: 0.20
+
+motion:
+  max_speed_mps: 12.0
+  time_bin_s: 0.02
+  max_rms_m: 0.50
+
+spatiotemporal:
+  spatial_tolerance_m: 0.30
+  temporal_gap_s: 0.010
+  temporal_min_points: 3
+  max_slice_extent_m: 1.50
+  background_min_points: 3
+  background_min_ratio: 0.20
+
+candidate:
+  association_gate_m: 1.0
+  max_cv_residual_m: 0.20
+  max_missed_scans: 2
+
+evidence:
+  component_radius_margin_m: 0.10
+  component_radius_min_m: 0.15
+  # Bound the robust evidence radius to a 1.5 m target diameter.
+  component_radius_max_m: 0.75
+  shell_gap_m: 0.05
+  shell_thickness_m: 1.00
+  obstacle_adaptive_shell: true
+  shell_min_thickness_m: 0.20
+  shell_obstacle_margin_m: 0.10
+  shell_direction_bins: 42
+  shell_sample_step_m: 0.10
+  shell_length_norm_m: 0.20
+  shell_bin_density_threshold: 1.50
+  shell_coverage_threshold: 0.60
+  min_observable_bins: 42
+  min_supported_bins: 42
+  min_shell_support_scans: 2
+  min_supported_octants: 2
+  spatial_hash_cell_m: 1.0
+  rebuild_translation_m: 0.20
+  rebuild_radius_fraction: 0.20
+  # Full reference recomputation is a periodic audit; unit tests keep it at 1.
+  reference_check_every_n_scans: 100
+  reference_tolerance: 1.0e-9
+
+birth:
+  history_length: 5
+  required_supports: 3
+
+tracker:
+  # Relax shell only for measurements near an already-born CA prediction.
+  maintenance_min_shell_bins: 29
+  maintenance_gate_m: 1.5
+  max_missed_s: 1.00
+  gate_chi2_3d: 11.345
+  process_jerk_sigma_mps3: 2.0
+  measurement_sigma_floor_m: 0.20
+  initial_velocity_sigma_mps: 3.0
+  initial_acceleration_sigma_mps2: 2.0
+  max_position_sigma_m: 5.0
+
+ablation:
+  use_spatiotemporal_history: true
+  use_whole_history_extent: false
+  use_shell_evidence: true
+  require_full_chord: true
+  use_no_return_rays: true
+  use_incremental_evidence: true
+  use_ray_spatial_index: true
+
+output:
+  tracks_topic: /aerocover/tracks
+  residual_points_topic: /aerocover/residual_points
+  background_points_topic: /aerocover/background_points
+  diagnostics_topic: /aerocover/diagnostics
+  markers_topic: /aerocover/markers
+  publish_markers: true

@@ -1,0 +1,42 @@
+schema_version: 1
+scenario_id: P01_planning_worlds_office_los_chase
+world: PW_office
+world_source: planning_worlds_gazebo/src/office/office.world@49df4795d143d590718f662d47fe7b39a54bb94f
+mrs_custom_config: paper_config.yaml
+seed: 6301
+trajectory_profile: continuous_cubic
+trajectory_tangent_scale: 0.8
+start_delay_s: 4.0
+duration_s: 23.8
+score_start_s: 1.0
+score_end_s: 22.8
+purpose: target makes a smooth descending turn from the open office into the 1.73 metre Willow Garage corridor, then threads between the close walls while changing altitude as the observer follows the same route 6 to 8 metres behind with continuous line of sight
+observer:
+  waypoints:
+    - {t: 0.0, x: -11.5, y: 15.4, z: 2.15, yaw: -0.128323}
+    - {t: 3.4, x: -5.3, y: 14.6, z: 1.75, yaw: -0.982794}
+    # The 0.20 m south bias leaves room for the measured MRS +y drift in the
+    # narrow corridor; the live trajectory settles close to its true centre.
+    - {t: 6.8, x: -1.2, y: 8.45, z: 2.25, yaw: -0.061461}
+    - {t: 10.2, x: 5.3, y: 8.05, z: 1.85, yaw: 0.0}
+    - {t: 13.6, x: 11.3, y: 8.05, z: 1.6, yaw: 0.0}
+    - {t: 17.0, x: 17.3, y: 8.05, z: 2.2, yaw: 0.0}
+    - {t: 20.4, x: 23.3, y: 8.05, z: 1.75, yaw: 0.0}
+    - {t: 23.8, x: 29.3, y: 8.05, z: 2.3, yaw: 0.0}
+targets:
+  - id: uav2
+    preflight_active: true
+    motion_start_s: 0.0
+    waypoints:
+      - {t: 0.0, x: -5.3, y: 14.6, z: 1.75, yaw: -0.982794}
+      - {t: 3.4, x: -1.2, y: 8.45, z: 2.25, yaw: -0.061461}
+      - {t: 6.8, x: 5.3, y: 8.05, z: 1.85, yaw: 0.0}
+      - {t: 10.2, x: 11.3, y: 8.05, z: 1.6, yaw: 0.0}
+      - {t: 13.6, x: 17.3, y: 8.05, z: 2.2, yaw: 0.0}
+      - {t: 17.0, x: 23.3, y: 8.05, z: 1.75, yaw: 0.0}
+      - {t: 20.4, x: 29.3, y: 8.05, z: 2.3, yaw: 0.0}
+      - {t: 23.8, x: 35.3, y: 8.05, z: 1.85, yaw: 0.0}
+events:
+  - {t: 3.4, id: office_descending_turn_started}
+  - {t: 6.8, id: office_narrow_corridor_entered}
+  - {t: 20.4, id: office_altitude_manoeuvre_finale}

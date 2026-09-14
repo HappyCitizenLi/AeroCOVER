@@ -1,0 +1,8 @@
+background:
+  mode: native_rangefinder
+  # Sparse Mid-360 initialization: at least one occupied XY cell in the
+  # fixed 9,424-cell plane.
+  sufficient_points_ratio: 0.0001
+
+separate_background:
+  min_sure_voxels: 1

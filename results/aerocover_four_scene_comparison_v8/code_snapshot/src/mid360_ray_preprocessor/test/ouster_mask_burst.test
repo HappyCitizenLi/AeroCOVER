@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="test_world_tf" args="0 0 0 0 0 0 world uav1/fcu"/>
+  <include file="$(find mid360_ray_preprocessor)/launch/ouster_snapshot_adapter.launch">
+    <arg name="input_topic" value="/test/raw_os1"/>
+  </include>
+  <test test-name="ouster_mask_burst" pkg="mid360_ray_preprocessor" type="ouster_mask_burst_test.py" time-limit="90"/>
+</launch>

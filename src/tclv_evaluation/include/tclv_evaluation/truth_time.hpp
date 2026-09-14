@@ -13,7 +13,7 @@
 
 namespace tclv_evaluation {
 
-enum class RayTimeGeometryMode { SNAPSHOT, PER_RAY_POSE };
+enum class RayTimeGeometryMode { SNAPSHOT, PER_RAY_POSE, ROLLING_SCENE };
 
 inline bool parseRayTimeGeometryMode(const std::string& value,
                                      RayTimeGeometryMode* output) {
@@ -26,6 +26,10 @@ inline bool parseRayTimeGeometryMode(const std::string& value,
   }
   if (value == "per_ray_pose") {
     *output = RayTimeGeometryMode::PER_RAY_POSE;
+    return true;
+  }
+  if (value == "rolling_scene") {
+    *output = RayTimeGeometryMode::ROLLING_SCENE;
     return true;
   }
   return false;
@@ -137,6 +141,7 @@ inline const TruthKinematicState& targetTruthForRay(
     case RayTimeGeometryMode::SNAPSHOT:
       return snapshot;
     case RayTimeGeometryMode::PER_RAY_POSE:
+    case RayTimeGeometryMode::ROLLING_SCENE:
       return per_ray;
   }
   throw std::invalid_argument("unknown ray-time geometry mode");

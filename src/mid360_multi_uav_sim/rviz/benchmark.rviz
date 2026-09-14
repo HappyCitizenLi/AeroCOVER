@@ -1,0 +1,218 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.35
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 120; 120; 120
+      Enabled: true
+      Name: Ground grid
+      Plane: XY
+      Plane Cell Count: 70
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 190; 225; 255
+      Color Transformer: FlatColor
+      Decay Time: 0.3
+      Enabled: true
+      Name: Mid360 world cloud
+      Position Transformer: XYZ
+      Queue Size: 5
+      Selectable: true
+      Size (Pixels): 2
+      Style: Points
+      Topic: /uav1/mid360/points_world
+      Unreliable: false
+      Use Fixed Frame: true
+      Value: true
+    - Angle Tolerance: 0.1
+      Class: rviz/Odometry
+      Covariance:
+        Value: false
+      Enabled: true
+      Keep: 2000
+      Name: Observer trajectory
+      Position Tolerance: 0.1
+      Queue Size: 100
+      Shape:
+        Alpha: 1
+        Axes Length: 0.16
+        Axes Radius: 0.025
+        Color: 30; 220; 90
+        Head Length: 0.12
+        Head Radius: 0.04
+        Shaft Length: 0.16
+        Shaft Radius: 0.02
+        Value: Arrow
+      Topic: /mid360_multi_uav_sim/ground_truth/uav1/odom
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.1
+      Class: rviz/Odometry
+      Covariance:
+        Value: false
+      Enabled: true
+      Keep: 2000
+      Name: Target trajectory
+      Position Tolerance: 0.1
+      Queue Size: 100
+      Shape:
+        Alpha: 1
+        Axes Length: 0.16
+        Axes Radius: 0.025
+        Color: 255; 120; 30
+        Head Length: 0.12
+        Head Radius: 0.04
+        Shaft Length: 0.16
+        Shaft Radius: 0.02
+        Value: Arrow
+      Topic: /mid360_multi_uav_sim/ground_truth/uav2/odom
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.1
+      Class: rviz/Odometry
+      Covariance:
+        Value: false
+      Enabled: true
+      Keep: 2000
+      Name: Target uav3 trajectory
+      Position Tolerance: 0.1
+      Queue Size: 100
+      Shape:
+        Alpha: 1
+        Axes Length: 0.16
+        Axes Radius: 0.025
+        Color: 255; 220; 40
+        Head Length: 0.12
+        Head Radius: 0.04
+        Shaft Length: 0.16
+        Shaft Radius: 0.02
+        Value: Arrow
+      Topic: /mid360_multi_uav_sim/ground_truth/uav3/odom
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.1
+      Class: rviz/Odometry
+      Covariance:
+        Value: false
+      Enabled: true
+      Keep: 2000
+      Name: Target uav4 trajectory
+      Position Tolerance: 0.1
+      Queue Size: 100
+      Shape:
+        Alpha: 1
+        Axes Length: 0.16
+        Axes Radius: 0.025
+        Color: 240; 80; 100
+        Head Length: 0.12
+        Head Radius: 0.04
+        Shaft Length: 0.16
+        Shaft Radius: 0.02
+        Value: Arrow
+      Topic: /mid360_multi_uav_sim/ground_truth/uav4/odom
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.1
+      Class: rviz/Odometry
+      Covariance:
+        Value: false
+      Enabled: true
+      Keep: 2000
+      Name: Target uav5 trajectory
+      Position Tolerance: 0.1
+      Queue Size: 100
+      Shape:
+        Alpha: 1
+        Axes Length: 0.16
+        Axes Radius: 0.025
+        Color: 80; 200; 255
+        Head Length: 0.12
+        Head Radius: 0.04
+        Shaft Length: 0.16
+        Shaft Radius: 0.02
+        Value: Arrow
+      Topic: /mid360_multi_uav_sim/ground_truth/uav5/odom
+      Unreliable: false
+      Value: true
+    - Angle Tolerance: 0.1
+      Class: rviz/Odometry
+      Covariance:
+        Value: false
+      Enabled: true
+      Keep: 2000
+      Name: Target uav6 trajectory
+      Position Tolerance: 0.1
+      Queue Size: 100
+      Shape:
+        Alpha: 1
+        Axes Length: 0.16
+        Axes Radius: 0.025
+        Color: 200; 100; 255
+        Head Length: 0.12
+        Head Radius: 0.04
+        Shaft Length: 0.16
+        Shaft Radius: 0.02
+        Value: Arrow
+      Topic: /mid360_multi_uav_sim/ground_truth/uav6/odom
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 150; 200; 140
+      Color Transformer: FlatColor
+      Decay Time: 0.3
+      Enabled: true
+      Name: OS1 raw cloud
+      Position Transformer: XYZ
+      Queue Size: 5
+      Selectable: true
+      Size (Pixels): 2
+      Style: Points
+      Topic: /uav1/os_cloud_nodelet/points
+      Unreliable: false
+      Use Fixed Frame: true
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 28; 28; 32
+    Default Light: true
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: Four-scene benchmark
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 75
+      Focal Point:
+        X: 12
+        Y: 6
+        Z: 3
+      Name: Current View
+      Pitch: 0.9
+      Yaw: 3.9
+Window Geometry:
+  Height: 900
+  Width: 1400

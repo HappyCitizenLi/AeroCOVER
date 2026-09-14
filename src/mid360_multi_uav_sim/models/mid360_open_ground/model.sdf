@@ -17,22 +17,21 @@
               <mu2>1.0</mu2>
             </ode>
           </friction>
-          <contact>
-            <collide_without_contact>true</collide_without_contact>
-          </contact>
         </surface>
       </collision>
       <visual name="ground_visual">
         <geometry>
           <plane>
             <normal>0 0 1</normal>
-            <size>100 100</size>
+            <size>160 120</size>
           </plane>
         </geometry>
         <material>
-          <ambient>0.18 0.22 0.18 1</ambient>
-          <diffuse>0.24 0.30 0.24 1</diffuse>
-          <specular>0.01 0.01 0.01 1</specular>
+          <script>
+            <uri>model://mid360_open_ground/materials/scripts</uri>
+            <uri>model://cloverleaf_interchange/materials/textures</uri>
+            <name>AeroCOVER/Concrete</name>
+          </script>
         </material>
       </visual>
     </link>

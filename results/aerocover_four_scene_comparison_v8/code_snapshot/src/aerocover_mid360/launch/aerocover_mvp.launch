@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="uav_name" default="uav1"/>
+  <arg name="world_frame_id" default="world"/>
+  <arg name="points_world" default="/$(arg uav_name)/mid360/points_world"/>
+  <arg name="rays_checked" default="/$(arg uav_name)/mid360/rays_checked"/>
+  <arg name="base_config"
+       default="$(find aerocover_mid360)/config/aerocover_mvp.yaml"/>
+  <arg name="config"
+       default="$(find aerocover_mid360)/config/aerocover_mvp.yaml"/>
+  <arg name="output" default="screen"/>
+
+  <node pkg="aerocover_mid360" type="aerocover_node"
+        name="aerocover" output="$(arg output)">
+    <rosparam file="$(arg base_config)"/>
+    <rosparam file="$(arg config)"/>
+    <param name="world_frame_id" value="$(arg world_frame_id)"/>
+    <param name="input/points_world_topic" value="$(arg points_world)"/>
+    <param name="input/rays_checked_topic" value="$(arg rays_checked)"/>
+  </node>
+</launch>

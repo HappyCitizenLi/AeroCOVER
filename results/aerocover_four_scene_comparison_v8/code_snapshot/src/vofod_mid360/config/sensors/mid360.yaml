@@ -1,0 +1,11 @@
+sensor:
+  model: Livox Mid-360
+  input_contract: checked_ray_bundle_v1
+  source_mode_required: sim_exact
+  expected_rays_per_bundle: 20000
+  organized_cloud_required: false
+
+# This is a fixed B0 output probability, not a track visibility score and not
+# an angular-resolution approximation.
+output:
+  base_detection_probability: 0.5

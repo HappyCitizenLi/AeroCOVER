@@ -1,0 +1,12 @@
+uint64 track_id
+uint64 birth_candidate_id
+time state_stamp
+time last_measurement_stamp
+geometry_msgs/Point position
+geometry_msgs/Vector3 velocity
+geometry_msgs/Vector3 acceleration
+geometry_msgs/Vector3 extent
+float64[81] covariance
+float64 missed_duration_s
+uint64 associated_component_id
+uint32 measurement_count

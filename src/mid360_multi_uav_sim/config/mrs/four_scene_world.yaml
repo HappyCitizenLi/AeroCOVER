@@ -1,0 +1,13 @@
+world_origin:
+  units: "LATLON"
+  origin_x: 47.397743
+  origin_y: 8.545594
+safety_area:
+  enabled: true
+  horizontal:
+    frame_name: "ground_truth_origin"
+    points: [-60, -60, 60, -60, 60, 60, -60, 60]
+  vertical:
+    frame_name: "ground_truth_origin"
+    max_z: 20.0
+    min_z: 0.0

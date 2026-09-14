@@ -4,6 +4,7 @@
 
 #ifndef SRC_GAZEBO_LIVOX_POINTS_PLUGIN_H
 #define SRC_GAZEBO_LIVOX_POINTS_PLUGIN_H
+#include <cstddef>
 #include <cstdint>
 #include <ros/node_handle.h>
 #include <tf/transform_broadcaster.h>
@@ -111,6 +112,9 @@ class LivoxPointsPlugin : public RayPlugin {
                           const ros::Time& first_ray_stamp, uint32_t scan_id);
     void PublishRayDiagnostics(const mid360_ray_msgs::RayBundle& bundle);
     void ConfigureRayTiming();
+    bool StartRollingScan(const ros::Time& stamp);
+    void ProcessRollingScan();
+    void PublishRollingScan();
 
     boost::shared_ptr<physics::LivoxOdeMultiRayShape> rayShape;
     gazebo::physics::CollisionPtr laserCollision;
@@ -145,6 +149,11 @@ class LivoxPointsPlugin : public RayPlugin {
     uint32_t rayBundleScanId = 0;
     double scanStartLinearSpeedMps = 0.0;
     double scanStartAngularSpeedRadps = 0.0;
+    size_t rollingRayCapacity = 0U;
+    size_t rollingNextRay = 0U;
+    double rollingScanPeriodSec = 0.0;
+    bool rollingScanActive = false;
+    mid360_ray_msgs::RayBundle rollingBundle;
 
     // | ------------ TF-related parameters and members ----------- |
     std::string parent_frame_name_;
@@ -154,6 +163,7 @@ class LivoxPointsPlugin : public RayPlugin {
     void createStaticTransforms(const ignition::math::Pose3d &pose);
     void publishStaticTransforms(const ros::WallTimerEvent& event);
     ros::Publisher tf_pub_;
+    ros::Publisher tf_static_pub_;
     tf2_msgs::TFMessage tf_message_;
     ros::WallTimer timer_;
     std::thread load_thread_;

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>aerocover_mid360</name>
+  <version>0.1.0</version>
+  <description>Causal component-centric ray evidence detector for Mid-360.</description>
+
+  <maintainer email="uav@example.com">UAV Research</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+
+  <depend>diagnostic_msgs</depend>
+  <depend>aerocover_st_background</depend>
+  <depend>eigen</depend>
+  <depend>geometry_msgs</depend>
+  <depend>lidar_tracker_mid360</depend>
+  <depend>message_filters</depend>
+  <depend>message_runtime</depend>
+  <depend>mid360_ray_msgs</depend>
+  <exec_depend>mid360_ray_preprocessor</exec_depend>
+  <depend>pcl_conversions</depend>
+  <depend>pcl_ros</depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <test_depend>rostest</test_depend>
+  <test_depend>rosunit</test_depend>
+</package>

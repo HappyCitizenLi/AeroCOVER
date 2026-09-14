@@ -1,0 +1,12 @@
+{
+  "pattern_count": 24849,
+  "ranges": 148,
+  "mask_sha256": "1f5d9d3188c56a49f21c7811881c48dfef27c74f49c7806dc2187e78c6af4497",
+  "retained_prior_calibration": true,
+  "sources": {
+    "OPEN": "4098f1e7f753b66965b886765600a79a20db0fe72475f2567a3cffc964c55df5",
+    "MT": "344bce9abb11c7aff0834087d862827176d26a3124b4e06834c9fa2d7dcb2d42",
+    "OFFICE": "ae51e05e12e5f9c2a8ad182db761690bc48aca54b83729e2765fb24bda47ffd5",
+    "FOREST": "1e632cc763208b5165c8f3fa24a570863bc3bb316789ef446dd5b0387475cbf6"
+  }
+}

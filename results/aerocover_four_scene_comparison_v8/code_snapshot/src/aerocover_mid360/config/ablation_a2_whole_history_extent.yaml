@@ -1,0 +1,2 @@
+ablation:
+  use_whole_history_extent: true
