@@ -13,29 +13,28 @@ SPEC = importlib.util.spec_from_file_location(
     "run_benchmark", ROOT / "scripts/run_benchmark.py")
 RUNNER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RUNNER)
-PAPER_SPEC = importlib.util.spec_from_file_location(
-    "run_paper_minimal", ROOT / "scripts/run_paper_minimal.py")
-PAPER = importlib.util.module_from_spec(PAPER_SPEC)
-PAPER_SPEC.loader.exec_module(PAPER)
+
 
 
 class RunnerTest(unittest.TestCase):
-    def test_twenty_run_matrix_and_v2_tracker_override(self):
+    def test_four_scene_suite_from_a_relay_directory(self):
+        import subprocess, sys
+        source=ROOT/'scripts/run_four_scene_suite.py'
+        with tempfile.TemporaryDirectory() as directory:
+            relay=pathlib.Path(directory)/'relay.py'
+            relay.write_text('from pathlib import Path\np='+repr(str(source))+'\nexec(compile(Path(p).read_text(),p,"exec"),{"__file__":p,"__name__":"__main__"})\n')
+            result=subprocess.run([sys.executable,str(relay),'--help'],capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn('record,mask,replay,report',result.stdout)
+
+    def test_current_four_scene_matrix(self):
         import sys
-        sys.path.insert(0,str(ROOT/'scripts'))
-        from run_twenty_scene_suite import matrix
-        rows=matrix()
-        self.assertEqual(len(rows),20)
-        self.assertEqual(len({(s,l) for s,l,*_ in rows}),20)
-        self.assertEqual({s:sum(r[0]==s for r in rows) for s in ('OPEN','MT','OFFICE','FOREST')},
-                         dict(OPEN=4,MT=4,OFFICE=6,FOREST=6))
-        for scene,label,method,config,override in rows:
-            self.assertTrue(config.exists())
-            if label.endswith('-V2'):
-                self.assertTrue(override.exists())
-                detector=yaml.safe_load(config.read_text())
-                self.assertEqual(detector['clustering']['tolerance'],1.5)
-                self.assertEqual(detector['clustering']['max_size'],3.)
+        sys.path.insert(0, str(ROOT/'scripts'))
+        from run_four_scene_suite import SCENES, METHODS
+        self.assertEqual(SCENES, ('OPEN', 'MT', 'OFFICE', 'FOREST'))
+        self.assertEqual(set(METHODS), {'AeroCOVER-Mid360','AeroCOVER-OS1','VoFOD-Mid360','VoFOD-OS1'})
+        self.assertEqual(len({(scene,method) for scene in SCENES for method in METHODS}),16)
+
 
     def test_open_tracker_override_is_explicit(self):
         command=RUNNER.algorithm_command('VoFOD-Mid360','detector.yaml','open_tracker.yaml')
@@ -75,15 +74,13 @@ class RunnerTest(unittest.TestCase):
     def test_current_scope(self):
         self.assertTrue({
             "AeroCOVER-Mid360", "AeroCOVER-OS1",
-            "VoFOD-Mid360-Adapted",
-            "VoFOD-Original-OS1", "VoFOD-Mid360-Adapted-OS1",
+            "VoFOD-Mid360", "VoFOD-OS1",
             "AeroCOVER-A1", "AeroCOVER-A2",
             "AeroCOVER-A3", "AeroCOVER-A4", "AeroCOVER-A5",
         }.issubset(RUNNER.ALGORITHMS))
         self.assertEqual(
             RUNNER.SCENES,
-            ("S1_near", "S1_far", "P01", "S2_new", "P02", "S3_new",
-             "M1", "M2", "OPEN", "MT", "OFFICE", "FOREST"))
+            ("OPEN", "MT", "OFFICE", "FOREST"))
         self.assertEqual(RUNNER.NOISE_STDDEV_M["N03"], 0.03)
         self.assertEqual(
             set(RUNNER.WORLD_FILES),
@@ -91,15 +88,8 @@ class RunnerTest(unittest.TestCase):
 
     def test_current_assets(self):
         workspace = ROOT.parents[1]
-        for scenario, world in (
-                ("S1_near.yaml", "PW_open.world"),
-                ("S1_far.yaml", "PW_open.world"),
-                ("P01.yaml", "PW_office.world"),
-                ("S2_new.yaml", "PW_office.world"),
-                ("P02.yaml", "PW_forest_seed0.world"),
-                ("S3_new.yaml", "PW_forest_seed0.world"),
-                ("M1.yaml", "PW_open.world"),
-                ("M2.yaml", "PW_open.world")):
+        for scenario, world in (("OPEN.yaml","PW_open.world"), ("MT.yaml","PW_mt.world"),
+                                ("OFFICE.yaml","PW_office.world"), ("FOREST.yaml","PW_forest_seed0.world")):
             self.assertTrue((workspace /
                 "src/mid360_multi_uav_sim/config/benchmarks" /
                 scenario).is_file())
@@ -113,37 +103,14 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(result["status"], "PASS", name)
 
     def test_ouster_commands_use_native_and_full_adapters(self):
-        config = pathlib.Path("config.yaml")
-        self.assertIn("ouster_original.launch", " ".join(
-            RUNNER.algorithm_command("VoFOD-Original-OS1", config)))
-        self.assertIn("aerocover_os1.launch", " ".join(
-            RUNNER.algorithm_command("AeroCOVER-OS1", config)))
-        self.assertIn("config:=config.yaml", RUNNER.algorithm_command("AeroCOVER-OS1", config))
-        self.assertIn("tracker_radius_min:=0.6", " ".join(
-            RUNNER.algorithm_command("VoFOD-Mid360-Adapted", config)))
-        self.assertNotIn("VoFOD-Original-Mid360", RUNNER.ALGORITHMS)
-        with self.assertRaises(ValueError):
-            RUNNER.algorithm_command("VoFOD-Original-Mid360", config)
-        adapted_os1 = " ".join(RUNNER.algorithm_command(
-            "VoFOD-Mid360-Adapted-OS1", config))
-        self.assertIn("ouster_original.launch", adapted_os1)
-        self.assertIn("tracker_radius_min:=0.6", adapted_os1)
+        config=pathlib.Path("config.yaml")
+        self.assertIn("ouster_original.launch", RUNNER.algorithm_command("VoFOD-OS1", config))
+        self.assertIn("aerocover_os1.launch", RUNNER.algorithm_command("AeroCOVER-OS1", config))
+        self.assertIn("config:=config.yaml", RUNNER.algorithm_command("AeroCOVER-OS1",config))
+        for retired in ("VOFOD", "VoFOD-Mid360-Adapted", "VoFOD-Original-OS1", "VoFOD-Original-Mid360"):
+            self.assertNotIn(retired, RUNNER.ALGORITHMS)
+            with self.assertRaises(ValueError): RUNNER.algorithm_command(retired, config)
 
-    def test_reduced_paper_matrix_uses_the_fixed_six_mid360_scenes(self):
-        self.assertEqual(
-            PAPER.PAIRED_SCENES,
-            ("P01", "S2_new", "P02", "S3_new", "M1", "M2"))
-        self.assertEqual(len(PAPER.ABLATIONS), 6)
-        self.assertEqual(len(PAPER.OUSTER_SCENES), 8)
-        self.assertEqual(PAPER.EXPECTED_RUNS, 70)
-        self.assertNotIn("VoFOD-Original-Mid360", PAPER.PAPER_METHODS)
-
-    def test_retired_method_is_not_resummarized(self):
-        with tempfile.TemporaryDirectory() as directory:
-            retired = pathlib.Path(directory) / "runs/S1_near/VoFOD-Original-Mid360"
-            retired.mkdir(parents=True)
-            (retired / "metrics.json").write_text("{}")
-            self.assertEqual(PAPER.read_rows(pathlib.Path(directory)), ([], []))
 
     def test_ouster_keeps_all_rays_and_bounds_only_the_point_domain(self):
         workspace = ROOT.parents[1]
@@ -165,59 +132,11 @@ class RunnerTest(unittest.TestCase):
         self.assertIn("use_gpu:=True horizontal_samples:=1024", spawner)
 
         vofod = yaml.safe_load((workspace /
-            "src/vofod_mid360/config/sensors/ouster_os1_128.yaml").read_text())
+            "src/vofod_mid360/config/sensors/ouster_os1_128_1024.yaml").read_text())
         ranges = vofod["body_mask"]["blocked_pattern_ranges"]
-        self.assertEqual(sum(last - first + 1 for first, last in ranges), 49714)
-        self.assertTrue(all(0 <= first <= last < 262144
+        self.assertEqual(sum(last - first + 1 for first, last in ranges), 24849)
+        self.assertTrue(all(0 <= first <= last < 131072
                             for first, last in ranges))
         self.assertTrue(all(first > previous_last + 1
                             for (_previous_first, previous_last),
                                 (first, _last) in zip(ranges, ranges[1:])))
-
-    def test_mid360_adaptation_is_global_and_original_is_unchanged(self):
-        workspace = ROOT.parents[1]
-        original = yaml.safe_load((workspace /
-            "src/vofod_mid360/config/b0_mid360_canonical.yaml").read_text())
-        adapted = yaml.safe_load((workspace /
-            "src/vofod_mid360/config/b0_mid360_adapted.yaml").read_text())
-        self.assertEqual(original["clustering"], {
-            "tolerance": 1.5, "min_points": 2, "max_size": 3.0,
-            "max_distance": 50.0, "background_distance": 1.5,
-            "max_explore_distance": 3.0})
-        self.assertEqual(adapted["clustering"], {
-            "tolerance": 1.5, "min_points": 2, "max_size": 3.0,
-            "max_distance": 50.0, "background_distance": 1.5,
-            "max_explore_distance": 3.0})
-        self.assertEqual(yaml.safe_load((workspace /
-            "src/vofod_mid360/config/vofod_original.yaml").read_text()),
-            {"background": {"mode": "native_rangefinder"}})
-        self.assertEqual(yaml.safe_load((workspace /
-            "src/vofod_mid360/config/vofod_mid360_adapted.yaml").read_text()),
-            {"background": {"mode": "native_rangefinder",
-                            "sufficient_points_ratio": 0.0001},
-             "separate_background": {"min_sure_voxels": 1}})
-        self.assertFalse((workspace /
-            "src/vofod_mid360/config/vofod_mid360_st_init.yaml").exists())
-
-    def test_ouster_source_does_not_overwrite_a_mid_only_source(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = pathlib.Path(directory)
-            source = root / "sources/S2_new"
-            source.mkdir(parents=True)
-            (source / "source.bag").touch()
-            manifest = source / "source_manifest.json"
-            manifest.write_text(json.dumps({
-                "recorded_message_counts": {
-                    "/uav1/mid360/rays_checked": 10,
-                }
-            }))
-            self.assertEqual(
-                PAPER.source_paths(root, "S2_new", "ouster")[0],
-                root / "sources_ouster/S2_new")
-            manifest.write_text(json.dumps({
-                "recorded_message_counts": {
-                    "/uav1/os_cloud_nodelet/points": 10,
-                }
-            }))
-            self.assertEqual(
-                PAPER.source_paths(root, "S2_new", "ouster")[0], source)

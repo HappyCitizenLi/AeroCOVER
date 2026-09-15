@@ -7,7 +7,7 @@ catkin_package()
 catkin_install_python(PROGRAMS
   scripts/evaluate_bag.py
   scripts/run_benchmark.py
-  scripts/run_paper_minimal.py
+  scripts/run_four_scene_suite.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

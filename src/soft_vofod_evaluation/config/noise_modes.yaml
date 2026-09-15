@@ -1,3 +1,6 @@
 N0:
   label: ideal_range_only
   range_stddev_m: 0.0
+N03:
+  label: range_noise_003m
+  range_stddev_m: 0.03

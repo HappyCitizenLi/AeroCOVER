@@ -1,7 +1,9 @@
 # AeroCOVER-Mid360
 
-Current causal AeroCOVER implementation for the eight-instance Mid-360 and
-Ouster comparisons, with core ablations on the fixed six-instance subset.
+Current causal AeroCOVER implementation for OPEN, MT, OFFICE and FOREST,
+with Mid-360 and OS1-128 sensor configurations. Current evidence is indexed in
+`results/retained_experiments`; A1–A5 are mechanism regression/ablation configs,
+not a retained six-scene experiment matrix.
 
 Mid-360 keeps one second of historical return points and checked rays. The
 point-level history/connectivity/background steps live in the standalone
@@ -14,11 +16,11 @@ point-level history/connectivity/background steps live in the standalone
 4. evaluates the current component slice against a 42-direction free-space
    shell built only from historical full-chord rays;
 5. births a track after three strict 42/42 passes in five scans;
-6. maintains an existing track with at least 29 bins only within 1 m of its
+6. maintains an existing track with at least 29 bins only within 1.5 m of its
    9-state CA prediction;
-7. applies the same 1 m innovation cap to strict observations after a track
+7. applies the same 1.5 m innovation cap to strict observations after a track
    missed the preceding scan;
-8. rejects any unassigned strict observation within 1 m of an already-born
+8. rejects any unassigned strict observation within 1.5 m of an already-born
    track prediction before creating a birth candidate;
 9. prepares the current ray block/index concurrently with point clustering,
    then commits it only after the decision.
@@ -34,17 +36,14 @@ Inputs:
 ```
 
 `aerocover_os1.launch` instead consumes `/uav1/ouster/points_world` and
-`/uav1/ouster/rays_checked`. Its OS1-128 configuration requires all 262,144
+`/uav1/ouster/rays_checked`. Its 1024×128 OS1 configuration requires all 131,072
 rays per snapshot and does not subsample. The ray FIFO and point history both
-remain `0.50 s`; points are bounded to the declared 40 m scoring domain plus a
-2 m shell allowance. OS1 uses one connectivity worker after 1/2/4/8-worker
+remain `0.50 s`; point input is bounded to 42 m without shortening ray evidence. OS1 uses one connectivity worker after 1/2/4/8-worker
 measurements found synchronization overhead, while independent shell
 observations and per-ray DDA cell generation retain eight workers. Union, spatial
 index merge, ray commit, state updates and output ordering remain serial and
 deterministic. The current ray block stays private while it is prepared, so it
-cannot support its own scan's shell decision. A conservative common-origin
-angular-index prototype preserved every metric but raised eight-scene mean
-runtime and is not retained.
+cannot support its own scan's shell decision. The production index is DDA-based; no angular-index path is enabled.
 One expired ray block is retained for allocation reuse, outside the causal FIFO;
 preparation clears old ray IDs and reuses ray/index vector capacities. Stale
 cell keys are periodically released when they exceed twice the live cell count
@@ -56,12 +55,6 @@ grid cell size; each block still supplies its own ray IDs with the original
 generation-based deduplication and sorted processing order. The parallel path
 uses its existing worker-local workspace; the serial path uses a thread-local
 one. Rebuilding invalidates the cached key until the cover is complete.
-A scan-local connectivity-cache prototype matched the reference labels but was
-slower and is not retained; a persistent worker pool was likewise measured and
-removed because it did not reduce runtime.
-A 42-bin batched dot/argmax prototype also preserved the tracking outputs, but
-slowed the isolated kernel and did not improve OS1 in a neighboring B-A-B replay
-control. The original scalar first-maximum loop is retained.
 
 The five retained core ablations are small YAML overlays: current-frame-only
 ST (A1), whole-history extent (A2), no shell (A3), no full-chord requirement

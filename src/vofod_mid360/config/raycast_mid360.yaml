@@ -1,4 +1,4 @@
-# Faithful VoFOD-Mid360 B0 soft free-space contract.
+# Shared local checked-ray free-space configuration; see UPSTREAM.md.
 raycast:
   free_update_weight_valid_return: 0.003
   # Strict baseline starts with upstream's single ray weight. A different

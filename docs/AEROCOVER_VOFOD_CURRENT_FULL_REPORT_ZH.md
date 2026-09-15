@@ -1,6 +1,6 @@
 # 当前 AeroCOVER 与 VoFOD：框架、实现、配置和四场景实验总报告
 
-> 本文以本次核查的**当前源码、生效配置、保留 manifest/metrics/逐帧 CSV、源数据 flight_audit**为依据。只整理与自检，未重跑实验、未修改算法或默认参数。旧的 `CURRENT_AEROCOVER_VOFOD_IMPLEMENTATION_RESULTS_AND_ANALYSIS.md` 主要描述早期 P01/P02，不能替代本报告。
+> 本文以核查的**当前源码、生效配置、保留 manifest/metrics/逐帧 CSV、源数据 flight_audit**为依据。未重跑实验、未修改检测/跟踪计算或默认参数数值。早期P01/P02旧总报告及旧提示词已清理；当前维护记录见 LOCAL_CLEANUP_AUDIT_ZH.md。
 >
 > 主对比固定为 **AeroCOVER-V8 八项 + VoFOD-V15 八项**，其中 V15/OPEN/Mid-360 复用 V14。V13 和 V16 作为补充，不用某一场景调参后的最好结果替换主表。共有18次独立保留回放、19条版本记录；主对比为16项。
 >
@@ -617,7 +617,7 @@ V14也是V15/OPEN/Mid的来源，不重复算新回放。V13只比较第二层�
 ### 10.1 本次验证
 
 - 核对保留manifest、metrics摘要及配置快照；主表16项和补充记录来自 [retained_index.json](../results/retained_experiments/retained_index.json)。
-- 对照V8快照，当前AeroCOVER核心、ST背景与OS1转换的已存C++/头文件/YAML/launch没有差异；当前算法二进制摘要匹配保留运行记录。
+- 对照V8快照，AeroCOVER核心、ST背景与OS1转换的生产C++/头文件/launch保持不变；当前参数数值保持不变。源码清理仅修正了少量YAML注释及离线入口，因此不能再称所有当前文本文件与快照逐字节相同；原实验摘要以冻结快照为准。
 - 执行现有AeroCOVER core测试35项、ST背景测试7项，全部通过；评估测试22项通过。未重新编译整套工作区或重跑16项实验。
 - 评估测试会提示可选BURST/pycocotools依赖缺失，但本次22项测试通过；HOTA/BURST未启用。不能把该可选提示说成进行了相应评估。
 - 这些测试包括精确连通对照、full-chord、FIFO移除、索引不漏交、并行预筛、3-of-5、近轨迹出生抑制、自适应球壳和stale维护门等；测试通过不覆盖所有真实传感器异常。
@@ -684,7 +684,7 @@ cd /home/uav/lyk
   --output /media/uav/SU710/NEW_OFFICE_VOFOD_RUN
 ```
 
-清理后的各实验replay.py是保留结果校验/报告兼容入口，不再依赖已删除V10，也不负责自动重跑；真正的新回放使用上述run_benchmark.py并指定新目录。全局源码的历史专用脚本可能仍描述已删除数据，不能据其文字判断当前数据还存在。
+清理后的各实验replay.py是保留结果校验/报告兼容入口，不再依赖已删除V10，也不负责自动重跑；真正的新回放使用上述run_benchmark.py并指定新目录。历史专用矩阵脚本已从活动源码清理，当前四场景自动入口为run_four_scene_suite.py。
 
 ### 10.5 主要来源
 
@@ -699,7 +699,7 @@ cd /home/uav/lyk
 
 以下直接取当前文件。AeroCOVER先加载base再加载sensor覆盖，OS1覆盖文件不能单独当作全部参数。VoFOD的常量与场景族已在第5节列明；body mask的长pattern列表以文件和manifest为准，不在此重复数万条编号。
 
-以下保留了文件中的历史注释。例如OS1注释中的“2.6 million rays”来自旧2048列设置，tracker覆盖注释中的“OPEN-only”未反映后来对MT的复用；这些注释不能覆盖上文已经核实的131072 rays、OPEN/MT覆盖范围和生效参数值。本次没有为整理文档而改动算法配置文件。
+配置注释已同步当前1024列OS1和OPEN/MT覆盖范围；数值未改。实验原配置仍按SHA冻结在保留结果目录，不改写历史manifest。
 
 ### A. AeroCOVER base
 
@@ -819,9 +819,9 @@ input:
   expected_rays_per_bundle: 131072
   sync_queue_size: 8
 
-# A full 1 s OS1-128 FIFO is about 2.6 million rays. Keep the ray evidence at
-# 0.50 s, and bound point connectivity to 0.50 s and the 40 m score domain plus
-# 2 m shell allowance. No ray is sampled or dropped by these point settings.
+# OS1 uses 1024 x 128 raw rays per snapshot. Keep ray evidence at 0.50 s
+# and point connectivity at 0.50 s / 42 m. These point settings do not
+# subsample usable rays or shorten their trusted free segments.
 time:
   point_window_s: 0.50
   point_max_range_m: 42.0
@@ -897,7 +897,7 @@ lkf:
     # radius = multiplier * sqrt(cbrt(det(position covariance))).
     radius:
       multiplier: 1.5
-      # Adapted value: minimum summed association gate is 1.2 m.
+      # Base OFFICE/FOREST value: minimum summed association gate is 1.2 m.
       min: 0.6 # metres
       # if the radius of P gets larger than this value,
       # the track will be deleted
@@ -925,7 +925,7 @@ association:
 ### D. OPEN/MT tracker覆盖
 
 ```yaml
-# OPEN-only v2 rollback explicitly approved by the user.
+# Active OPEN/MT overlay; the filename is retained for manifest compatibility.
 input_filter:
   downsample_leaf_size: 0.5
 association:
@@ -943,7 +943,7 @@ lkf:
 ### E. VoFOD raycast公共配置
 
 ```yaml
-# Faithful VoFOD-Mid360 B0 soft free-space contract.
+# Shared local checked-ray free-space configuration; see UPSTREAM.md.
 raycast:
   free_update_weight_valid_return: 0.003
   # Strict baseline starts with upstream's single ray weight. A different

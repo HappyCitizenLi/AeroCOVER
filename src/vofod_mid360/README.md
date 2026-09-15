@@ -1,51 +1,26 @@
-# VoFOD checked-ray research adapter
+# 当前 VoFOD checked-ray 适配
 
-Controlled compatibility fork of CTU-MRS VoFOD commit
-`7da9f33a878a586588f6a626b75cfeacac7824f7`. Provenance and redistribution
-limits are in `UPSTREAM.md`.
+受控移植自CTU-MRS VoFOD commit 7da9f33a878a586588f6a626b75cfeacac7824f7。来源、许可证和再分发边界见 [UPSTREAM.md](UPSTREAM.md)。这不是未经修改的上游二进制，也不能由文件名original推断所有参数等同论文。
 
-The adapter consumes a synchronized world-frame point cloud and
-`mid360_ray_msgs/CheckedRayBundle`. It validates scan IDs, original ray
-indices, return status and endpoint geometry before preserving the upstream
-occupancy update, close/far split, floating search, OBB detection, asynchronous
-free-ray update and separate-background cleanup. The only active background
-source is the original `sensor_msgs/Range` seed path.
+当前主实验只有 VoFOD-Mid360 / VoFOD-OS1，使用 config/four_scene_suite 中的八份场景配置：
 
-Two declared configurations are used in the paper matrix:
+- 地图体素0.25 m，xy中心(16,15)、尺寸(88,78) m；z中心8.9375、尺寸18.125 m，下界−0.125 m，地面位于第一层中央。
+- Mid ready=0.0001、min_sure_voxels=1；OS1 ready=0.15、min_sure_voxels=24。
+- OPEN/MT：聚类距离1.5 m、最大簇对角线3 m、background_distance=1.5 m。
+- OFFICE/FOREST：聚类距离0.5 m、最大簇对角线1.5 m、background_distance=0.3 m。
+- 最少聚类点数Mid=1、OS1=2；无回波可信距离20 m。OS1由sensor overlay覆盖为1024×128=131072 rays，固定body mask为24849个pattern。
 
-These are pinned GitHub-default configurations, not an exact reproduction of
-the paper's Table II: the paper uses a 0.25 m map voxel, while this fork uses
-the upstream YAML default of 0.5 m. Tracker noise/initialization conventions
-also differ from that table; see `results/aerocover_paper_main_comparison/VOFOD_PARAMETER_AUDIT_ZH.md`
-in the workspace. No detector/tracker parameters were changed during this audit.
+输入为同步world点云与CheckedRayBundle。仅native_rangefinder作为种子；point-update-before-classification、异步ray worker和独立0.1 s背景清理保留。没有STInit/PersistentInit或人工10scan冷启动。ready动态判断占据体素计数与确信背景簇，不是永久置位。
 
-- `VoFOD-Original` (OS1 only in the paper matrix): `b0_mid360_canonical.yaml` plus `vofod_original.yaml` and
-  the upstream 2.5 m tracker minimum radius. Its detector, map-maturity and
-  sure-background thresholds retain the upstream values.
-- `VoFOD-Mid360-Adapted`: `b0_mid360_adapted.yaml` plus
-  `vofod_mid360_adapted.yaml` and a 0.6 m tracker minimum radius. One
-  global sparse-sensor adaptation changes only the readiness gates to
-  `sufficient_points_ratio=1e-4` and one sure voxel. P01/P02 development tests
-  showed that changing voxel or clustering parameters reduced HOTA or raised
-  FP, so the original 0.5 m voxel, 1.5 m clustering/background distance,
-  `min_points=2` and `max_size=3.0 m` are retained.
+config/b0_mid360_canonical.yaml是低层launch/合约测试的基础配置，不代表当前四场景主配置。b0.launch按场景配置→method→raycast→sensor叠加；config/vofod_original.yaml保留为现有launch/manifest兼容名称。
 
-Both use the fixed map `[-20,42] × [-12,26] × [-3,13] m`; there are no
-scene-specific overrides. The Mid-360-adapted configuration is also replayed
-unchanged on Ouster as a cross-sensor control.
+浮空DFS、地图边界直接连通和unknown写回等风险路径源自上游；本地清理写回去重等差异尚未解决，不能宣称所有FP与本地修改无关。[实现差异和实验分析](../../docs/AEROCOVER_VOFOD_CURRENT_FULL_REPORT_ZH.md)
 
-The Ouster sensor overlay contains one global swept-body mask: 49,714 pattern
-indices compacted into ranges, calibrated without truth labels from the four
-open GPU sources. Both Original and Adapted use the same mask.
+运行时通过 tclv_evaluation 的 b0_canonical.launch / ouster_original.launch，显式传入对应场景b0_config；外部tracker配置由主runner按场景选择。
 
 ```bash
-roslaunch tclv_evaluation ouster_original.launch
-
-roslaunch tclv_evaluation b0_canonical.launch \
-  b0_config:=$(rospack find vofod_mid360)/config/b0_mid360_adapted.yaml \
-  method_config:=$(rospack find vofod_mid360)/config/vofod_mid360_adapted.yaml \
-  tracker_radius_min:=0.6
+source /opt/ros/noetic/setup.bash
+source /home/uav/lyk/devel/setup.bash
+catkin build vofod_mid360 --no-deps
+catkin run_tests vofod_mid360 --no-deps
 ```
-
-Build and test with `catkin build vofod_mid360` and
-`catkin run_tests vofod_mid360`.

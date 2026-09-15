@@ -21,17 +21,8 @@ import rosbag
 import yaml
 
 
-ALGORITHMS = (
-    "VoFOD-Mid360", "VoFOD-OS1",  # four-scene, one configuration per sensor
-    "VOFOD", "AeroCOVER",  # historical aliases
-    "AeroCOVER-Mid360", "AeroCOVER-OS1",
-    "VoFOD-Mid360-Adapted",
-    "VoFOD-Original-OS1", "VoFOD-Mid360-Adapted-OS1",
-    "AeroCOVER-A1", "AeroCOVER-A2", "AeroCOVER-A3",
-    "AeroCOVER-A4", "AeroCOVER-A5",
-)
-SCENES = ("S1_near", "S1_far", "P01", "S2_new", "P02", "S3_new",
-          "M1", "M2", "OPEN", "MT", "OFFICE", "FOREST")
+ALGORITHMS = ('VoFOD-Mid360', 'VoFOD-OS1', 'AeroCOVER-Mid360', 'AeroCOVER-OS1', 'AeroCOVER-A1', 'AeroCOVER-A2', 'AeroCOVER-A3', 'AeroCOVER-A4', 'AeroCOVER-A5')
+SCENES = ('OPEN', 'MT', 'OFFICE', 'FOREST')
 NOISE_LEVELS = ("N0", "N03")
 
 WORLD_FILES = {
@@ -103,32 +94,20 @@ def free_port():
 
 def algorithm_command(algorithm, config, tracker_override=None):
     root = Path(__file__).resolve().parents[3]
-    if algorithm in ("VOFOD", "VoFOD-Mid360"):
+    if algorithm == "VoFOD-Mid360":
         return ["roslaunch", "tclv_evaluation", "b0_canonical.launch",
                 f"b0_config:={config}",
                 "method_config:=" + str(root / "src/vofod_mid360/config/"
                     "vofod_original.yaml"), "output:=log"] + (
                         [f"tracker_override_config:={tracker_override}"] if tracker_override else [])
-    if algorithm == "VoFOD-Mid360-Adapted":
-        return ["roslaunch", "tclv_evaluation", "b0_canonical.launch",
-                f"b0_config:={config}",
-                "method_config:=" + str(root / "src/vofod_mid360/config/"
-                    "vofod_mid360_adapted.yaml"),
-                "tracker_radius_min:=0.6", "output:=log"]
-    if algorithm in ("VoFOD-Original-OS1", "VoFOD-OS1"):
+    if algorithm == "VoFOD-OS1":
         return ["roslaunch", "tclv_evaluation", "ouster_original.launch",
                 f"b0_config:={config}", "output:=log"] + (
                     [f"tracker_override_config:={tracker_override}"] if tracker_override else [])
-    if algorithm == "VoFOD-Mid360-Adapted-OS1":
-        return ["roslaunch", "tclv_evaluation", "ouster_original.launch",
-                f"b0_config:={config}",
-                "method_config:=" + str(root / "src/vofod_mid360/config/"
-                    "vofod_mid360_adapted.yaml"),
-                "tracker_radius_min:=0.6", "output:=log"]
     if algorithm == "AeroCOVER-OS1":
         return ["roslaunch", "aerocover_mid360", "aerocover_os1.launch",
                 f"config:={config}", "output:=log"]
-    if algorithm in ("AeroCOVER", "AeroCOVER-Mid360") or \
+    if algorithm == "AeroCOVER-Mid360" or \
             algorithm.startswith("AeroCOVER-A"):
         return ["roslaunch", "aerocover_mid360", "aerocover_mvp.launch",
                 f"config:={config}", "output:=log"]
@@ -136,7 +115,7 @@ def algorithm_command(algorithm, config, tracker_override=None):
 
 
 def recorded_topics(algorithm):
-    if algorithm in ("VOFOD", "VoFOD-Mid360", "VoFOD-Mid360-Adapted"):
+    if algorithm == "VoFOD-Mid360":
         return (
             "/uav1/batch/b0/tracks", "/uav1/vofod_mid360/background_points",
             "/uav1/vofod_mid360/free_voxels",
@@ -144,8 +123,7 @@ def recorded_topics(algorithm):
             "/uav1/vofod_mid360/profiling_info",
             "/uav1/batch/b0/lidar_tracker_mid360/profiling_info",
             "/uav1/batch/b0/lidar_tracker_mid360/frame_complete")
-    if algorithm in ("VoFOD-OS1", "VoFOD-Original-OS1",
-                     "VoFOD-Mid360-Adapted-OS1"):
+    if algorithm == "VoFOD-OS1":
         return (
             "/uav1/ouster_vofod/tracks",
             "/uav1/vofod_mid360/background_points",
@@ -155,7 +133,7 @@ def recorded_topics(algorithm):
     if algorithm == "AeroCOVER-OS1":
         return ("/aerocover_os1/tracks", "/aerocover_os1/background_points",
                 "/aerocover_os1/diagnostics")
-    if algorithm in ("AeroCOVER", "AeroCOVER-Mid360") or \
+    if algorithm == "AeroCOVER-Mid360" or \
             algorithm.startswith("AeroCOVER-A"):
         return (
             "/aerocover/tracks", "/aerocover/background_points",
@@ -740,7 +718,7 @@ def run_record(arguments):
     truth_path = output / "truth_evaluator.yaml"
     # The lightweight Mid-360 checked stream drives only the online truth
     # geometry evaluator. Ouster algorithms still receive the full raw
-    # 262,144-sample scan during replay.
+    # 131,072-sample (1024 x 128) scan during replay.
     truth_input_topic = "/uav1/mid360/rays_checked"
     use_visibility_evaluator = bool(scenario["targets"]) and sensor != "ouster"
     if not use_visibility_evaluator and truth_path.exists():
@@ -969,33 +947,21 @@ def run_replay(arguments):
         for stale in output.glob("output*.bag*"):
             stale.unlink()
     default_configs = {
-        "VoFOD-Mid360": workspace / "src/vofod_mid360/config/four_scene_suite/OPEN_mid360.yaml",
-        "VoFOD-OS1": workspace / "src/vofod_mid360/config/four_scene_suite/OPEN_os1.yaml",
-        "VOFOD": workspace / "src/vofod_mid360/config/b0_mid360_canonical.yaml",
-        "AeroCOVER": workspace / "src/aerocover_mid360/config/aerocover_mvp.yaml",
-        "AeroCOVER-Mid360": workspace / "src/aerocover_mid360/config/aerocover_mvp.yaml",
-        "AeroCOVER-OS1": workspace / "src/aerocover_mid360/config/aerocover_os1_128.yaml",
-        "VoFOD-Mid360-Adapted": workspace / "src/vofod_mid360/config/b0_mid360_adapted.yaml",
-        "VoFOD-Mid360-Adapted-OS1": workspace / "src/vofod_mid360/config/b0_mid360_adapted.yaml",
-        "VoFOD-Original-OS1": workspace / "src/vofod_mid360/config/b0_mid360_canonical.yaml",
-        "AeroCOVER-A1": workspace / "src/aerocover_mid360/config/ablation_a1_current_frame.yaml",
-        "AeroCOVER-A2": workspace / "src/aerocover_mid360/config/ablation_a2_whole_history_extent.yaml",
-        "AeroCOVER-A3": workspace / "src/aerocover_mid360/config/ablation_a3_without_shell.yaml",
-        "AeroCOVER-A4": workspace / "src/aerocover_mid360/config/ablation_a4_without_full_chord.yaml",
-        "AeroCOVER-A5": workspace / "src/aerocover_mid360/config/ablation_a5_one_shot_birth.yaml",
+        'VoFOD-Mid360': workspace / "src/vofod_mid360/config/four_scene_suite/OPEN_mid360.yaml",
+        'VoFOD-OS1': workspace / "src/vofod_mid360/config/four_scene_suite/OPEN_os1.yaml",
+        'AeroCOVER-Mid360': workspace / "src/aerocover_mid360/config/aerocover_mvp.yaml",
+        'AeroCOVER-OS1': workspace / "src/aerocover_mid360/config/aerocover_os1_128.yaml",
+        'AeroCOVER-A1': workspace / "src/aerocover_mid360/config/ablation_a1_current_frame.yaml",
+        'AeroCOVER-A2': workspace / "src/aerocover_mid360/config/ablation_a2_whole_history_extent.yaml",
+        'AeroCOVER-A3': workspace / "src/aerocover_mid360/config/ablation_a3_without_shell.yaml",
+        'AeroCOVER-A4': workspace / "src/aerocover_mid360/config/ablation_a4_without_full_chord.yaml",
+        'AeroCOVER-A5': workspace / "src/aerocover_mid360/config/ablation_a5_one_shot_birth.yaml",
     }
     default_config = default_configs[arguments.algorithm]
     config = Path(arguments.config or default_config).resolve()
     method_configs = {
-        "VoFOD-Mid360": workspace / "src/vofod_mid360/config/vofod_original.yaml",
-        "VoFOD-OS1": workspace / "src/vofod_mid360/config/vofod_original.yaml",
-        "VOFOD": workspace / "src/vofod_mid360/config/vofod_original.yaml",
-        "VoFOD-Mid360-Adapted": workspace /
-        "src/vofod_mid360/config/vofod_mid360_adapted.yaml",
-        "VoFOD-Mid360-Adapted-OS1": workspace /
-        "src/vofod_mid360/config/vofod_mid360_adapted.yaml",
-        "VoFOD-Original-OS1": workspace /
-        "src/vofod_mid360/config/vofod_original.yaml",
+        'VoFOD-Mid360': workspace / "src/vofod_mid360/config/vofod_original.yaml",
+        'VoFOD-OS1': workspace / "src/vofod_mid360/config/vofod_original.yaml",
     }
     method_config = method_configs.get(arguments.algorithm)
     source = Path(arguments.source).resolve()
@@ -1034,17 +1000,13 @@ def run_replay(arguments):
         if actual != expected:
             raise ValueError(f"source manifest mismatch: expected {expected}, got {actual}")
         suite = source_manifest.get("sensor_suite", "mid360")
-        needs_ouster = arguments.algorithm in (
-            "AeroCOVER-OS1", "VoFOD-OS1", "VoFOD-Original-OS1",
-            "VoFOD-Mid360-Adapted-OS1")
+        needs_ouster = arguments.algorithm in ("AeroCOVER-OS1", "VoFOD-OS1")
         if needs_ouster and suite not in ("ouster", "paired"):
             raise ValueError("Ouster method requires an ouster or paired source")
         if not needs_ouster and suite not in ("mid360", "paired"):
             raise ValueError("Mid-360 method requires a mid360 or paired source")
     evaluator = Path(__file__).with_name("evaluate_bag.py")
-    if arguments.algorithm in ("VOFOD", "VoFOD-Mid360", "VoFOD-OS1", "VoFOD-Mid360-Adapted",
-                                "VoFOD-Original-OS1",
-                                "VoFOD-Mid360-Adapted-OS1"):
+    if arguments.algorithm in ("VoFOD-Mid360", "VoFOD-OS1"):
         algorithm_roots = (
             workspace / "src/vofod_mid360",
             workspace / "src/lidar_tracker_mid360",
@@ -1106,8 +1068,8 @@ def run_replay(arguments):
         "upstream_tracker_commit":
         "a92b4db61060b47f1af6dcce122188ec021f2dcd"
         if arguments.algorithm in method_configs else None,
-        "hota_protocol": "TrackEval HOTA-3D-pos; 2 m linear similarity; "
-        "alpha=0.05:0.05:0.95",
+        "hota_protocol": "Disabled by current default evaluator; "
+        "see metrics.hota_computed. Optional compatibility tests remain.",
         "trackeval_commit":
         "12c8791b303e0a0b50f753af204249e622d0281a",
         "metric_code_sha256": sha256(evaluator),

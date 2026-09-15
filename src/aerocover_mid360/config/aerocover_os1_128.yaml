@@ -4,9 +4,9 @@ input:
   expected_rays_per_bundle: 131072
   sync_queue_size: 8
 
-# A full 1 s OS1-128 FIFO is about 2.6 million rays. Keep the ray evidence at
-# 0.50 s, and bound point connectivity to 0.50 s and the 40 m score domain plus
-# 2 m shell allowance. No ray is sampled or dropped by these point settings.
+# OS1 uses 1024 x 128 raw rays per snapshot. Keep ray evidence at 0.50 s
+# and point connectivity at 0.50 s / 42 m. These point settings do not
+# subsample usable rays or shorten their trusted free segments.
 time:
   point_window_s: 0.50
   point_max_range_m: 42.0

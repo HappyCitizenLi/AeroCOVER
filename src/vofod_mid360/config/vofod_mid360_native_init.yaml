@@ -1,8 +1,0 @@
-# Compatibility copy for completed manifests created before the method was
-# renamed. New runs use vofod_mid360_adapted.yaml.
-background:
-  mode: native_rangefinder
-  sufficient_points_ratio: 0.0001
-
-separate_background:
-  min_sure_voxels: 1

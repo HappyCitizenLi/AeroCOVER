@@ -12,9 +12,18 @@ import yaml
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT/'scripts'))
 
 
 class ScenarioTest(unittest.TestCase):
+
+    def test_current_generator_fingerprint(self):
+        import hashlib, json
+        from design_four_scenes import designs
+        expected = {"OPEN":"b77a5637ec28df1bc2f788d83a146b0da14bf53308d5a3ba8ff042ce528cc30b","MT":"ce5c57c8d90da6264592b4808499f9adc142525664b8c8f7ffee852023130913","OFFICE":"c98815bdffa67bd35739fed535d725987c87a00def06ef5b78d91f02f89afb9e","FOREST":"f07d8109f6a33fa3d702418054efb058d0d631279bd50d53859fbe850c29a0da"}
+        actual = {name:hashlib.sha256(json.dumps(config,sort_keys=True).encode()).hexdigest()
+                  for name,config in designs().items()}
+        self.assertEqual(actual, expected)
     def test_timed_run_aborts_when_controller_loses_output(self):
         sys.path.insert(0,str(ROOT/'scripts'))
         import benchmark_scenario as module
@@ -100,48 +109,6 @@ class ScenarioTest(unittest.TestCase):
         cylinder = ET.parse(ROOT/'worlds/PW_mt.world').find('.//collision/geometry/cylinder')
         self.assertEqual(float(cylinder.findtext('length')), 15.)
 
-    def test_high_speed_scene_designs(self):
-        sys.path.insert(0,str(ROOT/'scripts'))
-        from design_four_scenes_v3 import designs_v3
-        from check_four_scenes import thrust_rotation
-        import numpy as np
-        configs=designs_v3()
-        self.assertEqual(len(configs['OPEN']['targets']),2)
-        for name,config in configs.items():
-            yaml.safe_dump(config)
-            self.assertEqual(config['trajectory_execution'],'mrs_trajectory')
-            self.assertEqual(config['required_peak_speed_mps'],7.2 if name in ('OPEN','MT') else 4.)
-            self.assertEqual(config['speed_reference_mps'],8.)
-            speeds=[]
-            for entity in [config['observer']]+config['targets']:
-                p=np.array([[q['x'],q['y']] for q in entity['waypoints']])
-                t=np.array([q['t'] for q in entity['waypoints']])
-                self.assertTrue(np.all(np.diff(t)>0))
-                speeds.extend(np.linalg.norm(np.diff(p,axis=0),axis=1)/np.diff(t))
-            self.assertGreaterEqual(max(speeds),config['required_peak_speed_mps'])
-            self.assertLessEqual(max(speeds),8.)
-        for q in configs['OPEN']['observer']['waypoints']:
-            self.assertEqual(q['y'],0.)
-            self.assertEqual(q['z'],3.)
-        for q in configs['OPEN']['targets'][0]['waypoints']:
-            self.assertAlmostEqual(math.hypot(q['x'],q['y']-9),6.,places=5)
-        star=configs['OPEN']['targets'][1]['waypoints']
-        self.assertEqual(configs['OPEN']['geometry_design']['star_points'],5)
-        xy=np.array([[q['x'],q['y']+10.] for q in star])
-        self.assertTrue(np.allclose(xy[0],xy[-1],atol=1e-6))
-        for i in range(10):
-            angle=math.radians(126-36*i)
-            radius=9.4 if i%2==0 else .15
-            vertex=radius*np.array([math.cos(angle),math.sin(angle)])
-            self.assertLess(np.linalg.norm(xy-vertex,axis=1).min(),1e-4)
-        self.assertTrue(all(q['z']==6. for q in star))
-        for target in configs['MT']['targets'][:2]:
-            q=target['waypoints'][0]
-            self.assertAlmostEqual(math.hypot(q['x'],q['y'])-1.2-.43,1.5)
-        self.assertEqual(configs['MT']['targets'][1]['waypoints'][0]['x'], -3.13)
-        self.assertTrue(all(q['z']==3.9 for q in configs['MT']['targets'][2]['waypoints']))
-        self.assertTrue(np.allclose(thrust_rotation([0,0,0]),np.eye(3)))
-        with self.assertRaises(ValueError): thrust_rotation([0,0,-9.81])
 
     def test_rangefinder_tf_matches_physical_mount(self):
         plugin = ET.parse(ROOT/'models/observer_rangefinder/model.sdf').find('.//plugin')
@@ -156,31 +123,6 @@ class ScenarioTest(unittest.TestCase):
         for actual, expected in zip(quaternion, map(float, args[3:7])):
             self.assertAlmostEqual(actual, expected, places=12)
 
-    def test_flowing_candidates_preserve_geometry_and_reduce_dwell(self):
-        sys.path.insert(0,str(ROOT/'scripts'))
-        from design_four_scenes_v3 import designs_v3
-        from design_four_scenes_v4 import designs_v4
-        import numpy as np
-        old,new=designs_v3(),designs_v4()
-        self.assertEqual(old['MT'],new['MT'])
-        for name in ('OPEN','OFFICE','FOREST'):
-            self.assertLess(new[name]['duration_s'],old[name]['duration_s'])
-            self.assertEqual(new[name]['maximum_allowed_acceleration_mps2'],4.)
-            for entity in [new[name]['observer']]+new[name]['targets']:
-                t=np.array([w['t'] for w in entity['waypoints']])
-                self.assertTrue(np.all(np.diff(t)>0))
-        for w in new['OPEN']['targets'][0]['waypoints']:
-            self.assertAlmostEqual(math.hypot(w['x'],w['y']-9.),6.,places=5)
-        for label in ('observer','star'):
-            fractions=[]
-            for configs in (old,new):
-                c=configs['OPEN'];e=c['observer'] if label=='observer' else c['targets'][1]
-                t=np.array([w['t'] for w in e['waypoints']]);dt=np.diff(t)
-                p=np.array([[w[k] for k in ('x','y','z')] for w in e['waypoints']])
-                v=np.linalg.norm(np.diff(p,axis=0),axis=1)/dt
-                valid=(t[:-1]>2)&(t[1:]<c['duration_s']-5)
-                fractions.append(float(dt[valid&(v<.2)].sum()/dt[valid].sum()))
-            self.assertLess(fractions[1],fractions[0]/2)
 
     def test_open_19m_shapes_speed_and_range_margin(self):
         sys.path.insert(0,str(ROOT/'scripts'))
@@ -210,7 +152,7 @@ class ScenarioTest(unittest.TestCase):
             self.assertEqual(config['control_frame'], 'ground_truth_origin')
             self.assertEqual(len(config['targets']), {'OPEN':2,'MT':3,'OFFICE':1,'FOREST':1}[name])
             if name == 'MT':
-                from design_four_scenes_v3 import mt_scene
+                from current_scene_design import mt_scene
                 self.assertEqual(config, mt_scene())
                 self.assertEqual(config['moving_target_ids'], ['uav4'])
                 self.assertEqual([t['id'] for t in config['targets']], ['uav2','uav3','uav4'])
@@ -254,27 +196,13 @@ class ScenarioTest(unittest.TestCase):
         files = sorted(
             path.name for path in (ROOT / "config/benchmarks").glob("*.yaml"))
         self.assertEqual(files, [
-            "FOREST.yaml", "M1.yaml", "M2.yaml", "MT.yaml", "OFFICE.yaml", "OPEN.yaml", "P01.yaml", "P02.yaml", "S1_far.yaml",
-            "S1_near.yaml", "S2_new.yaml", "S3_new.yaml"])
+            "FOREST.yaml", "MT.yaml", "OFFICE.yaml", "OPEN.yaml"])
         worlds = sorted(
             path.name for path in (ROOT / "worlds").glob("*.world"))
         self.assertEqual(
             worlds, ["PW_forest_seed0.world", "PW_mt.world", "PW_office.world",
                      "PW_open.world"])
 
-    def test_routes_follow_at_safe_distance(self):
-        for name in ("P01", "P02"):
-            scene = yaml.safe_load(
-                (ROOT / "config/benchmarks" / f"{name}.yaml").read_text())
-            self.assertEqual(len(scene["targets"]), 1)
-            observer = scene["observer"]["waypoints"]
-            target = scene["targets"][0]["waypoints"]
-            self.assertGreaterEqual(len(observer), 5)
-            self.assertEqual(len(observer), len(target))
-            for follower, leader in zip(observer[1:], target[:-1]):
-                self.assertLessEqual(math.dist(
-                    (follower["x"], follower["y"], follower["z"]),
-                    (leader["x"], leader["y"], leader["z"])), 1.1)
 
     def test_world_assets_are_intact(self):
         office = ET.parse(
@@ -288,14 +216,3 @@ class ScenarioTest(unittest.TestCase):
         open_world = ET.parse(ROOT / "worlds/PW_open.world").getroot().find(
             "world")
         self.assertIsNotNone(open_world)
-
-    def test_multi_target_scenarios_really_have_three_targets(self):
-        for name in ("M1", "M2"):
-            scene = yaml.safe_load(
-                (ROOT / "config/benchmarks" / f"{name}.yaml").read_text())
-            self.assertEqual(len(scene["targets"]), 3)
-            self.assertEqual(scene["mrs_custom_config"],
-                             "multi_target_config.yaml")
-            self.assertTrue(all(
-                waypoint["z"] <= 2.4
-                for waypoint in scene["observer"]["waypoints"]))

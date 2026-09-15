@@ -11,7 +11,7 @@ import yaml
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("scenario", choices=["OPEN", "MT", "OFFICE", "FOREST", "P01", "P02"])
+    parser.add_argument("scenario", choices=["OPEN", "MT", "OFFICE", "FOREST"])
     parser.add_argument("--sensor", choices=["mid360", "ouster", "paired"], default="mid360")
     parser.add_argument("--rviz", action="store_true")
     parser.add_argument("--wait-for-start", action="store_true")

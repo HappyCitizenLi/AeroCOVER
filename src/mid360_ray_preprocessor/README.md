@@ -26,7 +26,7 @@ exact no-return claim without an external validated source-mode authority.
 ## Ouster OS1-128 snapshot adapter
 
 `ouster_snapshot_adapter.launch` consumes the actual MRS/Gazebo organized
-cloud at `/uav1/os_cloud_nodelet/points` (2048 columns x 128 rings). It
+cloud at `/uav1/os_cloud_nodelet/points` (1024 columns x 128 rings). It
 publishes the unchanged native cloud plus:
 
 ```text
@@ -34,7 +34,7 @@ publishes the unchanged native cloud plus:
 /uav1/ouster/rays_checked
 ```
 
-Every one of the 262,144 samples becomes a checked ray; valid returns become
+Every one of the 131,072 samples becomes a checked ray; valid returns become
 world points with the same original index. There is no sampling. The MRS
 sensor's `t` field is zero, so the adapter explicitly labels the geometry
 `ouster_sim_snapshot`; it does not claim hardware rolling-scan fidelity. The

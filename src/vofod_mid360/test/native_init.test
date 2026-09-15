@@ -12,7 +12,7 @@
     <arg name="b0_config"
          value="$(find vofod_mid360)/test/b0_soft_update.yaml"/>
     <arg name="method_config"
-         value="$(find vofod_mid360)/config/vofod_mid360_adapted.yaml"/>
+         value="$(find vofod_mid360)/test/native_background.yaml"/>
     <arg name="raycast_config"
          value="$(find vofod_mid360)/test/b0_soft_update_raycast.yaml"/>
     <arg name="sensor_config"

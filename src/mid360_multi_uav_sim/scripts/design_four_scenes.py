@@ -24,11 +24,9 @@ def scene(name, world, duration, observer, targets):
 
 
 def designs():
-    from design_four_scenes_v4 import designs_v4
+    from current_scene_design import chase_scenes
     from design_open_19m import open_19m_scene
-    configs=designs_v4()
-    configs['OPEN']=open_19m_scene()
-    return configs
+    return dict(OPEN=open_19m_scene(), **chase_scenes())
 
 
 if __name__ == '__main__':

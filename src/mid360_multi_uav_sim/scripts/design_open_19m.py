@@ -5,7 +5,7 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 from scipy.ndimage import gaussian_filter1d
 from design_four_scenes import scene, waypoint
-from design_four_scenes_v3 import high_speed_contract
+from current_scene_design import high_speed_contract
 
 
 def open_19m_scene():

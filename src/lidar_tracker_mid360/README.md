@@ -1,6 +1,6 @@
 # lidar_tracker_mid360
 
-Classic B0 tracker forked from CTU-MRS `lidar_tracker` commit
+Current tracker forked from CTU-MRS `lidar_tracker` commit
 `a92b4db61060b47f1af6dcce122188ec021f2dcd`. It deliberately remains a
 9-state constant-acceleration LKF with greedy nearest association, local
 point clustering/OBB correction, overlap merge, and uncertainty deletion.

@@ -43,7 +43,7 @@ lkf:
     # radius = multiplier * sqrt(cbrt(det(position covariance))).
     radius:
       multiplier: 1.5
-      # Adapted value: minimum summed association gate is 1.2 m.
+      # Base OFFICE/FOREST value: minimum summed association gate is 1.2 m.
       min: 0.6 # metres
       # if the radius of P gets larger than this value,
       # the track will be deleted

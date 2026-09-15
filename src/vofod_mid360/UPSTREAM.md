@@ -1,5 +1,11 @@
 # Upstream provenance and redistribution boundary
 
+> Current entry points are VoFOD-Mid360 / VoFOD-OS1 with the four-scene
+> configurations documented in README.md. The sections below retain the
+> import/license and migration history, not executable old experiment recipes.
+> Inactive PersistentStructure source and retired standalone adaptation
+> configs have been removed; native-rangefinder contract fixtures remain in test/.
+
 ## Imported snapshot
 
 ```text
@@ -124,9 +130,9 @@ tree. Subsequent functional changes must be recorded here by phase:
 | Phase 1 canonical B0 | superseded | The temporary target-free timed warm-up was removed before the RAL experiment because it was not upstream VoFOD initialization |
 | Native range seed | complete | Restored validated `sensor_msgs/Range` seeding along sensor +x; Original keeps upstream readiness, while the globally frozen Mid-360 adaptation uses a `1e-4` XY occupancy ratio and one sure voxel |
 | Shared point-background branch | retired | Removed from the node, configuration, launch path, dependencies, diagnostics and paper method list after its high-FP evaluation |
-| Fixed benchmark volume | complete | Replaced the uncovered `[-10,50] x [-15,15]` XY map with one predeclared `[-20,42] x [-12,26] x [-3,13] m` volume covering all eight scene definitions and search margin |
+| Current benchmark volume | complete | Four-scene nominal volume `[-28,60] x [-24,54] x [-0.125,18] m`; 0.25 m voxels, ground centered in the first layer. Exact effective bounds are documented in the current report |
 | Upstream-native map execution | complete | Restored point-update-before-classification, one asynchronous free-ray worker with upstream busy-skip/next-detection visibility, and an independent 0.1 s ROS-time separate-background cleanup |
-| Fixed-lag PersistentInit | retired | No active config, launch or experiment method selects the fixed-lag persistent-structure certificate; its source files remain only as inactive history |
+| Fixed-lag PersistentInit | removed | No production consumer or build target remained; inactive source/header removed. Prior import and migration history remain in Git |
 
 This is an independent compatibility fork. The local name and documentation
 must not imply endorsement by CTU-MRS, the upstream authors, PCL, or other
@@ -147,9 +153,10 @@ subsequent B0 phase then replaced the active sensor and mapping boundary:
 - rewrote the active nodelet around one deterministic synchronous update and
   removed detached cross-frame map work.
 
-The current Original/Adapted experiment keeps the algorithmic classifier at
-the pinned upstream boundary while retaining these explicit sensor and safety
-adaptations:
+The current four-scene VoFOD pipelines derive their classifier from the pinned
+upstream version, with explicit local sensor and safety adaptations. This is
+not a claim of byte-for-byte equivalence (notably, cleanup writeback deduplication
+differs). The current paths retain:
 
 - actual checked per-ray origins/directions/status replace organized Ouster
   dimensions, LUT lookup and row mask;
@@ -160,8 +167,8 @@ adaptations:
   and the original counted-voxel separate-background rule runs from its own
   0.1 s ROS-time timer;
 - `native_rangefinder` uses the actual Gazebo ray rangefinder as the sole
-  upstream seed source; Original and Adapted share map execution and differ
-  only by their explicitly declared readiness and tracker parameters;
+  upstream seed source; both sensor paths share map execution and use the
+  explicitly declared four-scene detector/readiness/tracker configurations;
 - the temporary direction-only `nadir_seed`, timed warm-up and active
   persistent-structure certificate are absent;
 - configured constant detection probability replaces the fixed-organized-scan

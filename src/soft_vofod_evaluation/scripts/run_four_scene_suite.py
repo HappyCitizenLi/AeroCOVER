@@ -4,11 +4,15 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import signal
+import subprocess
 
 import yaml
 
+# Catkin relays set __file__ to the source script but leave sys.path at devel/lib.
+# Import the actual sibling modules, not their generated relay wrappers.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from run_benchmark import sha256
-from run_paper_minimal import run
 
 WORKSPACE = Path(__file__).resolve().parents[3]
 SIM = WORKSPACE/'src/mid360_multi_uav_sim'
@@ -19,6 +23,28 @@ RUNNER = Path(__file__).with_name('run_benchmark.py')
 sys.path.insert(0, str(SIM/'scripts'))
 from audit_four_scene_source import audit
 
+
+def run(command, dry_run):
+    print(" ".join(map(str, command)), flush=True)
+    if dry_run:
+        return
+    process = subprocess.Popen(list(map(str, command)), cwd=WORKSPACE)
+    try:
+        return_code = process.wait()
+    except KeyboardInterrupt:
+        process.send_signal(signal.SIGINT)
+        try:
+            process.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+        raise
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, command)
 
 def require_accepted_source(root, name, report):
     if report['status'] == 'PASS':
@@ -145,7 +171,7 @@ def write_report(root, methods=METHODS):
              f'TP/FP/FN、IDSW/Frag 使用 {MAIN_THRESHOLD_M:g} m 匹配；'+
              ('HOTA 使用既有 TrackEval 3D-pos 协议。' if COMPUTE_HOTA else '本批次暂停 HOTA 计算，表内以 — 表示，非零分。')+
              '1 m 及其他敏感性指标保存在各运行 metrics.json 中。',
-             '本版按源扫描起点选择评分帧；以采集偏移得到扫描终点，各方法状态按 last_prediction 向前对齐到同一终点，真值按里程计插值。覆盖率按 source_header 精确对应，缺帧不再由邻近帧补齐；本版与旧时间口径数值不能直接混用。',
+             '评分网格由源扫描及采集偏移确定；AeroCOVER使用扫描终点状态，VoFOD按真实状态时刻与发布顺序选择合法完整快照，同刻去重、不回填历史状态。真值按里程计插值；具体口径见各metrics.json。',
              'AeroCOVER runtime 包含输入整理、核心检测与内部跟踪，不含输出发布；VoFOD 为检测主体 total_ms，在 publishOutputs 前结束，不含输出构建/发布、异步 ray worker 和外部 tracker。两者计时边界不同，均不是端到端耗时，也不乘回放倍率。', '',
              '| 场景 | 方法 | HOTA | TP/FP/FN | IDSW/Frag | 位置 RMSE/m | mean/p95 ms | ready | 计时帧/输入帧 | 回放倍率 |',
              '|---|---|---:|---|---|---:|---|---|---|---:|']
