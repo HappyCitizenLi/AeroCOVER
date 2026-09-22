@@ -673,7 +673,7 @@ cd /home/uav/lyk
   --algorithm AeroCOVER-Mid360 \
   --config results/retained_experiments/configs/AeroCOVER-V8_OPEN_AeroCOVER-Mid360.yaml \
   --require-source-manifest --replay-rate 1.0 \
-  --output /media/uav/SU710/NEW_OPEN_AEROCOVER_RUN
+  --output /data/lyk/NEW_OPEN_AEROCOVER_RUN
 
 /usr/bin/python3 src/soft_vofod_evaluation/scripts/run_benchmark.py replay \
   --source results/retained_experiments/sources/OFFICE/source.bag \
@@ -681,7 +681,7 @@ cd /home/uav/lyk
   --algorithm VoFOD-OS1 \
   --config results/retained_experiments/configs/V15_OFFICE_VoFOD-OS1.yaml \
   --require-source-manifest --replay-rate 0.15 \
-  --output /media/uav/SU710/NEW_OFFICE_VOFOD_RUN
+  --output /data/lyk/NEW_OFFICE_VOFOD_RUN
 ```
 
 清理后的各实验replay.py是保留结果校验/报告兼容入口，不再依赖已删除V10，也不负责自动重跑；真正的新回放使用上述run_benchmark.py并指定新目录。历史专用矩阵脚本已从活动源码清理，当前四场景自动入口为run_four_scene_suite.py。

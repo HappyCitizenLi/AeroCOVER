@@ -14,85 +14,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/run_manifest.json",
           "size": 2780,
           "mtime_ns": 1789325436840000000,
           "sha256": "248dc9b3ea20745ca32db54fc40a21161ec7f11e5d3482eb22602fae2c0c6126"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/algorithm.log",
           "size": 4501,
           "mtime_ns": 1789325241290000000,
           "sha256": "6683eb44914f5d0423a1bcbb3108da57668036ffda643ab4e719069cc9bbfb45"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/resource.txt",
           "size": 855,
           "mtime_ns": 1789325241410000000,
           "sha256": "a369f12d882a768bca1a983c0749286fddfb8502447059485d374fe1ec08aae8"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/recorder.log",
           "size": 460,
           "mtime_ns": 1789325240990000000,
           "sha256": "871add263a5ab0fb23081d15bd23f516a2c5aea2572783280e8aebe7db7e6f0c"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/aerocover_candidates.csv",
           "size": 253,
           "mtime_ns": 1789325435680000000,
           "sha256": "c4f9dad3f3202c201b9af5635725722829059381009e2476caae69f9cd303d03"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/aerocover_births.csv",
           "size": 180,
           "mtime_ns": 1789325435680000000,
           "sha256": "ed9fb384bad23db3b3436d26c0cebffc55e9d70cd379cbdd13c3ebc5a220d14f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/metrics.json",
           "size": 23618,
           "mtime_ns": 1789325435680000000,
           "sha256": "f0138f6d5a47919e69e9f988686444f233052e01df807533e8dc266bbfe722da"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789325435680000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/metrics.csv",
           "size": 38501,
           "mtime_ns": 1789325435680000000,
           "sha256": "d62b97b48d5986a46466cf5446049f07acc2d85d4f7bfc797fd1cd9876b505eb"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/timing.csv",
           "size": 46992,
           "mtime_ns": 1789325435680000000,
           "sha256": "6cdf91df3108d97147f12de664c67e4624ae676528888ca3cb4e9a81fd39e9c1"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/track_timeseries.csv",
           "size": 231346,
           "mtime_ns": 1789325435690000000,
           "sha256": "552e697824240f3691b6bf63046e30c6935e986a4e9d4a3ce5ef61d11b437e56"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/per_target_metrics.csv",
           "size": 703,
           "mtime_ns": 1789325435690000000,
           "sha256": "c8840799dd6e5430a2523ced43790c5c7f871c67751a8c8705f18bf67bfc62ed"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/tracking_timeline.csv",
           "size": 311024,
           "mtime_ns": 1789325435700000000,
           "sha256": "fb5dc1b1b9056d1c89b4d231e48842a1c54da85c10d3651be01903830dce6bbf"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-Mid360/diagnostics_timeseries.csv",
           "size": 573503,
           "mtime_ns": 1789325435720000000,
           "sha256": "8ed225b013871b8df67c2f29059afe496c06f6522dc3a225d11eae9fb95e5cf6"
@@ -113,85 +113,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/run_manifest.json",
           "size": 2775,
           "mtime_ns": 1789317450610000000,
           "sha256": "67c7769ecb1571833551db2be807a247b00ab9c779eba001c56ad38463f62eb6"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/algorithm.log",
           "size": 6715,
           "mtime_ns": 1789317337520000000,
           "sha256": "0429fe680f92036797158a1c0b9deff6be541c4b76d4887a154afa19d34f4887"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/resource.txt",
           "size": 868,
           "mtime_ns": 1789317337640000000,
           "sha256": "ebe8537b7b1f8b4c152ffcd3a7e8f05e48131645d8e1ff1b83ca9edfa322f860"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/recorder.log",
           "size": 469,
           "mtime_ns": 1789317337130000000,
           "sha256": "4dca92df94379cd4720ea821cd92cca48fcc7a064d198ed52e8a6d31589dd62b"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/aerocover_candidates.csv",
           "size": 253,
           "mtime_ns": 1789317448230000000,
           "sha256": "c4f9dad3f3202c201b9af5635725722829059381009e2476caae69f9cd303d03"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/aerocover_births.csv",
           "size": 180,
           "mtime_ns": 1789317448230000000,
           "sha256": "ed9fb384bad23db3b3436d26c0cebffc55e9d70cd379cbdd13c3ebc5a220d14f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/metrics.json",
           "size": 23708,
           "mtime_ns": 1789317448230000000,
           "sha256": "d2e1b1237a9721c1d148eb46995ca09a9131ddf5185ef1c2d4621991dd2a1043"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789317448230000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/metrics.csv",
           "size": 38591,
           "mtime_ns": 1789317448230000000,
           "sha256": "6b1033e68c1b9add13ee8bc9226e4b394702c724a83a1c6ebee17420882d9977"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/timing.csv",
           "size": 39558,
           "mtime_ns": 1789317448230000000,
           "sha256": "9e97aceeafcee9fe68768f5e5ea90b91ec642e3b9363a1ced7d5bb75bbfc6b51"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/track_timeseries.csv",
           "size": 214472,
           "mtime_ns": 1789317448240000000,
           "sha256": "46dec136ecd7bcafb1b20bca86bb9daff1a8e8b11e7842a824ae46a641e27b45"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/per_target_metrics.csv",
           "size": 697,
           "mtime_ns": 1789317448240000000,
           "sha256": "e5f7a405a3d42b0936cd99359e4475c9451eb9ccad0bfb7e1b21989b7f261e4f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/tracking_timeline.csv",
           "size": 324832,
           "mtime_ns": 1789317448250000000,
           "sha256": "607683c62a90b441538a9ecc8f27b7a78d43b3ff86ea45c9620eefb0a2c147ff"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/FOREST/AeroCOVER-OS1/diagnostics_timeseries.csv",
           "size": 640034,
           "mtime_ns": 1789317448280000000,
           "sha256": "eab3344bae4a17393204827547afe0896eadced92ed1c5325f4770779cd09ed0"
@@ -212,85 +212,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/run_manifest.json",
           "size": 2718,
           "mtime_ns": 1789319359020000000,
           "sha256": "c94292bf77a44a7bdbc9ed534c0e5218376b6a0b724f06a36adf63b1689723b8"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/algorithm.log",
           "size": 4501,
           "mtime_ns": 1789319314560000000,
           "sha256": "ace8dd0b76fdb90b1473a42b0dbc2549d2b0eb4fa64a7363582dc312bea4742f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/resource.txt",
           "size": 854,
           "mtime_ns": 1789319314680000000,
           "sha256": "64f40f56e856b12ee790c96a0e196b042362480ea5941073d00732956c326f6c"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/recorder.log",
           "size": 456,
           "mtime_ns": 1789319314160000000,
           "sha256": "bf920b9b2abce153a42a5a566f2c08a7639f44b4b987a32f3e4ca6f459a8f459"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/aerocover_candidates.csv",
           "size": 2977,
           "mtime_ns": 1789319358180000000,
           "sha256": "d89492acb47f815ee9ce84be5c6cc45c3e1696447f76c3e8106f97ed974176ca"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/aerocover_births.csv",
           "size": 905,
           "mtime_ns": 1789319358180000000,
           "sha256": "52d04bb1601139f467858f7b612208e057521c2af220ff5488e322fad3cfffd2"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/metrics.json",
           "size": 27211,
           "mtime_ns": 1789319358180000000,
           "sha256": "79ffed28c5ab19f66b40555e0adc0d5083241b585a05e6fd74ba361dce797072"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/los_ignored_timeseries.csv",
           "size": 9035,
           "mtime_ns": 1789319358180000000,
           "sha256": "89f3e8fb874733d0309a5c1a013850b43b88017bdb6494dd6a2ccc86a694ddb5"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/metrics.csv",
           "size": 42467,
           "mtime_ns": 1789319358180000000,
           "sha256": "00bb23d47c96299441ca37eab6025bdba5e71a88067a290d28ff6cef3b763898"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/timing.csv",
           "size": 12270,
           "mtime_ns": 1789319358180000000,
           "sha256": "0331116568733cf5ad90aeb22ff313af51b93d49f4589d7f6b19ec0f3c151c71"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/track_timeseries.csv",
           "size": 147321,
           "mtime_ns": 1789319358190000000,
           "sha256": "f04cb7428ba93935d5e2544b9322a5f99b5af636875bb11d06cf5a017451bc9f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/per_target_metrics.csv",
           "size": 1096,
           "mtime_ns": 1789319358190000000,
           "sha256": "643f67305fae72cdacc3c239422c71be070365cfbda02dacb51f53c619815b13"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/tracking_timeline.csv",
           "size": 209770,
           "mtime_ns": 1789319358200000000,
           "sha256": "2e9a352dc21f5e354296d8a3ea5d4fe05dc5975af8c668e835fae8632d98b505"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-Mid360/diagnostics_timeseries.csv",
           "size": 162215,
           "mtime_ns": 1789319358200000000,
           "sha256": "76ecbb313137b5bd8df8158a0d8a9cdc01fde02532060da6e672f9f5c89b8383"
@@ -311,85 +311,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/run_manifest.json",
           "size": 2712,
           "mtime_ns": 1789319221710000000,
           "sha256": "a92eb4c7f33ad707ac2109723433e65fe25a171044df1e100ea38f346eb4f63b"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/algorithm.log",
           "size": 6987,
           "mtime_ns": 1789319202640000000,
           "sha256": "29b3682c854b249c67ed3e1b13a791e9afbc63b871a7bd3236a3dd061df9ad27"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/resource.txt",
           "size": 864,
           "mtime_ns": 1789319202770000000,
           "sha256": "79fb3beda6e8da9eb7760ec15b20331e3d3ce79c47e1ed515de73a4c989821a4"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/recorder.log",
           "size": 465,
           "mtime_ns": 1789319202070000000,
           "sha256": "7c78870f7ecb7b735953aaa2fe4e8dd1ce3fadf7fb370802a24929de0a43cef5"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/aerocover_candidates.csv",
           "size": 1571,
           "mtime_ns": 1789319220370000000,
           "sha256": "0147de020f7c648ab29a883aa448f1e40a16d8756da9214c7fe34902e0eff6eb"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/aerocover_births.csv",
           "size": 697,
           "mtime_ns": 1789319220370000000,
           "sha256": "74755173a1cd3c854268e5e39abef24cb7ac118bc1a49b1c7edb420cbf477191"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/metrics.json",
           "size": 27340,
           "mtime_ns": 1789319220370000000,
           "sha256": "a7c75eed326cf261d9d3ffd7597fc9ccf25bb3f9c426d4a658e15994838386ce"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/los_ignored_timeseries.csv",
           "size": 8408,
           "mtime_ns": 1789319220370000000,
           "sha256": "aaa4bc4d2c79fdf77b0847cf4030d37a536665c55a422a05564eecae37ef1a55"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/metrics.csv",
           "size": 42604,
           "mtime_ns": 1789319220370000000,
           "sha256": "aebb730d1f09ed81b0f852b50aec96ffb5674c8bd3deb42df6ae30f71db5ab01"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/timing.csv",
           "size": 10866,
           "mtime_ns": 1789319220370000000,
           "sha256": "51f5de1624fc0e7131314556fce9facbe9ef9d25a1340e420b71b10b4527fea4"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/track_timeseries.csv",
           "size": 148817,
           "mtime_ns": 1789319220370000000,
           "sha256": "199e393e5250f3ba7f423d8bf66206005970865904322c818667bbc6736c3bc9"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/per_target_metrics.csv",
           "size": 1022,
           "mtime_ns": 1789319220370000000,
           "sha256": "a4716b38addd084b59f9d4d6d8a02e9a950d65f6df9088c4ba6e5ce5f01e47e8"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/tracking_timeline.csv",
           "size": 225124,
           "mtime_ns": 1789319220380000000,
           "sha256": "7e6d573d6befec4a33eb60a83fe82436511f577e6266f2042dbe5041418cd463"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/MT/AeroCOVER-OS1/diagnostics_timeseries.csv",
           "size": 177528,
           "mtime_ns": 1789319220390000000,
           "sha256": "47eabd4f2d87c418329494c5e01cb612aea733822f5c031b028ee00cd0b26613"
@@ -410,85 +410,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/run_manifest.json",
           "size": 2780,
           "mtime_ns": 1789321223280000000,
           "sha256": "a5886db7ce7184a7dc956042241f3bd34b3c0e378112bc0d315c5848f920bd97"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/algorithm.log",
           "size": 4501,
           "mtime_ns": 1789321061380000000,
           "sha256": "4720d319410db6d00a67c263f5411392c8d376edd3018f6a08ed1c19f1f82742"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/resource.txt",
           "size": 854,
           "mtime_ns": 1789321061510000000,
           "sha256": "2bc4ba123c065591c4cf14cd93fdc22fcdd0bb1a5257bc73d9bf365aa243e329"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/recorder.log",
           "size": 460,
           "mtime_ns": 1789321061080000000,
           "sha256": "f08a81039fb078a99ebeff2612771b44b63d9295d1cd67fb841808c600ddf9df"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/aerocover_candidates.csv",
           "size": 1192,
           "mtime_ns": 1789321222160000000,
           "sha256": "b28d2eb22f0e8c0a01c0508a0d4b2a9355f80aac278577e71cc5d2bbfcc913b2"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/aerocover_births.csv",
           "size": 180,
           "mtime_ns": 1789321222160000000,
           "sha256": "ed9fb384bad23db3b3436d26c0cebffc55e9d70cd379cbdd13c3ebc5a220d14f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/metrics.json",
           "size": 23847,
           "mtime_ns": 1789321222160000000,
           "sha256": "0abe8787fed1261c89ff24e99ce366ede88d305ef5b574649991689e780a3ec7"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789321222160000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/metrics.csv",
           "size": 39268,
           "mtime_ns": 1789321222160000000,
           "sha256": "2efb92950303f6ea22717c6f0e1c1280a2df3d0912170add6b2b1167f5d14006"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/timing.csv",
           "size": 38130,
           "mtime_ns": 1789321222160000000,
           "sha256": "a1e3e21ab1cdcbb6a103ca8c7007d983fb783a40e9fd2b4908961aa9a39cc06b"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/track_timeseries.csv",
           "size": 188486,
           "mtime_ns": 1789321222170000000,
           "sha256": "90b9b234ce3e36c199eb1b19e67cc04bcb0a28aa692e82d5ce1e41a4b4121e0a"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/per_target_metrics.csv",
           "size": 703,
           "mtime_ns": 1789321222170000000,
           "sha256": "b30557442de4a8c3d71d851c55d2d99627391575236e5e5bb4ea8038e96023e5"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/tracking_timeline.csv",
           "size": 256232,
           "mtime_ns": 1789321222180000000,
           "sha256": "ce00ed6029d02e6019ab68d97372650c5d86c82ebff7aeee469d23944fbd6119"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-Mid360/diagnostics_timeseries.csv",
           "size": 466079,
           "mtime_ns": 1789321222190000000,
           "sha256": "e2408faa4abf146652ad862e9973d50bebdb48409de22e867ef6e2c143f9c4c6"
@@ -509,85 +509,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/run_manifest.json",
           "size": 2775,
           "mtime_ns": 1789320866020000000,
           "sha256": "dde7e435ebb3541c00d35f0333ea69f8cd9d94946172eb7e0e8bf02e47291539"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/algorithm.log",
           "size": 6715,
           "mtime_ns": 1789320753940000000,
           "sha256": "2bd3927489921e08aacead75130a48fcd2be410e607837a51cb03130ce0351c0"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/resource.txt",
           "size": 865,
           "mtime_ns": 1789320754070000000,
           "sha256": "b081aa1a4b0b9b22ec0720379fe1a847c881d7e9ee5568491c4023cb5f89803d"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/recorder.log",
           "size": 469,
           "mtime_ns": 1789320753730000000,
           "sha256": "55b5fd7fe89c7d3e69533674ae80f2b66be71dbf8dc02225508505a7b09f33c3"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/aerocover_candidates.csv",
           "size": 253,
           "mtime_ns": 1789320863740000000,
           "sha256": "c4f9dad3f3202c201b9af5635725722829059381009e2476caae69f9cd303d03"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/aerocover_births.csv",
           "size": 180,
           "mtime_ns": 1789320863740000000,
           "sha256": "ed9fb384bad23db3b3436d26c0cebffc55e9d70cd379cbdd13c3ebc5a220d14f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/metrics.json",
           "size": 23467,
           "mtime_ns": 1789320863740000000,
           "sha256": "917c5cdf72ee1894ae4474b77f9c9a7c82b9cbaac349f167f3bba4fa2cce1f1c"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789320863740000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/metrics.csv",
           "size": 38350,
           "mtime_ns": 1789320863740000000,
           "sha256": "4b38dc6e597d78abab09ba7f0b45975b3bfa573748bfc431104645421204e29d"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/timing.csv",
           "size": 30089,
           "mtime_ns": 1789320863740000000,
           "sha256": "942ddf55e4f77689db1f8c9b436e6fe96ef27de33405aff6d33354ea4de65e06"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/track_timeseries.csv",
           "size": 165407,
           "mtime_ns": 1789320863750000000,
           "sha256": "e5f168c04ea19e2599516d0558fda6a84b5a28d18fb117ed07e071fbea5caefb"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/per_target_metrics.csv",
           "size": 697,
           "mtime_ns": 1789320863750000000,
           "sha256": "3ca594f199a17bf233705939cf59303cc12db5029eaefb672e3a71d5b23c031d"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/tracking_timeline.csv",
           "size": 252069,
           "mtime_ns": 1789320863750000000,
           "sha256": "eb375a651c7b95c8ef61dce5fb0887e25cba14216899a83d11cd816b26c71365"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OFFICE/AeroCOVER-OS1/diagnostics_timeseries.csv",
           "size": 473389,
           "mtime_ns": 1789320863770000000,
           "sha256": "5b342814c3846e37ae861767d1cbf318233525726496ac9fd22f5001eb585d64"
@@ -608,85 +608,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/run_manifest.json",
           "size": 2804,
           "mtime_ns": 1789317694610000000,
           "sha256": "d571adf9120b37ff191066dca6900f7a6c667267feb753c850def1344327df3a"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/algorithm.log",
           "size": 4501,
           "mtime_ns": 1789317601350000000,
           "sha256": "23b166bd1dc847eef9fae6553e07aba253e24bd476e63a376a3e7fc8d12d6215"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/resource.txt",
           "size": 857,
           "mtime_ns": 1789317601470000000,
           "sha256": "89d54edb0d02ab8486f85a4c4725027c65b2b4a1ed8d3ef9631119d1256cebd0"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/recorder.log",
           "size": 458,
           "mtime_ns": 1789317600890000000,
           "sha256": "8f3bbc0605543aeeb9c700d96924fb8edb24d3700b6be5247874ca3ab483ca04"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/aerocover_candidates.csv",
           "size": 253,
           "mtime_ns": 1789317693610000000,
           "sha256": "c4f9dad3f3202c201b9af5635725722829059381009e2476caae69f9cd303d03"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/aerocover_births.csv",
           "size": 180,
           "mtime_ns": 1789317693610000000,
           "sha256": "ed9fb384bad23db3b3436d26c0cebffc55e9d70cd379cbdd13c3ebc5a220d14f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/metrics.json",
           "size": 24942,
           "mtime_ns": 1789317693610000000,
           "sha256": "faf41b49e8e26f813e4801cb82ae26f066ede99d2f7a9fffc3e1dc50c83f264d"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789317693610000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/metrics.csv",
           "size": 39826,
           "mtime_ns": 1789317693610000000,
           "sha256": "45070626eddf17806a9c5aff169e79a54ea78d5c895cebcfa5d1ec9926ad28cb"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/timing.csv",
           "size": 25135,
           "mtime_ns": 1789317693610000000,
           "sha256": "6ac2a82e80cef573d65aae0dd0aea9ec2744030ee466649ff7b22bfca5e2482e"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/track_timeseries.csv",
           "size": 246093,
           "mtime_ns": 1789317693620000000,
           "sha256": "41f44f6bffcbeae75a319b051cf8efe330567519c4871e1603deadf5926200ae"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/per_target_metrics.csv",
           "size": 822,
           "mtime_ns": 1789317693620000000,
           "sha256": "eee48a458a1c7fbb898dd028dfa73b51489c2de5ff404df26185c9d8250b5c4d"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/tracking_timeline.csv",
           "size": 320794,
           "mtime_ns": 1789317693630000000,
           "sha256": "1ae031dc818f7d02a9a7a82c34d68bfcb1d010708beaff4c9cb72572871d2290"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-Mid360/diagnostics_timeseries.csv",
           "size": 295525,
           "mtime_ns": 1789317693640000000,
           "sha256": "cda2fa1a509be14cbe18eeca190de1e6ff687b5fa83c7a6c2eba00b67667d49f"
@@ -707,85 +707,85 @@
       "output_bag_existed": false,
       "inventory": [
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/run_manifest.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/run_manifest.json",
           "size": 2799,
           "mtime_ns": 1789316559730000000,
           "sha256": "5533ada4df0ff6091c01b22aaff7740cc6517502299596e4ce9cbd8ffa89bad6"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/algorithm.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/algorithm.log",
           "size": 6993,
           "mtime_ns": 1789316523930000000,
           "sha256": "faf10fd48d5be07dd147f52e6f7b74991467367c1a5c688cd4b367329c60a966"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/resource.txt",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/resource.txt",
           "size": 866,
           "mtime_ns": 1789316524070000000,
           "sha256": "ecf7f024855c23d8cdd1c69b158c0043b02dc94a6449b6c53028ae77c026ac43"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/recorder.log",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/recorder.log",
           "size": 467,
           "mtime_ns": 1789316523470000000,
           "sha256": "14334bc4f41b8a9eeb645aa19b2094bf783fb821c5db43694515a2b7547b5a6e"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/aerocover_candidates.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/aerocover_candidates.csv",
           "size": 253,
           "mtime_ns": 1789316557930000000,
           "sha256": "c4f9dad3f3202c201b9af5635725722829059381009e2476caae69f9cd303d03"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/aerocover_births.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/aerocover_births.csv",
           "size": 180,
           "mtime_ns": 1789316557930000000,
           "sha256": "ed9fb384bad23db3b3436d26c0cebffc55e9d70cd379cbdd13c3ebc5a220d14f"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/metrics.json",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/metrics.json",
           "size": 25111,
           "mtime_ns": 1789316557930000000,
           "sha256": "f678718b94da7343215657782928ace831b8360d73e47283fc10a288efa48b50"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789316557930000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/metrics.csv",
           "size": 39987,
           "mtime_ns": 1789316557930000000,
           "sha256": "4c7d210efef44b38d2c04b73487e144c41d4151a8b6f01d38f02988d57993830"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/timing.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/timing.csv",
           "size": 21085,
           "mtime_ns": 1789316557930000000,
           "sha256": "61b980dee76ee301a078281f49e39d621e1f21eecee4862c776d5d769afc2402"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/track_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/track_timeseries.csv",
           "size": 224886,
           "mtime_ns": 1789316557930000000,
           "sha256": "7f62c12967cebd27d115223d8ab6d5ee41e7026c08575d2f97a7aacfe8eaac78"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/per_target_metrics.csv",
           "size": 810,
           "mtime_ns": 1789316557930000000,
           "sha256": "db1dfbc3aa9e0a89e6bcda07dafbd4d6facbb57e0bf020c05f47f7c5c6ed4bda"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/tracking_timeline.csv",
           "size": 343551,
           "mtime_ns": 1789316557950000000,
           "sha256": "da1d40a7e13a2a7109e5a7ec9116d40f84dc1b741851cac8143bd03a32e565a1"
         },
         {
-          "path": "/media/uav/SU710/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/aerocover_twenty_v8/runs/OPEN/AeroCOVER-OS1/diagnostics_timeseries.csv",
           "size": 345207,
           "mtime_ns": 1789316557960000000,
           "sha256": "54b49944638784e9e9d8d84ede936e4150ea5d41779263b82c4e25966491ef87"
@@ -806,85 +806,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/run_manifest.json",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/run_manifest.json",
           "size": 3335,
           "mtime_ns": 1789374458990000000,
           "sha256": "738a0a8215d332b1402819edb10ec7efba3eecd6ea597dc629501a61c2b519ee"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/algorithm.log",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/algorithm.log",
           "size": 7023,
           "mtime_ns": 1789374279890000000,
           "sha256": "b3c4e4aa306a64ae0fe87f07df5b6f8a5ed3553f5817177dcddba11a3add639c"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/resource.txt",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/resource.txt",
           "size": 1045,
           "mtime_ns": 1789374280020000000,
           "sha256": "0e4393d05caacedf43d9012745f77394458dde80a94e8e0b01dc088926bfbf5c"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/recorder.log",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/recorder.log",
           "size": 844,
           "mtime_ns": 1789374279410000000,
           "sha256": "e9a2148172f02e3e3f11230c122e027ad3513034ef1383134299fd5a877b8c00"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/output.bag",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/output.bag",
           "size": 3750654984,
           "mtime_ns": 1789374279400000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/metrics.json",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/metrics.json",
           "size": 26792,
           "mtime_ns": 1789374447430000000,
           "sha256": "aecd2d384a924e9cc9cc335ac2885a60f2ce0a5c26a3782cbf6e3a595902b93d"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789374447430000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/publication_selection.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/publication_selection.csv",
           "size": 306219,
           "mtime_ns": 1789374447450000000,
           "sha256": "3d2af8fbd50983f3f4f1b9b7b3763a732347692a060f5e85e9cb259588a166fd"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/metrics.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/metrics.csv",
           "size": 40396,
           "mtime_ns": 1789374447450000000,
           "sha256": "91cf0d9fe7e38ced4c6dad6fa890cfa22c65af594db080045d322ca8fdba63e5"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/timing.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/timing.csv",
           "size": 30868,
           "mtime_ns": 1789374447450000000,
           "sha256": "4e287374b5dccc433555369ae0136eeb016085be5dd100a1cb7cce81863529f1"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/track_timeseries.csv",
           "size": 1210117,
           "mtime_ns": 1789374447490000000,
           "sha256": "c9d69cc4f577ebefa1da42588cd029bd8a96969c9c36fe89df3f20a323d5e311"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/per_target_metrics.csv",
           "size": 921,
           "mtime_ns": 1789374447490000000,
           "sha256": "8fe625d84e54226e57c16eaeb1cb5be954ae7f7c99c9c1a1e8869cb98bb76295"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/tracking_timeline.csv",
           "size": 307593,
           "mtime_ns": 1789374447490000000,
           "sha256": "4c35379836378cc76e52967b9d5e885b1df847a9162836029a84cdc1cc7dc601"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_second_v13/runs/OPEN/VoFOD-Mid360/diagnostics_timeseries.csv",
           "size": 435333,
           "mtime_ns": 1789374447510000000,
           "sha256": "5d0fdba61ad527156a7755a429a076f17e7d7ce035d289ce5e63e6775309e31f"
@@ -905,85 +905,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/run_manifest.json",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/run_manifest.json",
           "size": 3333,
           "mtime_ns": 1789375431660000000,
           "sha256": "42c6bd94f1e1340b8eb1b51049fb58fa0827f9a565a06759847c8b32f153b46e"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/algorithm.log",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/algorithm.log",
           "size": 6891,
           "mtime_ns": 1789375305560000000,
           "sha256": "d296ec285abf9c36d39b7bf917ec7cf462a6703d51b85c458419dc165015783a"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/resource.txt",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/resource.txt",
           "size": 1044,
           "mtime_ns": 1789375305690000000,
           "sha256": "ee41fa9d85b49b1637e9d6fe132293d9802324a2ce5466e54baf88420b8e400e"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/recorder.log",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/recorder.log",
           "size": 843,
           "mtime_ns": 1789375305310000000,
           "sha256": "66c81f843d612f3e68f2c411405f55112db09cc0c2b57dbe6bc2c566de78947f"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/output.bag",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/output.bag",
           "size": 3992591848,
           "mtime_ns": 1789375305300000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.json",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.json",
           "size": 26640,
           "mtime_ns": 1789375428400000000,
           "sha256": "470b29e5adc6da8292d42f825809cbcef25c5b8edd8225b992a173ad8349445c"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789375428400000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/publication_selection.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/publication_selection.csv",
           "size": 130645,
           "mtime_ns": 1789375428400000000,
           "sha256": "5b9c2387d275fd8421d9e1194722e8df818e465365498f1c0bd2830ba746ade2"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.csv",
           "size": 40244,
           "mtime_ns": 1789375428410000000,
           "sha256": "a35b614370e411510d2a089afb7de09d3afc9f72a73b3339f2d9392aa853d602"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/timing.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/timing.csv",
           "size": 30868,
           "mtime_ns": 1789375428410000000,
           "sha256": "b928e82751fc79482b9ef1498326041c17c431f0d2f4793e4e7faa6320347aaa"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/track_timeseries.csv",
           "size": 250600,
           "mtime_ns": 1789375428420000000,
           "sha256": "d718a3727b1f2a792ac1a7f66bd0d65421ba8a89d57929929af1d4d8ac940a51"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/per_target_metrics.csv",
           "size": 918,
           "mtime_ns": 1789375428420000000,
           "sha256": "96524387d12cff0da9921b0eeb41cf114a919d3c46b2c3007ca4cfe24d1403c2"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/tracking_timeline.csv",
           "size": 306315,
           "mtime_ns": 1789375428420000000,
           "sha256": "255142b415c68963122d2e2ce51234b307a7cad03fcd8289d57f97040d84e8f5"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/diagnostics_timeseries.csv",
           "size": 434895,
           "mtime_ns": 1789375428440000000,
           "sha256": "6fe1ebcb52a7a8d399fa43169fa0ba71cc40a09e1f8be5329027f002dd7d8d7a"
@@ -1004,85 +1004,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/run_manifest.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/run_manifest.json",
           "size": 3083,
           "mtime_ns": 1789381819470000000,
           "sha256": "f78dbe5fa4e58fdc7811edfcf1f027d71881db2baa1e914e783c37cf4e7f2ba4"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/algorithm.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/algorithm.log",
           "size": 9710,
           "mtime_ns": 1789381546970000000,
           "sha256": "28e4912bcb6a1b3e23e7d9805d20a1d6ec2d2b5c2c99b012b73ba8c3267b3626"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/resource.txt",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/resource.txt",
           "size": 955,
           "mtime_ns": 1789381547100000000,
           "sha256": "c36455591e55b73a1ffa8ec7fa156b52dd6c3b999eea365c6d99db15dc85c651"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/recorder.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/recorder.log",
           "size": 844,
           "mtime_ns": 1789381546340000000,
           "sha256": "6c22206b1e028cac89f1437d71fc35e51585aef314087a386d35077eaa1f8739"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/output.bag",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/output.bag",
           "size": 8432577222,
           "mtime_ns": 1789381546330000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/metrics.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/metrics.json",
           "size": 25094,
           "mtime_ns": 1789381812220000000,
           "sha256": "e6f502bebf7bcd534224d484879fd3057ddf5195fefc7d43c109a67855957f4e"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789381812220000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/publication_selection.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/publication_selection.csv",
           "size": 228297,
           "mtime_ns": 1789381812230000000,
           "sha256": "b6475b48f888d6ddc6fef775bdbc7097b7602a5272b4163073f3080a81d3ea00"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/metrics.csv",
           "size": 38659,
           "mtime_ns": 1789381812230000000,
           "sha256": "d785511ba92169728210ebb2c64440074c0661420122c0d3c36c5bbfff63e843"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/timing.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/timing.csv",
           "size": 57884,
           "mtime_ns": 1789381812230000000,
           "sha256": "9897771e2dd2752337b6b3d8cb95a9644cfa8d84969f363fd480d525c0346498"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/track_timeseries.csv",
           "size": 2365043,
           "mtime_ns": 1789381812300000000,
           "sha256": "ed684fa9d0948789e600c0e14dfbbce8d31f0748aebdf48b50cc0041586435ef"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/per_target_metrics.csv",
           "size": 751,
           "mtime_ns": 1789381812300000000,
           "sha256": "fed595384da8ef471466747ed3d1ce68661d0ac89c0ed94cb4efc02f96f4325e"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/tracking_timeline.csv",
           "size": 307068,
           "mtime_ns": 1789381812310000000,
           "sha256": "1db6738f06d2bdb9d258b421e02338b4f88556a734d39b799865c051ba466991"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-Mid360/diagnostics_timeseries.csv",
           "size": 858374,
           "mtime_ns": 1789381812340000000,
           "sha256": "544f1ceeb93946e66dbc39ffe073d2b6ea99e7b4f03737aa5c81641976e957c4"
@@ -1103,85 +1103,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/run_manifest.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/run_manifest.json",
           "size": 2986,
           "mtime_ns": 1789380767940000000,
           "sha256": "f75e08779c607a9d68f262d7df05de526e711c690c8a5d99d4c3ae4dfbe0f9f4"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/algorithm.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/algorithm.log",
           "size": 23127,
           "mtime_ns": 1789380734290000000,
           "sha256": "e10d7d36ee81e4091922a5358af4e8a7ba21ba5850ba1de98262c0ca9e64d322"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/resource.txt",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/resource.txt",
           "size": 883,
           "mtime_ns": 1789380734410000000,
           "sha256": "29258bb3405c3abae9d44c1f0b5c725fe5ffa2ac0e76863d7d57fcc285d29f60"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/recorder.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/recorder.log",
           "size": 682,
           "mtime_ns": 1789380733940000000,
           "sha256": "1dbcb0ff59a8cf66c0a8dba18e1cca6d9fa61c7eccfb0a0f529f20a5582f01b8"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/output.bag",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/output.bag",
           "size": 163078317,
           "mtime_ns": 1789380733940000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/metrics.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/metrics.json",
           "size": 25493,
           "mtime_ns": 1789380766690000000,
           "sha256": "d396740f3ec308311103a61c30e1e8c6c0ae29906957be6dbdc42de3f860238b"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789380766690000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/publication_selection.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/publication_selection.csv",
           "size": 194366,
           "mtime_ns": 1789380766700000000,
           "sha256": "dbc7b01e1e494df44aeaa90c6dac364e30b99e6307aa832d107d7b638a08cb85"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/metrics.csv",
           "size": 39062,
           "mtime_ns": 1789380766700000000,
           "sha256": "c598518229556f78661606115c0e77af28cf8fa263ef378e9ba89c31c9e7c559"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/timing.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/timing.csv",
           "size": 51559,
           "mtime_ns": 1789380766700000000,
           "sha256": "932878f7ccf1f9b6913831ec0d317def2ae959f61abc73442b993dbd8c3c8c96"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/track_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/track_timeseries.csv",
           "size": 237739,
           "mtime_ns": 1789380766710000000,
           "sha256": "e70c0757fbf07e24e206ca9a8e55cf1ee89c5d6e64a924bc9c11b8d4af074c26"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/per_target_metrics.csv",
           "size": 763,
           "mtime_ns": 1789380766710000000,
           "sha256": "57b2e9b7aaf11f1d2e8c632375e8e2c2542a2351fbb96e11e1d5624136db51e4"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/tracking_timeline.csv",
           "size": 294057,
           "mtime_ns": 1789380766720000000,
           "sha256": "466733b17abffdb613d27e549a3024af7b93d10c1c6e2cc41868cbfd60da445a"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/FOREST/VoFOD-OS1/diagnostics_timeseries.csv",
           "size": 917822,
           "mtime_ns": 1789380766750000000,
           "sha256": "673a89306ed5aa27d831f85665d6fd34d4ba77aa1633d7754657fe43ae46f66a"
@@ -1202,85 +1202,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/run_manifest.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/run_manifest.json",
           "size": 3238,
           "mtime_ns": 1789377319260000000,
           "sha256": "85950546cc2c9fa2b06cec28a6be1ff91b71f76b779f7c156c5c44d83b104699"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/algorithm.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/algorithm.log",
           "size": 7587,
           "mtime_ns": 1789377268320000000,
           "sha256": "42849efd678e9dce7366ba2895ff4a23b1d4ce5d015fac60e0d22f3a0ca8f5b7"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/resource.txt",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/resource.txt",
           "size": 1040,
           "mtime_ns": 1789377268450000000,
           "sha256": "3800e52b1b96f02b00372f750575f3dec519e8787a0de9005c5c186ebff45d9b"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/recorder.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/recorder.log",
           "size": 840,
           "mtime_ns": 1789377267970000000,
           "sha256": "2c4dc06c96013d866f2d10fce7a91a4a18555fd993ebc9981f61063d006fea36"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/output.bag",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/output.bag",
           "size": 339592984,
           "mtime_ns": 1789377267960000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/metrics.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/metrics.json",
           "size": 27707,
           "mtime_ns": 1789377318250000000,
           "sha256": "ff7bd83c5907f474645c05f54476535ec89c4aa15d2922ba2b809a36819427f3"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/los_ignored_timeseries.csv",
           "size": 9035,
           "mtime_ns": 1789377318250000000,
           "sha256": "89f3e8fb874733d0309a5c1a013850b43b88017bdb6494dd6a2ccc86a694ddb5"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/publication_selection.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/publication_selection.csv",
           "size": 86084,
           "mtime_ns": 1789377318250000000,
           "sha256": "c7b4b99d362d1edff2e7b7e32cba08550463585e469361a63da04ca364c0e3e9"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/metrics.csv",
           "size": 41107,
           "mtime_ns": 1789377318250000000,
           "sha256": "36f823ee0298ebc28b28a0549de1387cf6cb285f8f745e02fe974f1b6d7dc585"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/timing.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/timing.csv",
           "size": 15412,
           "mtime_ns": 1789377318250000000,
           "sha256": "d8efbec01bdcecac66a1a5b2f92ef6af6dd1903a7b1864df8fea96984b7693d4"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/track_timeseries.csv",
           "size": 170023,
           "mtime_ns": 1789377318260000000,
           "sha256": "62388b2aab3e3d18d903530f3d87b086f7d24dff747264fbc6d7916e8a3b7015"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/per_target_metrics.csv",
           "size": 1088,
           "mtime_ns": 1789377318260000000,
           "sha256": "bfbbb6d99dfce0c4dfb6fe6f0234b4a3b02e41208149f63e9c685504644ab4c5"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/tracking_timeline.csv",
           "size": 198637,
           "mtime_ns": 1789377318260000000,
           "sha256": "a78f30c6d63f01278b5271a0bf6a1e084e05ae5d66d086fd819c1f521f316907"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-Mid360/diagnostics_timeseries.csv",
           "size": 235207,
           "mtime_ns": 1789377318270000000,
           "sha256": "c94176583c8354e01071c3a42b55feca8b4e41648468a791d2e43611c34d3c84"
@@ -1301,85 +1301,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/run_manifest.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/run_manifest.json",
           "size": 3142,
           "mtime_ns": 1789377012030000000,
           "sha256": "5f08598c31da75d4be1f21d601f214dbad9fcf0e9df2f8a42385e157a135d91a"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/algorithm.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/algorithm.log",
           "size": 14244,
           "mtime_ns": 1789377001030000000,
           "sha256": "5f38fc361bebbc8b761238feeb81d2d779fe14bd0e26b8eea41821358f3d42d3"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/resource.txt",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/resource.txt",
           "size": 966,
           "mtime_ns": 1789377001160000000,
           "sha256": "19f659216cc12960a64f9a0752e54785f9dc968f70c0a92787402be5df80c9ae"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/recorder.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/recorder.log",
           "size": 678,
           "mtime_ns": 1789377000540000000,
           "sha256": "115daefe5de21fe9edb5597656bd0ce22cc5c7caa9d0ba8f36eaf7061dd58658"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/output.bag",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/output.bag",
           "size": 55369422,
           "mtime_ns": 1789377000540000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/metrics.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/metrics.json",
           "size": 27751,
           "mtime_ns": 1789377011120000000,
           "sha256": "14ab49351d6e6e023fc14a998b403e8b67d7fffe17a88c7780f9352dda1a3a3c"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/los_ignored_timeseries.csv",
           "size": 8408,
           "mtime_ns": 1789377011120000000,
           "sha256": "aaa4bc4d2c79fdf77b0847cf4030d37a536665c55a422a05564eecae37ef1a55"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/publication_selection.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/publication_selection.csv",
           "size": 76995,
           "mtime_ns": 1789377011120000000,
           "sha256": "6757a5f2ce67bfb19bcff9fbe80c693589830d512c103c47500a02fc67627a0d"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/metrics.csv",
           "size": 41155,
           "mtime_ns": 1789377011120000000,
           "sha256": "4b647aa4c023b4c323d162178d90f74ecde819c7d9ca859bcdaf79e126bf517d"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/timing.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/timing.csv",
           "size": 13867,
           "mtime_ns": 1789377011120000000,
           "sha256": "f4f4f2c46561d3ed2be3f036de21ca2e2c761c96a5427f320eb022ce86df9d22"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/track_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/track_timeseries.csv",
           "size": 144605,
           "mtime_ns": 1789377011130000000,
           "sha256": "204cda3c89ac14597ca82d8a548fbd4f1419889f144c1b389165758fd3ba5f0a"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/per_target_metrics.csv",
           "size": 1035,
           "mtime_ns": 1789377011130000000,
           "sha256": "5041519be6eb62368d82517c8992dfb0630145c6da3ac5565f7f6a8de77b69ee"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/tracking_timeline.csv",
           "size": 206569,
           "mtime_ns": 1789377011130000000,
           "sha256": "11b88b602d17be90fce2d19324844ef4a8b79c4ea3890ee24e42a5adcda44be4"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/MT/VoFOD-OS1/diagnostics_timeseries.csv",
           "size": 249734,
           "mtime_ns": 1789377011140000000,
           "sha256": "1819a1c01e7c7781806c13b0b0eec0acb171ee79d438bf75b9296fef3e13c092"
@@ -1400,85 +1400,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/run_manifest.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/run_manifest.json",
           "size": 3082,
           "mtime_ns": 1789379298690000000,
           "sha256": "83899c14e53aa5af0d5300d97db2fa6c913409290efd38e3536d288f42ec359e"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/algorithm.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/algorithm.log",
           "size": 7929,
           "mtime_ns": 1789379105740000000,
           "sha256": "1061c706bf9a5f5b3a2a5db36dd2a1f709f53841ef44880ca632e89a8d27c305"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/resource.txt",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/resource.txt",
           "size": 953,
           "mtime_ns": 1789379105870000000,
           "sha256": "b0e99d96957723c373d41d98c07753fe0d057a1134dc833feaa18aa44e7c2f1d"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/recorder.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/recorder.log",
           "size": 844,
           "mtime_ns": 1789379105330000000,
           "sha256": "c98c78a5c4fb3abdfb144146e8ac550758c200dc01fa42e801df0afe456bf103"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/output.bag",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/output.bag",
           "size": 4424666604,
           "mtime_ns": 1789379105320000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/metrics.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/metrics.json",
           "size": 25097,
           "mtime_ns": 1789379295330000000,
           "sha256": "e27a9514e1d727e75ed5cd7bf69eea2f11aafdb15dcb30bc3bb3b78c2db3fa96"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789379295330000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/publication_selection.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/publication_selection.csv",
           "size": 162274,
           "mtime_ns": 1789379295340000000,
           "sha256": "b38a496a5fbf88cef42640c8d7fc07fd2d40664672303af7f9dff3a1b45ed1b0"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/metrics.csv",
           "size": 38682,
           "mtime_ns": 1789379295340000000,
           "sha256": "66923aaff6497bcd4443572f3f3524d6a37e22de988976bf5b789724a7d96697"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/timing.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/timing.csv",
           "size": 47371,
           "mtime_ns": 1789379295340000000,
           "sha256": "3dac7fea7d3f3ef7c065309afd290cf22f20775f125313f84da009a0d0a0197c"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/track_timeseries.csv",
           "size": 273754,
           "mtime_ns": 1789379295350000000,
           "sha256": "fc43ebe7a87e7002c7456858f53902dad9733a275b029355419cd3df42b1b156"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/per_target_metrics.csv",
           "size": 751,
           "mtime_ns": 1789379295350000000,
           "sha256": "e89cdc20baac97d03d87be8e597eb3dba9c62dddc5b645bdd4d217ccfc197603"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/tracking_timeline.csv",
           "size": 252348,
           "mtime_ns": 1789379295360000000,
           "sha256": "0af4d5187efd883a6dfc58516528136583a5705082c6fbed36117ae48a88a2e2"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-Mid360/diagnostics_timeseries.csv",
           "size": 706744,
           "mtime_ns": 1789379295380000000,
           "sha256": "29370992f7ac3045be477c35748b005f25d0d2988744e99f6f17562bfab1d0dd"
@@ -1499,85 +1499,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/run_manifest.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/run_manifest.json",
           "size": 2983,
           "mtime_ns": 1789378456170000000,
           "sha256": "ba88173124af960c8fe95558e98ec909e458c5abb5d7cb8708e00e9668e56be9"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/algorithm.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/algorithm.log",
           "size": 8783,
           "mtime_ns": 1789378438250000000,
           "sha256": "cace70d19f187890cfe7c122914b0892a2870c2ee2f389a90cb308807b6ba2ec"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/resource.txt",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/resource.txt",
           "size": 883,
           "mtime_ns": 1789378438390000000,
           "sha256": "74a6034c672f55c79268ee4de1ac98456a6163647c39d3e9207184146166abf4"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/recorder.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/recorder.log",
           "size": 682,
           "mtime_ns": 1789378437550000000,
           "sha256": "d278563cf564e50eb6ebaa35d5511c599c970a858baa4148be07e1dc63fe8b3a"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/output.bag",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/output.bag",
           "size": 25914412,
           "mtime_ns": 1789378437550000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/metrics.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/metrics.json",
           "size": 25196,
           "mtime_ns": 1789378455220000000,
           "sha256": "b09657fc2e1993e99349511a7a7e646c479e8dab84409ae1f2163736acc82f8c"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789378455220000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/publication_selection.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/publication_selection.csv",
           "size": 77951,
           "mtime_ns": 1789378455220000000,
           "sha256": "c7a252e976e4eb16ff7347b18bfc748b7c7b5a056fa81f602ad89b3540944063"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/metrics.csv",
           "size": 38789,
           "mtime_ns": 1789378455220000000,
           "sha256": "3daea2b6ec39d3870acc9edf798bdfa2fc00428b85471915060cb16378afdf0b"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/timing.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/timing.csv",
           "size": 39461,
           "mtime_ns": 1789378455220000000,
           "sha256": "d8b3d82e0e8bd6749b123457afa79ae4d7afedbd2478e6c4e18afc57539d9e8a"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/track_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/track_timeseries.csv",
           "size": 9906,
           "mtime_ns": 1789378455220000000,
           "sha256": "af2c93996c9bfaf45a7225a4e8e2a6e89dd62a486cfeb4b9205440b501d8e0db"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/per_target_metrics.csv",
           "size": 756,
           "mtime_ns": 1789378455220000000,
           "sha256": "d6c74585da25aa1d8129aab948607d41a3ae6340a5aab4901ce3a7c8367c413b"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/tracking_timeline.csv",
           "size": 136197,
           "mtime_ns": 1789378455220000000,
           "sha256": "5a6dc9167cd821befa969f0ffcb3e71fa2829e491c0c2a37dc494588be4bff11"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OFFICE/VoFOD-OS1/diagnostics_timeseries.csv",
           "size": 707304,
           "mtime_ns": 1789378455250000000,
           "sha256": "dd34a06a427367ac60959f508b4be956e01a315856d0cdfecd4ef76e253e6e0e"
@@ -1598,85 +1598,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/run_manifest.json",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/run_manifest.json",
           "size": 3333,
           "mtime_ns": 1789375431660000000,
           "sha256": "42c6bd94f1e1340b8eb1b51049fb58fa0827f9a565a06759847c8b32f153b46e"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/algorithm.log",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/algorithm.log",
           "size": 6891,
           "mtime_ns": 1789375305560000000,
           "sha256": "d296ec285abf9c36d39b7bf917ec7cf462a6703d51b85c458419dc165015783a"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/resource.txt",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/resource.txt",
           "size": 1044,
           "mtime_ns": 1789375305690000000,
           "sha256": "ee41fa9d85b49b1637e9d6fe132293d9802324a2ce5466e54baf88420b8e400e"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/recorder.log",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/recorder.log",
           "size": 843,
           "mtime_ns": 1789375305310000000,
           "sha256": "66c81f843d612f3e68f2c411405f55112db09cc0c2b57dbe6bc2c566de78947f"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/output.bag",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/output.bag",
           "size": 3992591848,
           "mtime_ns": 1789375305300000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.json",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.json",
           "size": 26640,
           "mtime_ns": 1789375428400000000,
           "sha256": "470b29e5adc6da8292d42f825809cbcef25c5b8edd8225b992a173ad8349445c"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789375428400000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/publication_selection.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/publication_selection.csv",
           "size": 130645,
           "mtime_ns": 1789375428400000000,
           "sha256": "5b9c2387d275fd8421d9e1194722e8df818e465365498f1c0bd2830ba746ade2"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/metrics.csv",
           "size": 40244,
           "mtime_ns": 1789375428410000000,
           "sha256": "a35b614370e411510d2a089afb7de09d3afc9f72a73b3339f2d9392aa853d602"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/timing.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/timing.csv",
           "size": 30868,
           "mtime_ns": 1789375428410000000,
           "sha256": "b928e82751fc79482b9ef1498326041c17c431f0d2f4793e4e7faa6320347aaa"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/track_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/track_timeseries.csv",
           "size": 250600,
           "mtime_ns": 1789375428420000000,
           "sha256": "d718a3727b1f2a792ac1a7f66bd0d65421ba8a89d57929929af1d4d8ac940a51"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/per_target_metrics.csv",
           "size": 918,
           "mtime_ns": 1789375428420000000,
           "sha256": "96524387d12cff0da9921b0eeb41cf114a919d3c46b2c3007ca4cfe24d1403c2"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/tracking_timeline.csv",
           "size": 306315,
           "mtime_ns": 1789375428420000000,
           "sha256": "255142b415c68963122d2e2ce51234b307a7cad03fcd8289d57f97040d84e8f5"
         },
         {
-          "path": "/media/uav/SU710/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_open_floor_first_v14/runs/OPEN/VoFOD-Mid360/diagnostics_timeseries.csv",
           "size": 434895,
           "mtime_ns": 1789375428440000000,
           "sha256": "6fe1ebcb52a7a8d399fa43169fa0ba71cc40a09e1f8be5329027f002dd7d8d7a"
@@ -1697,85 +1697,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/run_manifest.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/run_manifest.json",
           "size": 3231,
           "mtime_ns": 1789376598620000000,
           "sha256": "96cf75e517c960fe7de26318da49bf8471dba9502481a45f4fb5e417ce09ac87"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/algorithm.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/algorithm.log",
           "size": 18673,
           "mtime_ns": 1789376575190000000,
           "sha256": "2b7dbf0f4e47f8ea14996d144a8926d0d4a0d3cd0f4e55860a37971f39c0f35b"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/resource.txt",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/resource.txt",
           "size": 971,
           "mtime_ns": 1789376575330000000,
           "sha256": "c1e27f68a4bcf96e65f269972017bbbb4ed0a92b80e81a5ffe53ca7db5d11090"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/recorder.log",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/recorder.log",
           "size": 680,
           "mtime_ns": 1789376574610000000,
           "sha256": "cf8cf40132c6b6f72bb002fada645281f80c2ea604e294bc2578426dec8a1dae"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/output.bag",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/output.bag",
           "size": 123115409,
           "mtime_ns": 1789376574610000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/metrics.json",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/metrics.json",
           "size": 26400,
           "mtime_ns": 1789376597320000000,
           "sha256": "4744f24f118ddd5f1ac1307377eb356c3a177544d8cf6973e749f2e999e44a25"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789376597320000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/publication_selection.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/publication_selection.csv",
           "size": 172439,
           "mtime_ns": 1789376597330000000,
           "sha256": "2c1720fb937f9055911353c55062b18e5ab02aedbd6c13833c7c20398f06869f"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/metrics.csv",
           "size": 39980,
           "mtime_ns": 1789376597330000000,
           "sha256": "39f5977d783d9d23c48b1201bc78ff91c1fa4a2fe19678dbb07f2f2fafe2ac01"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/timing.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/timing.csv",
           "size": 27107,
           "mtime_ns": 1789376597330000000,
           "sha256": "ae46463176a13bb777275cd6189eae689caf776df81b6df994301d84e3bcaa59"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/track_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/track_timeseries.csv",
           "size": 243384,
           "mtime_ns": 1789376597330000000,
           "sha256": "b8612085b4bfc62c4e6d74841c7ea0903e3a5d72d20f345f7dd727afbc07c62e"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/per_target_metrics.csv",
           "size": 914,
           "mtime_ns": 1789376597340000000,
           "sha256": "775ebed51983c0a7f6d861ca98adc3673c3cf58bf2a60f04458de60b5c970b91"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/tracking_timeline.csv",
           "size": 337552,
           "mtime_ns": 1789376597350000000,
           "sha256": "a446669fabefbfef2005fa358c1f40012d554343da2e6b22fffbdabaaba6c89c"
         },
         {
-          "path": "/media/uav/SU710/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_floor_first_all_v15/runs/OPEN/VoFOD-OS1/diagnostics_timeseries.csv",
           "size": 482235,
           "mtime_ns": 1789376597360000000,
           "sha256": "21beb2f7c3248cffe1280604989c2edfc9a97a220aba85eff1e1d716dfb0e60e"
@@ -1796,85 +1796,85 @@
       "output_bag_existed": true,
       "inventory": [
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/run_manifest.json",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/run_manifest.json",
           "size": 2996,
           "mtime_ns": 1789389666920000000,
           "sha256": "045bc540afd0585aef29caadd9d10f9b3f253793d8ad322a1f95682f8ef5f678"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/algorithm.log",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/algorithm.log",
           "size": 8779,
           "mtime_ns": 1789389648910000000,
           "sha256": "eeb12399b0e928d61b578ee4467d0cf8f682734dc34208955a0ad67cdff2ef6c"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/resource.txt",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/resource.txt",
           "size": 889,
           "mtime_ns": 1789389649040000000,
           "sha256": "b98c7f9840367222bfd1034ba029af00f81dc589c556eed2b3b21e56b79c6fee"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/recorder.log",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/recorder.log",
           "size": 686,
           "mtime_ns": 1789389648390000000,
           "sha256": "91540aa8bb642ddeaba4ebfd98580da7363110551d8e19d1f81e05253f11043e"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/output.bag",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/output.bag",
           "size": 26252267,
           "mtime_ns": 1789389648380000000,
           "sha256": null
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/metrics.json",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/metrics.json",
           "size": 25320,
           "mtime_ns": 1789389665990000000,
           "sha256": "7f70b5ebac3767bcf8970fefb91d6112d62113c65ed2784b67ad1159fad8dd10"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/los_ignored_timeseries.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/los_ignored_timeseries.csv",
           "size": 23,
           "mtime_ns": 1789389665990000000,
           "sha256": "a0da67abc11583367d9ba5e3742fd1b2f3d665f3513df4ab6998e030d1c78881"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/publication_selection.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/publication_selection.csv",
           "size": 109999,
           "mtime_ns": 1789389666000000000,
           "sha256": "a6b30e008aaae0823684d9fb12492e15bc5d6c94110bb7bb5aefb7cd2cf7e295"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/metrics.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/metrics.csv",
           "size": 38873,
           "mtime_ns": 1789389666000000000,
           "sha256": "2f39e46b4497997bcb4004d3c6b00a06678c034227c0b40fa5daf22190f93a13"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/timing.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/timing.csv",
           "size": 39498,
           "mtime_ns": 1789389666000000000,
           "sha256": "bedf4c795520d9a719b79f49b3b2b6664af1704f5c661fa3500fe56835163938"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/track_timeseries.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/track_timeseries.csv",
           "size": 83006,
           "mtime_ns": 1789389666000000000,
           "sha256": "07981425e363b9e2ce23a7b03bc0aceb9c4b8a9470fa9d748acf2ec69cecfb20"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/per_target_metrics.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/per_target_metrics.csv",
           "size": 772,
           "mtime_ns": 1789389666000000000,
           "sha256": "4325734fe9fcf7307d78ffbf35cf7d61a2a4616545a348e62115ba143d477d34"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/tracking_timeline.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/tracking_timeline.csv",
           "size": 178045,
           "mtime_ns": 1789389666000000000,
           "sha256": "2e5c29e509a7efd9ff5485fcfcf24382f1fadacf8f607c547924adafb03d7f85"
         },
         {
-          "path": "/media/uav/SU710/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/diagnostics_timeseries.csv",
+          "path": "/data/lyk/vofod_office_os1_ready001_v16/runs/OFFICE/VoFOD-OS1/diagnostics_timeseries.csv",
           "size": 703109,
           "mtime_ns": 1789389666030000000,
           "sha256": "f6864fc497e197a5f993427b890215d039f46db1b92b8f0786ff6cdfefa465f5"
@@ -1883,200 +1883,200 @@
     }
   ],
   "sources": {
-    "FOREST": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST",
-    "MT": "/media/uav/SU710/aerocover_twenty_v8/sources/MT",
-    "OFFICE": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE",
-    "OPEN": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped"
+    "FOREST": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST",
+    "MT": "/data/lyk/aerocover_twenty_v8/sources/MT",
+    "OFFICE": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE",
+    "OPEN": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped"
   },
   "source_inventory": [
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/scenario.yaml",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/scenario.yaml",
       "size": 1364621,
       "mtime_ns": 1789265745980000000,
       "sha256": "65cc6ea7c1cd14d125a0b3a6c8657e27267550b0e8292bd723cadffc669d05a3"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/truth_evaluator.yaml",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/truth_evaluator.yaml",
       "size": 35975,
       "mtime_ns": 1789265746020000000,
       "sha256": "3f9e5bc755052f49f025ffd6d49000966a097a411046ef5c05e0c195c6fd9e11"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/truth_evaluator.log",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/truth_evaluator.log",
       "size": 332,
       "mtime_ns": 1789265981860000000,
       "sha256": "00412a3ad86558c1eedc23387404550c0407941a3cd446ccf22df5f375834fb8"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/simulation.log",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/simulation.log",
       "size": 484160,
       "mtime_ns": 1789265981130000000,
       "sha256": "f23f8cf18b84cb1bcafed8ceab79d75f23f72e7a15aad0661466225ea050b79e"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/recorder.log",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/recorder.log",
       "size": 948,
       "mtime_ns": 1789265981710000000,
       "sha256": "1dee833cfb505c7037acfb3f0eaee90d7ed6bb7e16a966f4e0c66fdc74b53f68"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/source_manifest.json",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/source_manifest.json",
       "size": 3806,
       "mtime_ns": 1789266435450000000,
       "sha256": "1e632cc763208b5165c8f3fa24a570863bc3bb316789ef446dd5b0387475cbf6"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/source.bag",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/source.bag",
       "size": 6488402646,
       "mtime_ns": 1789266354000000000,
       "sha256": null
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/FOREST/flight_audit.json",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/FOREST/flight_audit.json",
       "size": 265060,
       "mtime_ns": 1789266558300000000,
       "sha256": "16c0d5da454b97a25e00aea65b4434b02661539ab9241f605b1cbb16204f7bfe"
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/scenario.yaml",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/scenario.yaml",
       "size": 76304,
       "mtime_ns": 1789315659040000000,
       "sha256": "c0a9e56c6839e87e886fbd10b91e0a3e6c3aa17d785c5f86cc736218ad5eea6d"
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/truth_evaluator.yaml",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/truth_evaluator.yaml",
       "size": 3955,
       "mtime_ns": 1789315659040000000,
       "sha256": "d3400127a860a7ac05286adbbbe896f33cb2503307349de51bddbe7f4f5f0bac"
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/truth_evaluator.log",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/truth_evaluator.log",
       "size": 328,
       "mtime_ns": 1789315755380000000,
       "sha256": "99bcaad495b418e518da64c66f6ab8772ca6e860cc3870a77776d3b580c69a39"
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/simulation.log",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/simulation.log",
       "size": 891568,
       "mtime_ns": 1789315754640000000,
       "sha256": "b2a3317eb3e92047eea51e0a50d193bea78d1df365452a5e0dbf919f0f3d5d9a"
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/recorder.log",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/recorder.log",
       "size": 1109,
       "mtime_ns": 1789315755090000000,
       "sha256": "f5b2727bf085e6c8a701af1711746fa4c357ea9552f087123a553a7b0f4290d2"
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/source_manifest.json",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/source_manifest.json",
       "size": 4402,
       "mtime_ns": 1789315821730000000,
       "sha256": "344bce9abb11c7aff0834087d862827176d26a3124b4e06834c9fa2d7dcb2d42"
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/source.bag",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/source.bag",
       "size": 1418907732,
       "mtime_ns": 1789315819800000000,
       "sha256": null
     },
     {
-      "path": "/media/uav/SU710/aerocover_twenty_v8/sources/MT/flight_audit.json",
+      "path": "/data/lyk/aerocover_twenty_v8/sources/MT/flight_audit.json",
       "size": 265505,
       "mtime_ns": 1789315874060000000,
       "sha256": "c5c408b6e0f1b2312fb85e8cf60de7f71253e9d618e4891724a6425bbb613fec"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/scenario.yaml",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/scenario.yaml",
       "size": 1111338,
       "mtime_ns": 1789265312080000000,
       "sha256": "f66ed44d82cce14aae7f0bebe4fe6c9cb77e42dc6fd509c2c3644d87f9277474"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/truth_evaluator.yaml",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/truth_evaluator.yaml",
       "size": 1890,
       "mtime_ns": 1789265312080000000,
       "sha256": "f97234df0190d618ebb93e9cafdd0a14a1c3f0362fabc42dbe15bb4209c1be41"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/truth_evaluator.log",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/truth_evaluator.log",
       "size": 332,
       "mtime_ns": 1789265504130000000,
       "sha256": "7cd961bf4cbb2a9880ebaccc18708859154030c9bf3a58a8e4c516fb3ce93c30"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/simulation.log",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/simulation.log",
       "size": 472486,
       "mtime_ns": 1789265503390000000,
       "sha256": "305ad061e9e6884ccae9f4b2e870e9de7a041f111ef3a8adab2311b7e02e180d"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/recorder.log",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/recorder.log",
       "size": 948,
       "mtime_ns": 1789265503870000000,
       "sha256": "9ae5426ed75b963a7515494e8c6f6fb01092c47f78bd109151c58ede5c0d7a16"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/source_manifest.json",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/source_manifest.json",
       "size": 3804,
       "mtime_ns": 1789266028310000000,
       "sha256": "ae51e05e12e5f9c2a8ad182db761690bc48aca54b83729e2765fb24bda47ffd5"
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/source.bag",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/source.bag",
       "size": 6000779920,
       "mtime_ns": 1789265888980000000,
       "sha256": null
     },
     {
-      "path": "/media/uav/SU710/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/flight_audit.json",
+      "path": "/data/lyk/aerocover_four_scene_v4_flow_20260913/probes/OFFICE/flight_audit.json",
       "size": 265013,
       "mtime_ns": 1789266231340000000,
       "sha256": "f723a9de9705ac96cdcd3537cb9bf308adc3321b0945f8c10e6fdaacbb43c0e5"
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/scenario.yaml",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/scenario.yaml",
       "size": 1036329,
       "mtime_ns": 1789293806120000000,
       "sha256": "39be7973abeb9d90e4a90f33944b6198710e8fafa4dd8e4b473e97c6581a0268"
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/truth_evaluator.yaml",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/truth_evaluator.yaml",
       "size": 2724,
       "mtime_ns": 1789293806120000000,
       "sha256": "6c0f2d1f117e209daa05ddf665cbcf4e12a6933243ec48e32a529aec2e880304"
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/truth_evaluator.log",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/truth_evaluator.log",
       "size": 330,
       "mtime_ns": 1789293945330000000,
       "sha256": "8ddc70570ba9a1d0f5d2a75952025f4e868c3eb0ac391f23025282460e27e901"
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/simulation.log",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/simulation.log",
       "size": 693159,
       "mtime_ns": 1789293944590000000,
       "sha256": "160f00950f853880b66391dd37ac3381e68bef695eae95b9ad8744fd444715e6"
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/recorder.log",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/recorder.log",
       "size": 1048,
       "mtime_ns": 1789293945290000000,
       "sha256": "91f708d5670a5748e395d1abf5cfc9f927c7b187e2a2e7c2711af47f11c30296"
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/source_manifest.json",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/source_manifest.json",
       "size": 3914,
       "mtime_ns": 1789294072210000000,
       "sha256": "4098f1e7f753b66965b886765600a79a20db0fe72475f2567a3cffc964c55df5"
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/source.bag",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/source.bag",
       "size": 2531954554,
       "mtime_ns": 1789294069020000000,
       "sha256": null
     },
     {
-      "path": "/media/uav/SU710/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/flight_audit.json",
+      "path": "/data/lyk/aerocover_open_19m_strict_20260913/sources/OPEN_entry_capped/flight_audit.json",
       "size": 265135,
       "mtime_ns": 1789294122650000000,
       "sha256": "3a7b783e28245a356dacc8bb3ecf91a279bd179193f8ff6fe8419730b5130fa8"
